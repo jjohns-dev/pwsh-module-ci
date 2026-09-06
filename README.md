@@ -70,8 +70,14 @@ jobs:
       security-events: write
 ```
 
-`os-matrix` (ci.yml) and `psscriptanalyzer-settings-path` (pssa-sarif.yml) are optional
-`with:` inputs — omit them to use the defaults every current repo already matches.
+`os-matrix` and `enable-test-report` (ci.yml), and `psscriptanalyzer-settings-path`
+(pssa-sarif.yml) are optional `with:` inputs — omit them to use the defaults, which match
+most repos. Set `enable-test-report: false` for a repo whose `build.psake.ps1` configures
+Pester's `TestResult.OutputFormat` as `NUnitXml` rather than `JUnitXml` (check with
+`grep OutputFormat Build/build.psake.ps1`) — `dorny/test-reporter`'s `java-junit` reporter
+cannot parse NUnit-format XML, and its `dotnet-nunit` reporter expects NUnit**3** XML, which
+Pester's `NUnitXml` output is not. With it disabled, results still upload as a plain
+artifact, matching what these repos did before adopting this shared workflow.
 
 ## Versioning
 

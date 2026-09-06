@@ -9,6 +9,11 @@ on:
         required: false
         type: string
         default: '["ubuntu-latest", "windows-latest", "macos-latest"]'
+      enable-test-report:
+        description: 'Publish Pester results as a check-run annotation. Requires JUnitXml output (set false for repos configured with NUnitXml).'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -49,7 +54,7 @@ jobs:
         uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         # Only publish when a JUnit file actually exists, so CI stays green
         # during initial scaffolding before real tests land.
-        if: always() && hashFiles('Artifacts/**/Test-*.xml') != ''
+        if: always() && inputs.enable-test-report && hashFiles('Artifacts/**/Test-*.xml') != ''
         with:
           name: Pester Tests (${{ matrix.os }})
           path: Artifacts/**/Test-*.xml
