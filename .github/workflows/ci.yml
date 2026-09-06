@@ -23,6 +23,8 @@ jobs:
   validate:
     name: validate (${{ matrix.os }})
     strategy:
+      # false keeps the other runners going if one OS fails, so cross-OS
+      # divergence surfaces in a single run instead of fix-push-wait-repeat.
       fail-fast: false
       matrix:
         os: ${{ fromJSON(inputs.os-matrix) }}
