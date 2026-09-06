@@ -50,7 +50,6 @@ jobs:
   release:
     uses: jjohns-dev/pwsh-module-ci/.github/workflows/release.yml@v1
     permissions:
-      id-token: write
       contents: write
 ```
 
