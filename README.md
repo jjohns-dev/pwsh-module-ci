@@ -79,6 +79,10 @@ cannot parse NUnit-format XML, and its `dotnet-nunit` reporter expects NUnit**3*
 Pester's `NUnitXml` output is not. With it disabled, results still upload as a plain
 artifact, matching what these repos did before adopting this shared workflow.
 
+`artifact-name` (release.yml) sets the uploaded build artifact's display name — default
+`'Artifacts'`. Set it to something like `'MyModule-${{ github.ref_name }}'` in the consumer
+workflow to preserve a repo-specific naming convention.
+
 ## Versioning
 
 Tagged with semver (`v1.0.0`, `v1.1.0`, ...); a floating `v1` tag tracks the latest
