@@ -1,0 +1,61 @@
+name: analyze-sarif
+run-name: analyze-sarif
+
+on:
+  workflow_call:
+    inputs:
+      psscriptanalyzer-settings-path:
+        description: 'Path to the PSScriptAnalyzer settings file'
+        required: false
+        type: string
+        default: './Build/PSScriptAnalyzerSettings.psd1'
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    permissions:
+      contents: read           # for actions/checkout to fetch code
+      security-events: write   # for github/codeql-action/upload-sarif
+    name: PSScriptAnalyzer
+    runs-on: ubuntu-latest
+    env:
+      PSSA_SETTINGS_PATH: ${{ inputs.psscriptanalyzer-settings-path }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $moduleParams = @{
+            Scope       = 'CurrentUser'
+            Force       = $true
+            Repository  = 'PSGallery'
+            ErrorAction = 'Stop'
+          }
+
+          Install-Module -Name 'PSScriptAnalyzer' -RequiredVersion '1.25.0' @moduleParams
+          Install-Module -Name 'ConvertToSARIF' @moduleParams
+
+          Import-Module -Name 'PSScriptAnalyzer' -RequiredVersion '1.25.0' -Force -ErrorAction Stop
+          Import-Module -Name 'ConvertToSARIF' -Force -ErrorAction Stop
+
+          $analyzerParams = @{
+            Path     = './'
+            Recurse  = $true
+            Settings = $env:PSSA_SETTINGS_PATH
+          }
+
+          $sarifParams = @{
+            FilePath = 'results.sarif'
+          }
+
+          Invoke-ScriptAnalyzer @analyzerParams | ConvertTo-SARIF @sarifParams
+
+      - name: Upload SARIF results file
+        uses: github/codeql-action/upload-sarif@cdf488f595d80d6e07e03d4674febd5ab45fa938 # v4.37.9
+        with:
+          sarif_file: results.sarif
