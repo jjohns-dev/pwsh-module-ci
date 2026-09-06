@@ -15,7 +15,7 @@ instead of once per consumer repo.
 | --- | --- | --- |
 | `ci.yml` | Stage, analyze, and test the module across a runner matrix | `pull_request`, `push` to `main` |
 | `release.yml` | Build the module artifact and cut a GitHub release | `push` of a `v*.*.*` tag |
-| `analyze-sarif.yml` | PSScriptAnalyzer findings uploaded to the Security tab | `pull_request`, `push` to `main` |
+| `pssa-sarif.yml` | PSScriptAnalyzer findings uploaded to the Security tab | `pull_request`, `push` to `main` |
 
 ## Usage
 
@@ -55,8 +55,8 @@ jobs:
 ```
 
 ```yaml
-# .github/workflows/analyze-sarif.yml
-name: analyze-sarif
+# .github/workflows/pssa-sarif.yml
+name: pssa-sarif
 on:
   pull_request:
     branches: ["*"]
@@ -64,13 +64,13 @@ on:
     branches: [main]
 jobs:
   analyze:
-    uses: jjohns-dev/pwsh-module-ci/.github/workflows/analyze-sarif.yml@v1
+    uses: jjohns-dev/pwsh-module-ci/.github/workflows/pssa-sarif.yml@v1
     permissions:
       contents: read
       security-events: write
 ```
 
-`os-matrix` (ci.yml) and `psscriptanalyzer-settings-path` (analyze-sarif.yml) are optional
+`os-matrix` (ci.yml) and `psscriptanalyzer-settings-path` (pssa-sarif.yml) are optional
 `with:` inputs — omit them to use the defaults every current repo already matches.
 
 ## Versioning

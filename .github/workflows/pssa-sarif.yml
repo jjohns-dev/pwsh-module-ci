@@ -1,5 +1,5 @@
-name: analyze-sarif
-run-name: analyze-sarif
+name: pssa-sarif
+run-name: pssa-sarif
 
 on:
   workflow_call:
