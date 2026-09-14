@@ -1,0 +1,55 @@
+name: actionlint
+run-name: actionlint
+
+on:
+  pull_request:
+    branches: ["*"]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: actionlint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read # for actions/checkout to fetch code
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Pinned release + checksum rather than the upstream curl|bash installer,
+      # which fetches its script from a moving branch.
+      - name: Install actionlint
+        shell: pwsh
+        env:
+          ACTIONLINT_VERSION: '1.7.12'
+          ACTIONLINT_SHA256: '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8'
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $archive = 'actionlint.tar.gz'
+          $uri = 'https://github.com/rhysd/actionlint/releases/download/v{0}/actionlint_{0}_linux_amd64.tar.gz' -f $env:ACTIONLINT_VERSION
+
+          Invoke-WebRequest -Uri $uri -OutFile $archive
+
+          $actual = (Get-FileHash -Path $archive -Algorithm SHA256).Hash
+          $expected = $env:ACTIONLINT_SHA256.ToUpperInvariant()
+          if ($actual -ne $expected) {
+              Write-Error -Message ('actionlint checksum mismatch: expected [{0}] got [{1}]' -f $expected, $actual) -ErrorAction Stop
+          }
+
+          tar -xzf $archive actionlint
+
+      # shellcheck is preinstalled on ubuntu-latest; actionlint picks it up for run: blocks.
+      - name: Run actionlint
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          ./actionlint -color
