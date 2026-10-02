@@ -9,11 +9,6 @@ on:
         required: false
         type: string
         default: '["ubuntu-latest", "windows-latest", "macos-latest"]'
-      enable-test-report:
-        description: 'Publish Pester results as a check-run annotation. Requires JUnitXml output (set false for repos configured with NUnitXml).'
-        required: false
-        type: boolean
-        default: true
 
 permissions:
   contents: read
@@ -43,7 +38,66 @@ jobs:
         run: ./Build/build.ps1 -TaskList 'Analyze'
 
       - shell: pwsh # pester
+        id: pester
         run: ./Build/build.ps1 -TaskList 'Test'
+
+      - name: Verify Pester results
+        shell: pwsh
+        # Gated on the Pester step having run, not on always(): when an earlier
+        # step fails there is no result file, and an unconditional check would
+        # bury that real failure under a misleading "no result file" error.
+        if: always() && steps.pester.outcome != 'skipped'
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $files = @(Get-ChildItem -Path 'Artifacts' -Filter 'Test-*.xml' -Recurse -ErrorAction SilentlyContinue)
+          if ($files.Count -eq 0) {
+              throw 'No Pester result file was produced under Artifacts/.'
+          }
+
+          $problems = @()
+
+          foreach ($f in $files) {
+              [xml]$doc = Get-Content -Path $f.FullName -Raw
+              $root = $doc.DocumentElement
+
+              # Counts are read from the root <testsuites>. The child <testsuite>
+              # reports errors="0" for the same run, so a check written against the
+              # child parses cleanly and never fires.
+              #
+              # LocalName, not Name: PowerShell's XML adapter surfaces attributes as
+              # properties, so $root.Name returns the name="Pester" attribute rather
+              # than the element name. Attributes are read with GetAttribute() for the
+              # same reason.
+              if ($root.LocalName -ne 'testsuites') {
+                  $problems += ('{0}: expected a JUnit <testsuites> root, found <{1}>. Pester must be configured with TestResult.OutputFormat = JUnitXml.' -f $f.Name, $root.LocalName)
+                  continue
+              }
+
+              $tests = [int]($root.GetAttribute('tests') -as [int])
+              $errors = [int]($root.GetAttribute('errors') -as [int])
+              $failures = [int]($root.GetAttribute('failures') -as [int])
+
+              Write-Host ('{0}: tests={1} errors={2} failures={3}' -f $f.Name, $tests, $errors, $failures)
+
+              # Discovery and container errors attach to the container rather than
+              # to a test, so a psake gate reading FailedCount leaves them invisible.
+              if ($errors -gt 0) {
+                  $problems += ('{0}: {1} container/discovery error(s); part of the suite was never collected.' -f $f.Name, $errors)
+              }
+
+              if ($tests -eq 0) {
+                  $problems += ('{0}: no tests were collected.' -f $f.Name)
+              }
+
+              # $failures is reported above but not gated here: a genuine test
+              # failure already fails the Pester step via the repo's psake gate.
+          }
+
+          if ($problems.Count -gt 0) {
+              $problems | ForEach-Object { Write-Host ('::error::{0}' -f $_) }
+              throw ('Pester result verification failed with {0} problem(s).' -f $problems.Count)
+          }
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
@@ -54,9 +108,10 @@ jobs:
 
       - name: Publish Pester results
         uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
-        # Only publish when a JUnit file actually exists, so CI stays green
-        # during initial scaffolding before real tests land.
-        if: always() && inputs.enable-test-report && hashFiles('Artifacts/**/Test-*.xml') != ''
+        # Only publish when a JUnit file actually exists. This step is display
+        # only: fail-on-* stay false because "Verify Pester results" above is the
+        # gate, and a missing file is already a hard failure there.
+        if: always() && hashFiles('Artifacts/**/Test-*.xml') != ''
         with:
           name: Pester Tests (${{ matrix.os }})
           path: Artifacts/**/Test-*.xml

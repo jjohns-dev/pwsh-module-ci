@@ -69,14 +69,30 @@ jobs:
       security-events: write
 ```
 
-`os-matrix` and `enable-test-report` (ci.yml), and `psscriptanalyzer-settings-path`
-(pssa-sarif.yml) are optional `with:` inputs — omit them to use the defaults, which match
-most repos. Set `enable-test-report: false` for a repo whose `build.psake.ps1` configures
-Pester's `TestResult.OutputFormat` as `NUnitXml` rather than `JUnitXml` (check with
-`grep OutputFormat Build/build.psake.ps1`) — `dorny/test-reporter`'s `java-junit` reporter
-cannot parse NUnit-format XML, and its `dotnet-nunit` reporter expects NUnit**3** XML, which
-Pester's `NUnitXml` output is not. With it disabled, results still upload as a plain
-artifact, matching what these repos did before adopting this shared workflow.
+`os-matrix` (ci.yml) and `psscriptanalyzer-settings-path` (pssa-sarif.yml) are optional
+`with:` inputs — omit them to use the defaults, which match most repos.
+
+## Pester result verification
+
+`ci.yml` verifies the JUnit XML that the `Test` task writes, after the Pester step and
+independently of the consumer's own psake gate. The run fails if no result file was
+produced, if the root `<testsuites>` element reports `errors > 0`, or if it reports
+`tests == 0`.
+
+This exists because a discovery or container error attaches to the *container* rather than
+to a test, so a psake gate written as `if ($TestResults.FailedCount -gt 0)` leaves
+`FailedCount` at `0` and the build passes having collected a fraction of its suite. The
+counts must be read from the **root** `<testsuites>` element: the child `<testsuite>`
+reports `errors="0"` for the same run, so a check written against the child parses cleanly
+and silently never fires.
+
+Consumers must therefore configure Pester with `TestResult.OutputFormat = 'JUnitXml'`.
+`NUnitXml` is not supported — the verification step fails with an explicit message naming
+the root element it found, and `dorny/test-reporter`'s `java-junit` reporter cannot parse
+NUnit-format XML either. All seven consumers already emit `JUnitXml`.
+
+The verification step is the gate; the `dorny/test-reporter` step is display only and keeps
+`fail-on-error: false` / `fail-on-empty: false`.
 
 `artifact-name` (release.yml) sets the uploaded build artifact's display name — default
 `'Artifacts'`. Set it to something like `'MyModule-${{ github.ref_name }}'` in the consumer
@@ -84,7 +100,9 @@ workflow to preserve a repo-specific naming convention.
 
 ## Versioning
 
-Tagged with semver (`v1.0.0`, `v1.1.0`, ...); a floating `v1` tag tracks the latest
-non-breaking release. Consumer repos should pin to `@v1` so action-version bumps and fixes
-land automatically; a breaking change to inputs or job structure bumps to `v2`, and
-consumers migrate on their own schedule.
+Tagged with semver (`v1.0.0`, `v1.1.0`, ...). Two floating tags track releases: `v1` for the
+latest non-breaking release, and a per-minor `v1.3` that picks up patch fixes within that
+minor without taking the next minor's behavior change. Consumer repos pin to `@v1` for
+normal operation, and to a `@v1.<minor>` when staging a change that alters CI outcomes.
+A breaking change to inputs or job structure bumps to `v2`, and consumers migrate on their
+own schedule.
