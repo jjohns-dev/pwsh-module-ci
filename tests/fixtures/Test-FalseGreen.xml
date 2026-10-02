@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!-- The shape that motivated this check: a discovery error attached to the
+     container, so the root reports errors="1" while the child testsuite and
+     Pester's own FailedCount both report 0. The build looked green having
+     collected 6 of 432 tests. -->
+<testsuites name="Pester" tests="6" errors="1" failures="0" time="1.2061">
+  <testsuite name="Module.Help.tests.ps1" tests="6" errors="0" failures="0" time="1.2061">
+    <testcase name="Help.Synopsis is present" classname="Help" time="0.2010" />
+  </testsuite>
+</testsuites>

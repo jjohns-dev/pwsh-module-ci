@@ -1,0 +1,48 @@
+name: self-test
+run-name: self-test
+
+on:
+  pull_request:
+    branches: ["*"]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: self-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-step:
+    name: verify Pester result step
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read # for actions/checkout to fetch code
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install powershell-yaml
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $moduleParams = @{
+              Name            = 'powershell-yaml'
+              RequiredVersion = '0.4.12'
+              Scope           = 'CurrentUser'
+              Force           = $true
+              Repository      = 'PSGallery'
+              ErrorAction     = 'Stop'
+          }
+
+          Install-Module @moduleParams
+
+      # Extracts the "Verify Pester results" step out of ci.yml and release.yml
+      # and runs it against fixtures, asserting both that it fires on a false
+      # green and that it stays quiet on a healthy run.
+      - name: Verify the shipped step behaves in both directions
+        shell: pwsh
+        run: ./tests/Invoke-VerificationTest.ps1
