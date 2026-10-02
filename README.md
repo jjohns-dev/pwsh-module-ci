@@ -1,8 +1,10 @@
 # pwsh-module-ci
 
 Reusable GitHub Actions workflows shared by [johnsarie27](https://github.com/johnsarie27)'s
-PowerShell module repos (PS.Log, PS.GHOps, PS.GitHub, PS.SSL, PS.DCU, AWSAutomation,
-SecurityTools). Each module repo's own `Build/build.ps1` (psake) already does the real
+PowerShell module repos (PS.Log, PS.GHOps, PS.GitHub, PS.SSL, PS.DCU, AWSAutomation).
+SecurityTools is deliberately not a consumer: it pairs each runner with a `PesterScope`
+psake property through `matrix.include`, which `os-matrix` cannot express. Each module
+repo's own `Build/build.ps1` (psake) already does the real
 work — `Init`, `CombineFunctionsAndStage`, `Analyze`, `Test`, `CreateBuildArtifact` — these
 workflows just standardize how that gets invoked in CI, and centralize the third-party
 action pins (`actions/checkout`, `actions/upload-artifact`, `dorny/test-reporter`,
@@ -72,6 +74,10 @@ jobs:
 `os-matrix` (ci.yml) and `psscriptanalyzer-settings-path` (pssa-sarif.yml) are optional
 `with:` inputs — omit them to use the defaults, which match most repos.
 
+`artifact-name` (release.yml) sets the uploaded build artifact's display name — default
+`'Artifacts'`. Set it to something like `'MyModule-${{ github.ref_name }}'` in the consumer
+workflow to preserve a repo-specific naming convention.
+
 ## Pester result verification
 
 `ci.yml` verifies the JUnit XML that the `Test` task writes, after the Pester step and
@@ -89,20 +95,17 @@ and silently never fires.
 Consumers must therefore configure Pester with `TestResult.OutputFormat = 'JUnitXml'`.
 `NUnitXml` is not supported — the verification step fails with an explicit message naming
 the root element it found, and `dorny/test-reporter`'s `java-junit` reporter cannot parse
-NUnit-format XML either. All seven consumers already emit `JUnitXml`.
+NUnit-format XML either. All six consumers already emit `JUnitXml`.
 
 The verification step is the gate; the `dorny/test-reporter` step is display only and keeps
 `fail-on-error: false` / `fail-on-empty: false`.
 
-`artifact-name` (release.yml) sets the uploaded build artifact's display name — default
-`'Artifacts'`. Set it to something like `'MyModule-${{ github.ref_name }}'` in the consumer
-workflow to preserve a repo-specific naming convention.
-
 ## Versioning
 
-Tagged with semver (`v1.0.0`, `v1.1.0`, ...). Two floating tags track releases: `v1` for the
-latest non-breaking release, and a per-minor `v1.3` that picks up patch fixes within that
-minor without taking the next minor's behavior change. Consumer repos pin to `@v1` for
-normal operation, and to a `@v1.<minor>` when staging a change that alters CI outcomes.
-A breaking change to inputs or job structure bumps to `v2`, and consumers migrate on their
-own schedule.
+Tagged with semver (`v1.0.0`, `v1.1.0`, ...). Two kinds of floating tag track releases: `v1`
+for the latest non-breaking release, and a per-minor `v1.<minor>` that picks up patch fixes
+within that minor without taking the next minor's behavior change. Consumer repos pin to
+`@v1` for normal operation, and to a `@v1.<minor>` when staging a change that alters CI
+outcomes. A breaking change to inputs or job structure bumps to `v2`, and consumers migrate
+on their own schedule — see [ADR-0002](docs/adr/0002-removing-an-unused-input-is-a-minor-release.md)
+for what counts as breaking.
