@@ -46,6 +46,8 @@ jobs:
         # Gated on the Pester step having run, not on always(): when an earlier
         # step fails there is no result file, and an unconditional check would
         # bury that real failure under a misleading "no result file" error.
+        # A step that never started reports outcome 'skipped', not '' -- measured,
+        # not inferred. Do not rewrite this as a positive test; see AGENTS.md.
         if: always() && steps.pester.outcome != 'skipped'
         run: |
           $ErrorActionPreference = 'Stop'
