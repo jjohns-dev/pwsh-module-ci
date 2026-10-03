@@ -64,6 +64,7 @@ The workflow pins actionlint `1.7.12` with a SHA256 check. Match that version lo
 ## Gotchas that have bitten here
 
 - **`#Requires -Modules` silently discards a script's exit code under `pwsh -File`.** A script that calls `exit 1` exits `0`, so a CI gate invoking it is permanently green. `#Requires -Version` is unaffected, and `pwsh -Command "& ./script.ps1"` propagates correctly. `tests/Invoke-VerificationTest.ps1` therefore uses `Import-Module` and says so in its `.NOTES`; do not "correct" it back to the house `#Requires` convention. Verified on PowerShell 7.6.6.
+- **Under `shell: pwsh`, a step exits with whatever `$LASTEXITCODE` holds.** GitHub invokes the script as `pwsh -command ". '<file>'"`, so a stale non-zero `$LASTEXITCODE` left by any earlier native call fails the step even when the script itself succeeded. `pwsh -File` does not behave this way, so it passes locally and fails in CI. End any script that shells out with an explicit `exit 0`.
 - **An annotated tag's ref SHA is not its commit SHA.** `git rev-parse v1` and the GitHub refs API both return the tag *object*; `git log` quietly dereferences to the commit. Use `git rev-parse 'v1^{commit}'` when you mean the commit, and do not "fix" a tag SHA in prose without checking which one it is.
 
 - **YAML block scalars cannot carry a PowerShell here-string.** A here-string's closing delimiter (`'@`) must sit at column 0, which terminates the block scalar. Build multi-line strings with an array and `-join` instead.

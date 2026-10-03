@@ -158,4 +158,8 @@ if ($failures.Count -gt 0) {
 
 Write-Output ('All {0} cases behaved as expected.' -f $cases.Count)
 
+# EXPLICIT: $LASTEXITCODE STILL HOLDS THE LAST FIXTURE'S NON-ZERO EXIT, AND
+# shell: pwsh EXITS WITH IT UNLESS THE SCRIPT SAYS OTHERWISE
+exit 0
+
 #endregion ====================================================================
