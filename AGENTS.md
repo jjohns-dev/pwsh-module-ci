@@ -45,9 +45,9 @@ The three reusable workflows are `on: workflow_call` only. `actionlint.yml` and 
 
 ## Versioning
 
-Semver tags, plus two kinds of moving tag: `v1` (latest non-breaking) and `v1.<minor>` (patch fixes within that minor). Consumers normally pin `@v1` and move to `@v1.<minor>` only while staging a change.
+Semver tags plus one moving tag, `v1`, tracking the latest non-breaking release. Consumers normally pin `@v1`. While staging a release that can change CI outcomes they pin the **immutable** `vX.Y.Z` instead, so the dependency is frozen while they migrate, then repoint to `@v1` once `v1` has moved. There is deliberately no moving `vX.Y` tag — a staging pin that moves underneath an in-flight migration defeats the point of staging. Leaving a consumer pinned is debt: it stops receiving the centralized action bumps this repo exists to deliver.
 
-"Breaking" means the consumer's **call** stops working, not its **build** stops passing — see ADR-0002. Removing an input no consumer passes is a minor; removing one any consumer passes, or renaming a job (which silently un-gates branch protection), is a `v2`. A change that turns a wrongly-green build red is not breaking, and is staged through `v1.<minor>` instead. Verify which you have by checking the six consumer repos, and record the result in the PR.
+"Breaking" means the consumer's **call** stops working, not its **build** stops passing — see ADR-0002. Removing an input no consumer passes is a minor; removing one any consumer passes, or renaming a job (which silently un-gates branch protection), is a `v2`. A change that turns a wrongly-green build red is not breaking, and is staged through an immutable `vX.Y.Z` pin instead. Verify which you have by checking the six consumer repos, and record the result in the PR.
 
 ## Validating a change
 

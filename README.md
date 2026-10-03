@@ -102,12 +102,15 @@ The verification step is the gate; the `dorny/test-reporter` step is display onl
 
 ## Versioning
 
-Tagged with semver (`v1.0.0`, `v1.1.0`, ...). Two kinds of floating tag track releases: `v1`
-for the latest non-breaking release, and a per-minor `v1.<minor>` that picks up patch fixes
-within that minor without taking the next minor's behavior change. Consumer repos pin to
-`@v1` for normal operation, and to a `@v1.<minor>` when staging a change that alters CI
-outcomes. A breaking change to inputs or job structure bumps to `v2`, and consumers migrate
-on their own schedule — see [ADR-0002](docs/adr/0002-breaking-means-the-call-not-the-build-outcome.md)
-for what counts as breaking. Note that a release can turn a passing build red without being
-breaking, when the new failure reflects a real defect; that is staged through `v1.<minor>`
-rather than deferred to a major.
+Tagged with semver (`v1.0.0`, `v1.1.0`, ...). One floating tag, `v1`, tracks the latest
+non-breaking release, and consumer repos pin to `@v1` for normal operation. A breaking change
+to inputs or job structure bumps to `v2`, and consumers migrate on their own schedule — see
+[ADR-0002](docs/adr/0002-breaking-means-the-call-not-the-build-outcome.md) for what counts as
+breaking.
+
+A release can turn a passing build red without being breaking, when the new failure reflects a
+real defect that was always there. Those are rolled out by pinning each consumer to the
+**immutable** `vX.Y.Z` tag, confirming it, and only then moving `v1` — after which every
+staging pin is returned to `@v1`. There is deliberately no moving `vX.Y` tag: staging wants
+the dependency frozen so the consumer's own change is the only variable, and a consumer left
+pinned stops receiving the centralized action bumps this repo exists to deliver.

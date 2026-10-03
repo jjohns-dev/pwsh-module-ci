@@ -27,7 +27,9 @@ Accepted — 2026-10-02
   - changing an input's default such that a consumer relying on the default gets materially different behavior;
   - renaming or removing a workflow output, or an artifact name a consumer consumes downstream.
 - We will **not** treat a change as breaking merely because it turns a passing build red, where the call itself remains valid and the new failure reflects a real defect in the consumer. A major bump there would let consumers opt out of a correctness fix indefinitely, which inverts the reason this repo is centralized.
-- We will stage every change that can alter a consumer's CI outcome behind the moving `v1.<minor>` tag, and move `v1` only once each consumer is confirmed green or deliberately fixed. This, not the version number, is the mechanism that controls blast radius.
+- We will stage every change that can alter a consumer's CI outcome by pinning consumers to the **immutable** patch tag (`vX.Y.Z`) while they migrate, and move `v1` only once each consumer is confirmed green or deliberately fixed. This sequencing, not the version number, is what controls blast radius.
+- We will treat a staging pin as temporary and self-clearing: the work that adopts it is responsible for repointing that consumer back to `@v1` once `v1` has moved.
+- We will **not** publish a moving `vX.Y` tag. Its only proposed use was staging, and staging wants the dependency frozen so that the consumer's own change is the single variable; a tag that moves underneath an in-flight migration works against that.
 - We will treat removal of an input as a **minor** when no consumer passes it, verified by inspecting every consumer repo at the time of removal, with that verification recorded in the pull request.
 - We will ship the removal of `enable-test-report`, and the result-verification step, as `v1.3.0`.
 
@@ -41,5 +43,6 @@ Accepted — 2026-10-02
 - **Negative** — "materially different behavior" from a changed default is a judgement call with no test attached, and will eventually be argued about.
 - **Negative** — correctness of the unused-input rule rests on a point-in-time scan. A consumer that starts passing a removed input between the scan and the `v1` move breaks with a resolution error, and nothing here would catch it.
 - **Negative** — ADR-0001 now contains statements that are false on their face. Its Status section flags them and links here, but a reader who quotes ADR-0001 without reading its Status will get the old rule.
-- **Neutral** — the moving `v1.<minor>` tag becomes load-bearing rather than a convenience, since it is now the only staging mechanism between merge and fleet-wide rollout.
+- **Negative** — a staging pin is debt. A consumer left on `vX.Y.Z` silently stops receiving the centralized action bumps this repo exists to deliver, which is the original problem ADR-0001 solved. Nothing here detects it; the obligation to repoint rests on whoever remembers.
+- **Neutral** — adopting an outcome-changing release is therefore a two-step migration per consumer — pin and verify, then repoint — rather than a single tag move. That is slower on purpose.
 - **Neutral** — these rules bind every future change here, not just `enable-test-report`; the verification and the staging are standing obligations.
