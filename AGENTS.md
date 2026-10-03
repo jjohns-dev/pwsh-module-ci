@@ -49,11 +49,31 @@ Semver tags plus one moving tag, `v1`, tracking the latest non-breaking release.
 
 "Breaking" means the consumer's **call** stops working, not its **build** stops passing — see ADR-0002. Removing an input no consumer passes is a minor; removing one any consumer passes, or renaming a job (which silently un-gates branch protection), is a `v2`. A change that turns a wrongly-green build red is not breaking, and is staged through an immutable `vX.Y.Z` pin instead. Verify which you have by checking the six consumer repos, and record the result in the PR.
 
+### Cutting a release
+
+Nothing automates this. `release.yml` is a reusable workflow *for consumers*; it never runs here, and there is no tagging pipeline in this repo.
+
+Every existing tag is **annotated**, including `v1`. Keep it that way — the ref-SHA gotcha below assumes it.
+
+```pwsh
+git tag -a v1.3.0 -m 'v1.3.0' <commit>
+git push origin v1.3.0
+```
+
+Moving `v1` is a separate, deliberate act performed only after every consumer is confirmed, never bundled with cutting the release:
+
+```pwsh
+git tag -fa v1 -m 'v1 -> v1.3.0' 'v1.3.0^{commit}'
+git push --force origin v1
+```
+
 ## Validating a change
 
 `actionlint` checks workflow syntax, expression validity, and (via shellcheck) `run:` blocks — it does **not** execute anything.
 
 `tests/Invoke-VerificationTest.ps1` covers the one `run:` block with real logic. It parses `ci.yml` and `release.yml`, pulls out the `Verify Pester results` step body, asserts the two have not drifted, then runs that body against the fixtures in `tests/fixtures/`. Extracting from the YAML rather than committing a copy is deliberate: the code under test is then the code that ships, by construction.
+
+Run it with `pwsh -File tests/Invoke-VerificationTest.ps1`. It needs `powershell-yaml`, which `self-test.yml` installs at a pinned version.
 
 Every fixture asserts a **direction**. Half must make the step fail and half must leave it quiet, because a check that never fires is indistinguishable from one that passes. When you add a case, add it to whichever half is thinner.
 
