@@ -4,6 +4,13 @@
 
 Accepted — 2026-09-14
 
+Amended by [ADR-0002](0002-breaking-means-the-call-not-the-build-outcome.md) — 2026-10-02. Two statements below are now inaccurate and are deliberately left in place, because an accepted ADR is an append-only record:
+
+- The Context bullet listing `enable-test-report` among the inputs consumers require. That input was removed in `v1.3.0`; no consumer ever passed it.
+- The Decision bullet reading "a breaking change to inputs or job structure bumps to `v2`". ADR-0002 defines what breaking means — the consumer's call ceasing to work, not its build ceasing to pass — and names job renames as breaking while excluding correctness fixes that turn a wrongly-green build red.
+
+Everything else in this record still stands, including the centralization decision itself.
+
 ## Context
 
 - Seven PowerShell module repos (`PS.Log`, `PS.GHOps`, `PS.GitHub`, `PS.SSL`, `PS.DCU`, `AWSAutomation`, `SecurityTools`) each ran their own near-identical Actions workflows for build, analyze, test, and release.

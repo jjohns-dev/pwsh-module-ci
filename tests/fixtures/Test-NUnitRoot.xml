@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!-- Pester configured with NUnitXml. The counts live on differently named
+     attributes, so every count would read as 0 and the step would report a
+     false "no tests collected" rather than naming the real problem. -->
+<test-results name="Pester" total="432" errors="0" failures="0" time="48.9102">
+  <test-suite name="Module.tests.ps1" result="Success" />
+</test-results>

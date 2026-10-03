@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!-- Non-numeric count attributes. A bare [int] cast throws a conversion error
+     here; the ($x -as [int]) form yields 0, which fails cleanly as "no tests
+     collected" instead of crashing the step. -->
+<testsuites name="Pester" tests="N/A" errors="" failures="" time="0.0000">
+  <testsuite name="Module.tests.ps1" tests="N/A" errors="" failures="" />
+</testsuites>

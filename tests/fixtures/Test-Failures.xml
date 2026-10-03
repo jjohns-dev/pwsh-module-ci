@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!-- Genuine assertion failures. This step must stay quiet: the consumer's own
+     psake gate already fails the Pester step on FailedCount, and gating it
+     twice produces a second, confusing error for one cause. -->
+<testsuites name="Pester" tests="432" errors="0" failures="3" time="47.1180">
+  <testsuite name="Module.tests.ps1" tests="432" errors="0" failures="3" time="47.1180">
+    <testcase name="Returns the expected object" classname="Module" time="0.0900">
+      <failure message="Expected 3, but got 4." />
+    </testcase>
+  </testsuite>
+</testsuites>
