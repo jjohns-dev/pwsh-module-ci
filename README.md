@@ -107,5 +107,7 @@ for the latest non-breaking release, and a per-minor `v1.<minor>` that picks up 
 within that minor without taking the next minor's behavior change. Consumer repos pin to
 `@v1` for normal operation, and to a `@v1.<minor>` when staging a change that alters CI
 outcomes. A breaking change to inputs or job structure bumps to `v2`, and consumers migrate
-on their own schedule — see [ADR-0002](docs/adr/0002-removing-an-unused-input-is-a-minor-release.md)
-for what counts as breaking.
+on their own schedule — see [ADR-0002](docs/adr/0002-breaking-means-the-call-not-the-build-outcome.md)
+for what counts as breaking. Note that a release can turn a passing build red without being
+breaking, when the new failure reflects a real defect; that is staged through `v1.<minor>`
+rather than deferred to a major.

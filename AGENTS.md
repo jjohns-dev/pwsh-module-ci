@@ -47,7 +47,7 @@ The three reusable workflows are `on: workflow_call` only. `actionlint.yml` and 
 
 Semver tags, plus two kinds of moving tag: `v1` (latest non-breaking) and `v1.<minor>` (patch fixes within that minor). Consumers normally pin `@v1` and move to `@v1.<minor>` only while staging a change.
 
-"Breaking" means *observable by a consumer at its current pin*, not any change to the input surface — see ADR-0002. Removing an input that no consumer passes is a minor; removing one that any consumer passes is a `v2`. Verify which it is by checking the six consumer repos, and record the result in the PR.
+"Breaking" means the consumer's **call** stops working, not its **build** stops passing — see ADR-0002. Removing an input no consumer passes is a minor; removing one any consumer passes, or renaming a job (which silently un-gates branch protection), is a `v2`. A change that turns a wrongly-green build red is not breaking, and is staged through `v1.<minor>` instead. Verify which you have by checking the six consumer repos, and record the result in the PR.
 
 ## Validating a change
 
