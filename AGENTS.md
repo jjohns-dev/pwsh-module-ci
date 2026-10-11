@@ -14,8 +14,8 @@ Consumers pin to the moving `@v1` tag, so anything merged here and tagged reache
 
 Consequences for how you work:
 
-- Never move the `v1` tag as part of landing a change. Land the change, cut `vX.Y.Z` plus the moving `vX.Y`, and move `v1` only after consumers are confirmed.
-- Treat a change that can flip a consumer's CI from green to red as a rollout, not a commit. Pin one consumer to `@vX.Y` first.
+- Never move the `v1` tag as part of landing a change. Land the change, cut `vX.Y.Z`, and move `v1` only after consumers are confirmed.
+- Treat a change that can flip a consumer's CI from green to red as a rollout, not a commit. Pin consumers to the immutable `@vX.Y.Z` first.
 - Verify a behavior change in **both** directions: that it fires when it should *and* stays quiet when it should. A check that never fires looks identical to a check that passes.
 
 ## Layout
@@ -63,9 +63,23 @@ git push origin v1.3.0
 Moving `v1` is a separate, deliberate act performed only after every consumer is confirmed, never bundled with cutting the release:
 
 ```pwsh
-git tag -fa v1 -m 'v1 -> v1.3.0' 'v1.3.0^{commit}'
+git fetch origin --tags --force
+git rev-parse 'v1.3.1^{commit}'   # confirm the target before moving
+git tag -fa v1 -m 'v1 -> v1.3.1' 'v1.3.1^{commit}'
 git push --force origin v1
+git ls-remote origin 'refs/tags/v1^{}'   # must show the target commit
 ```
+
+Two tag rulesets block updating and deleting tags, and their targets do not overlap (ADR-0003):
+
+| Ruleset | Covers | Bypass |
+| ------- | ------ | ------ |
+| `protect-release-tags` | `v*` excluding `v*.*.*`, i.e. `v1` | repository admin |
+| `protect-version-tags` | `v*.*.*` | none, owner included |
+
+The `v1` force-push must therefore come from an admin; anyone else gets `GH013: Cannot update this protected ref`. Do not disable either ruleset or widen a bypass to get a push through.
+
+A `vX.Y.Z` tag can never be moved or deleted. If one is cut on the wrong commit, cut the next patch version instead, check no consumer is pinned to the bad one, and never move `v1` onto it.
 
 ## Validating a change
 
@@ -85,6 +99,7 @@ The workflow pins actionlint `1.7.12` with a SHA256 check. Match that version lo
 
 - **`#Requires -Modules` silently discards a script's exit code under `pwsh -File`.** A script that calls `exit 1` exits `0`, so a CI gate invoking it is permanently green. `#Requires -Version` is unaffected, and `pwsh -Command "& ./script.ps1"` propagates correctly. `tests/Invoke-VerificationTest.ps1` therefore uses `Import-Module` and says so in its `.NOTES`; do not "correct" it back to the house `#Requires` convention. Verified on PowerShell 7.6.6.
 - **Under `shell: pwsh`, a step exits with whatever `$LASTEXITCODE` holds.** GitHub invokes the script as `pwsh -command ". '<file>'"`, so a stale non-zero `$LASTEXITCODE` left by any earlier native call fails the step even when the script itself succeeded. `pwsh -File` does not behave this way, so it passes locally and fails in CI. End any script that shells out with an explicit `exit 0`.
+- **A tag pattern that matches `v1` freezes it along with the version tags.** `protect-release-tags` originally matched all of `refs/tags/v*` with no bypass, so nobody could move `v1`, owner included. That went unnoticed for a month because nothing needed to move it. It was split on 2026-10-11 into the two non-overlapping rulesets above. If you change either ruleset's include or exclude, check that every tag still matches exactly one: GitHub's docs do not say whether a bypass in one ruleset exempts the actor from an overlapping one. `/rules/branches/{branch}` reports the rules on a branch, but `/rules/tags/{tag}` returns 404, so check the patterns against `git tag --list` with fnmatch instead.
 - **An annotated tag's ref SHA is not its commit SHA.** `git rev-parse v1` and the GitHub refs API both return the tag *object*; `git log` quietly dereferences to the commit. Use `git rev-parse 'v1^{commit}'` when you mean the commit, and do not "fix" a tag SHA in prose without checking which one it is.
 
 - **YAML block scalars cannot carry a PowerShell here-string.** A here-string's closing delimiter (`'@`) must sit at column 0, which terminates the block scalar. Build multi-line strings with an array and `-join` instead.
