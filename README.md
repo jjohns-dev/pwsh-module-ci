@@ -98,6 +98,9 @@ Consumers must therefore configure Pester with `TestResult.OutputFormat = 'JUnit
 the root element it found, and `dorny/test-reporter`'s `java-junit` reporter cannot parse
 NUnit-format XML either. All six consumers already emit `JUnitXml`.
 
+The verification step is the gate; the `dorny/test-reporter` step is display only and keeps
+`fail-on-error: false` / `fail-on-empty: false`.
+
 ### Minimum test count
 
 A suite can also shrink with `errors = 0`: a test-file glob that stops matching, a file moved
@@ -111,6 +114,9 @@ jobs:
     uses: jjohns-dev/pwsh-module-ci/.github/workflows/ci.yml@v1
     with:
       min-tests: 430
+    permissions:
+      contents: read
+      checks: write
 ```
 
 `min-tests` is a floor, not an exact count, so adding tests never fails a run. Set it about
@@ -118,8 +124,12 @@ jobs:
 It catches a large drop rather than a single lost file, and it only stays useful if you raise
 it as the suite grows.
 
-The verification step is the gate; the `dorny/test-reporter` step is display only and keeps
-`fail-on-error: false` / `fail-on-empty: false`.
+The floor is compared against each result file separately, so it assumes one `Test-*.xml`
+per run, which is what every current consumer writes.
+
+The root `tests` count includes tests excluded by `Filter.ExcludeTag`; Pester reports them in
+the root `disabled` attribute without a `<testcase>` element. A floor therefore does not catch
+a filter that starts excluding more of the suite.
 
 ## Versioning
 

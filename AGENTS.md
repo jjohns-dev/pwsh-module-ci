@@ -93,6 +93,8 @@ Every fixture asserts a **direction**. Half must make the step fail and half mus
 
 Neither gate covers a step's `if:` condition — that is orchestration, not script logic, and needs a real run on a branch with an earlier step deliberately failing.
 
+Nor do they cover the step's `env:` block. The harness sets `MIN_TESTS` itself and runs only the `run:` body, so whether `inputs.min-tests` actually reaches the step is proven only by a consumer run that sets the input.
+
 The workflow pins actionlint `1.7.12` with a SHA256 check. Match that version locally rather than installing latest.
 
 ## Gotchas that have bitten here
