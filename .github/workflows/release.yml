@@ -9,11 +9,6 @@ on:
         required: false
         type: string
         default: 'Artifacts'
-      min-tests:
-        description: 'Fail when a Pester result file collects fewer tests than this; 0 disables the check'
-        required: false
-        type: number
-        default: 0
 
 permissions:
   contents: write
@@ -46,8 +41,8 @@ jobs:
         # A step that never started reports outcome 'skipped', not '' -- measured,
         # not inferred. Do not rewrite this as a positive test; see AGENTS.md.
         if: always() && steps.pester.outcome != 'skipped'
-        env:
-          MIN_TESTS: ${{ inputs.min-tests }}
+        # No MIN_TESTS here: the floor is a ci.yml input only, so a consumer sets
+        # it once. A release is cut from a commit that already passed ci.yml.
         run: |
           $ErrorActionPreference = 'Stop'
 

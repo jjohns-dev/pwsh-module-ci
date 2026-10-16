@@ -72,8 +72,8 @@ jobs:
 ```
 
 `os-matrix` (ci.yml) and `psscriptanalyzer-settings-path` (pssa-sarif.yml) are optional
-`with:` inputs — omit them to use the defaults, which match most repos. `min-tests` (ci.yml,
-release.yml) is covered under [Minimum test count](#minimum-test-count).
+`with:` inputs — omit them to use the defaults, which match most repos. `min-tests` (ci.yml) is
+covered under [Minimum test count](#minimum-test-count).
 
 `artifact-name` (release.yml) sets the uploaded build artifact's display name — default
 `'Artifacts'`. Set it to something like `'MyModule-${{ github.ref_name }}'` in the consumer
@@ -105,8 +105,10 @@ The verification step is the gate; the `dorny/test-reporter` step is display onl
 
 A suite can also shrink with `errors = 0`: a test-file glob that stops matching, a file moved
 outside `Run.Path`, or a `-ForEach` data source that shrinks rather than empties. To catch
-that, pass the optional `min-tests` input to `ci.yml` or `release.yml`. The run then fails
-when a result file's root `tests` count is below it. The default, `0`, disables the check.
+that, pass the optional `min-tests` input to `ci.yml`. The run then fails when a result
+file's root `tests` count is below it. The default, `0`, disables the check. `release.yml`
+does not take the input: a release is cut from a commit that already passed `ci.yml`, so the
+floor is set in one place.
 
 ```yaml
 jobs:
