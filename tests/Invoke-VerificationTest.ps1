@@ -44,6 +44,9 @@ $cases = @(
     @{ Description = 'NUnit root element'; Fixture = 'Test-NUnitRoot.xml'; ShouldFail = $true }
     @{ Description = 'malformed count attributes'; Fixture = 'Test-MalformedCounts.xml'; ShouldFail = $true }
     @{ Description = 'no result file at all'; Fixture = $null; ShouldFail = $true }
+    @{ Description = 'below min-tests floor'; Fixture = 'Test-Healthy.xml'; MinTests = 433; ShouldFail = $true }
+    @{ Description = 'exactly at min-tests floor'; Fixture = 'Test-Healthy.xml'; MinTests = 432; ShouldFail = $false }
+    @{ Description = 'min-tests 0 disables the floor'; Fixture = 'Test-Healthy.xml'; MinTests = 0; ShouldFail = $false }
 )
 
 #endregion ====================================================================
@@ -118,6 +121,9 @@ try {
             Copy-Item @copyParams
         }
 
+        # STANDS IN FOR THE STEP'S env: BLOCK, WHICH THIS HARNESS DOES NOT PARSE;
+        # A CASE WITHOUT MinTests LEAVES IT UNSET
+        $env:MIN_TESTS = $case.MinTests
         Push-Location -Path $caseRoot
         try {
             $output = & pwsh -NoProfile -File $stepScript 2>&1 | Out-String
@@ -125,6 +131,7 @@ try {
         }
         finally {
             Pop-Location
+            $env:MIN_TESTS = $null
         }
 
         if ($stepFailed -eq $case.ShouldFail) {

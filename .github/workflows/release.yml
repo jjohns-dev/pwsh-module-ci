@@ -41,6 +41,8 @@ jobs:
         # A step that never started reports outcome 'skipped', not '' -- measured,
         # not inferred. Do not rewrite this as a positive test; see AGENTS.md.
         if: always() && steps.pester.outcome != 'skipped'
+        # No MIN_TESTS here: the floor is a ci.yml input only, so a consumer sets
+        # it once. A release is cut from a commit that already passed ci.yml.
         run: |
           $ErrorActionPreference = 'Stop'
 
@@ -48,6 +50,9 @@ jobs:
           if ($files.Count -eq 0) {
               throw 'No Pester result file was produced under Artifacts/.'
           }
+
+          # An unset MIN_TESTS reads as 0, which disables the floor check below.
+          $minTests = [int]($env:MIN_TESTS -as [int])
 
           $problems = @()
 
@@ -82,6 +87,11 @@ jobs:
 
               if ($tests -eq 0) {
                   $problems += ('{0}: no tests were collected.' -f $f.Name)
+              }
+              # A suite can shrink without any discovery error: a glob that stops
+              # matching, a file moved out of Run.Path, a -ForEach source that shrinks.
+              elseif ($tests -lt $minTests) {
+                  $problems += ('{0}: {1} tests collected, below the min-tests floor of {2}; part of the suite is no longer being collected.' -f $f.Name, $tests, $minTests)
               }
 
               # $failures is reported above but not gated here: a genuine test
