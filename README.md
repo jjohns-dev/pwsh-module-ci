@@ -72,7 +72,8 @@ jobs:
 ```
 
 `os-matrix` (ci.yml) and `psscriptanalyzer-settings-path` (pssa-sarif.yml) are optional
-`with:` inputs — omit them to use the defaults, which match most repos.
+`with:` inputs — omit them to use the defaults, which match most repos. `min-tests` (ci.yml,
+release.yml) is covered under [Minimum test count](#minimum-test-count).
 
 `artifact-name` (release.yml) sets the uploaded build artifact's display name — default
 `'Artifacts'`. Set it to something like `'MyModule-${{ github.ref_name }}'` in the consumer
@@ -83,7 +84,7 @@ workflow to preserve a repo-specific naming convention.
 `ci.yml` verifies the JUnit XML that the `Test` task writes, after the Pester step and
 independently of the consumer's own psake gate. The run fails if no result file was
 produced, if the root `<testsuites>` element reports `errors > 0`, or if it reports
-`tests == 0`.
+`tests == 0`. `release.yml` carries the identical step.
 
 This exists because a discovery or container error attaches to the *container* rather than
 to a test, so a psake gate written as `if ($TestResults.FailedCount -gt 0)` leaves
@@ -96,6 +97,26 @@ Consumers must therefore configure Pester with `TestResult.OutputFormat = 'JUnit
 `NUnitXml` is not supported — the verification step fails with an explicit message naming
 the root element it found, and `dorny/test-reporter`'s `java-junit` reporter cannot parse
 NUnit-format XML either. All six consumers already emit `JUnitXml`.
+
+### Minimum test count
+
+A suite can also shrink with `errors = 0`: a test-file glob that stops matching, a file moved
+outside `Run.Path`, or a `-ForEach` data source that shrinks rather than empties. To catch
+that, pass the optional `min-tests` input to `ci.yml` or `release.yml`. The run then fails
+when a result file's root `tests` count is below it. The default, `0`, disables the check.
+
+```yaml
+jobs:
+  validate:
+    uses: jjohns-dev/pwsh-module-ci/.github/workflows/ci.yml@v1
+    with:
+      min-tests: 430
+```
+
+`min-tests` is a floor, not an exact count, so adding tests never fails a run. Set it about
+10% below the current count, using the lowest count across your runner OSes when they differ.
+It catches a large drop rather than a single lost file, and it only stays useful if you raise
+it as the suite grows.
 
 The verification step is the gate; the `dorny/test-reporter` step is display only and keeps
 `fail-on-error: false` / `fail-on-empty: false`.
