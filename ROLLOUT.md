@@ -129,9 +129,14 @@ CONTEXT YOU DO NOT NEED TO REDISCOVER (verify anything you restate)
 - That workflow accepts a `min-tests` input (fail when a Pester result file collects
   fewer tests than this; 0 disables). This repo currently passes nothing, so there is no
   floor. Issue #<N> tracks setting one.
-- The shared workflow runs an independent "Verify Pester results" step because Pester
-  container and discovery errors do not increment FailedCount and are invisible to the
-  psake gate.
+- Pester container and discovery errors do not increment FailedCount; they land in the
+  JUnit root `errors` attribute instead. A psake gate reading FailedCount misses them.
+  This repo's Test task almost certainly gates on $TestResults.Result, which DOES catch
+  them - 9 of the 10 module repos do, PS-MCS/PS.ETL being the only exception. Check
+  which form this repo uses before writing anything about it; do not assume.
+- The shared workflow still runs an independent "Verify Pester results" step, for the
+  min-tests floor, for detecting a missing result file, and so the check does not depend
+  on each consumer's harness staying correct.
 - Tests/Common/Help.Tests.ps1 is a copy-pasted template shared across eight repos and
   has known defects, tracked at jjohns-dev/pwsh-module-ci#17 and locally at #<N>. Do not
   "fix" it as a side effect of writing this file.
