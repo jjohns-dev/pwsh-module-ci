@@ -13,8 +13,8 @@ Zero matching-help cases collected. Green because the tests do not exist.
 - [x] **PS.SSL** — [PS.SSL#71](https://github.com/jjohns-dev/PS.SSL/issues/71)
   Done 2026-10-27, merged as [PS.SSL#72](https://github.com/jjohns-dev/PS.SSL/pull/72). AST discovery binding, defects 1/2/3, `min-tests: 337`, and the vestigial `BuildHelpers` entry removed (#24). Floor confirmed against both legs: ubuntu `tests=375`, windows `tests=377`. **Still owes the PSDepend migration** — catch-up, tracked on #27.
 - [ ] **SecurityTools** — [SecurityTools#153](https://github.com/jjohns-dev/SecurityTools/issues/153)
-  **First, as a separate PR:** migrate `Build/build.ps1` off PSDepend to `Install-PSResource` (#27). Small and independent, and its `windows-latest` leg is what settles the `SkipPublisherCheck` question for the whole fleet.
-  Then #153 itself: same as PS.Log, **plus port the verify step** — the only repo without one, so it has no `min-tests` floor and no check independent of its own psake gate. Per-leg floor. Also affected by #23.
+  Same as PS.Log, **plus port the verify step** — the only repo without one, so it has no `min-tests` floor and no check independent of its own psake gate. Per-leg floors, since the legs differ enormously: ubuntu `tests=1227`, windows `tests=21`. Also affected by #23.
+  **The PSDepend migration did not go first here** — work on #153 had already started when that was decided, so it follows instead, as a separate PR after [SecurityTools#154](https://github.com/jjohns-dev/SecurityTools/pull/154) merges. #154 closes #153, so the migration is tracked on #27 rather than in this repo.
 
 ## Phase 2 — The silent ones
 
