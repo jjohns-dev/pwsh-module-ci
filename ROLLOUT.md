@@ -13,7 +13,8 @@ Zero matching-help cases collected. Green because the tests do not exist.
 - [ ] **PS.SSL** — [PS.SSL#71](https://github.com/jjohns-dev/PS.SSL/issues/71)
   **In progress 2026-10-27.** Same as PS.Log. Floor semantics affected by #23 — uses `Describe -Skip:` on openssl and network reachability. Its vestigial `BuildHelpers` entry (#24) is a free one-line deletion while the repo is open.
 - [ ] **SecurityTools** — [SecurityTools#153](https://github.com/jjohns-dev/SecurityTools/issues/153)
-  Same, **plus add the verify step** — the only repo without one, so container and discovery errors still pass green. Per-leg floor. Also affected by #23.
+  **First, as a separate PR:** migrate `Build/build.ps1` off PSDepend to `Install-PSResource` (#27). Small and independent, and its `windows-latest` leg is what settles the `SkipPublisherCheck` question for the whole fleet.
+  Then #153 itself: same as PS.Log, **plus port the verify step** — the only repo without one, so it has no `min-tests` floor and no check independent of its own psake gate. Per-leg floor. Also affected by #23.
 
 ## Phase 2 — The silent ones
 
@@ -80,6 +81,7 @@ Gated on Phases 1–2.
 
 ## Recurring rules for every PR in Phases 1–3
 
+- **Migrate the repo off PSDepend first, in its own PR** (#27). `Import-PowerShellDataFile` on `Build/depend.psd1`, then `Install-PSResource` per entry. All ten `depend.psd1` files are mechanically identical, so it is the same change everywhere. Separate PR, before the Help.Tests work, so a module-install failure surfaces against a three-line diff instead of a large one. `PS.Log` and `PS.SSL` are already past this point and are tracked on #27 instead.
 - **Fix first, measure second, set the floor third.** A floor derived before the fix records the defective count as the baseline, and can never trip on a regression back to it.
 - **Acceptance is the mutation, not the count.** Make the thing you are guarding fail, confirm red, revert. A check that never fires is indistinguishable from one that passes.
 - **Verify floors in both directions.** An impossible floor must fail the run *and* leave the result XML uploaded; a correct floor must stay quiet.
