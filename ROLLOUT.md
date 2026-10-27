@@ -11,7 +11,7 @@ Zero matching-help cases collected. Green because the tests do not exist.
 - [x] **PS.Log** — [PS.Log#54](https://github.com/jjohns-dev/PS.Log/issues/54)
   Done 2026-10-26, merged as [PS.Log#55](https://github.com/jjohns-dev/PS.Log/pull/55). AST discovery binding, defects 1/2/3, `min-tests: 87`. The implementing agent also caught two errors in its brief — see the corrections on #17.
 - [ ] **PS.SSL** — [PS.SSL#71](https://github.com/jjohns-dev/PS.SSL/issues/71)
-  Same as PS.Log. Floor semantics affected by #23 — uses `Describe -Skip:` on openssl and network reachability.
+  **In progress 2026-10-27.** Same as PS.Log. Floor semantics affected by #23 — uses `Describe -Skip:` on openssl and network reachability. Its vestigial `BuildHelpers` entry (#24) is a free one-line deletion while the repo is open.
 - [ ] **SecurityTools** — [SecurityTools#153](https://github.com/jjohns-dev/SecurityTools/issues/153)
   Same, **plus add the verify step** — the only repo without one, so container and discovery errors still pass green. Per-leg floor. Also affected by #23.
 
