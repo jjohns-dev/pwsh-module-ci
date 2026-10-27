@@ -10,8 +10,8 @@ Zero matching-help cases collected. Green because the tests do not exist.
 
 - [x] **PS.Log** — [PS.Log#54](https://github.com/jjohns-dev/PS.Log/issues/54)
   Done 2026-10-26, merged as [PS.Log#55](https://github.com/jjohns-dev/PS.Log/pull/55). AST discovery binding, defects 1/2/3, `min-tests: 87`. The implementing agent also caught two errors in its brief — see the corrections on #17.
-- [ ] **PS.SSL** — [PS.SSL#71](https://github.com/jjohns-dev/PS.SSL/issues/71)
-  **In progress 2026-10-27.** Same as PS.Log. Floor semantics affected by #23 — uses `Describe -Skip:` on openssl and network reachability. Its vestigial `BuildHelpers` entry (#24) is a free one-line deletion while the repo is open.
+- [x] **PS.SSL** — [PS.SSL#71](https://github.com/jjohns-dev/PS.SSL/issues/71)
+  Done 2026-10-27, merged as [PS.SSL#72](https://github.com/jjohns-dev/PS.SSL/pull/72). AST discovery binding, defects 1/2/3, `min-tests: 337`, and the vestigial `BuildHelpers` entry removed (#24). Floor confirmed against both legs: ubuntu `tests=375`, windows `tests=377`. **Still owes the PSDepend migration** — catch-up, tracked on #27.
 - [ ] **SecurityTools** — [SecurityTools#153](https://github.com/jjohns-dev/SecurityTools/issues/153)
   **First, as a separate PR:** migrate `Build/build.ps1` off PSDepend to `Install-PSResource` (#27). Small and independent, and its `windows-latest` leg is what settles the `SkipPublisherCheck` question for the whole fleet.
   Then #153 itself: same as PS.Log, **plus port the verify step** — the only repo without one, so it has no `min-tests` floor and no check independent of its own psake gate. Per-leg floor. Also affected by #23.
