@@ -8,8 +8,8 @@ Authoritative detail lives in the linked issues — this is an index and an orde
 
 Zero matching-help cases collected. Green because the tests do not exist.
 
-- [ ] **PS.Log** — [PS.Log#54](https://github.com/jjohns-dev/PS.Log/issues/54)
-  Discovery+AST fix, defects 1/2/3, floor. One PR, floor measured last.
+- [x] **PS.Log** — [PS.Log#54](https://github.com/jjohns-dev/PS.Log/issues/54)
+  Done 2026-10-26, merged as [PS.Log#55](https://github.com/jjohns-dev/PS.Log/pull/55). AST discovery binding, defects 1/2/3, `min-tests: 87`. The implementing agent also caught two errors in its brief — see the corrections on #17.
 - [ ] **PS.SSL** — [PS.SSL#71](https://github.com/jjohns-dev/PS.SSL/issues/71)
   Same as PS.Log. Floor semantics affected by #23 — uses `Describe -Skip:` on openssl and network reachability.
 - [ ] **SecurityTools** — [SecurityTools#153](https://github.com/jjohns-dev/SecurityTools/issues/153)
@@ -49,7 +49,7 @@ Gated on Phases 1–3.
 Gated on Phases 1–2.
 
 - [ ] **pwsh-module-ci** — [#24](https://github.com/jjohns-dev/pwsh-module-ci/issues/24)
-  Converge `PS.Log` and `PS.ETL` off `BuildHelpers`, drop `PS.SSL`'s vestigial entry. Prep for #20 — it removes one known `Build/` difference before the classification work starts. The PS.ETL half must wait for PS-MCS/PS.ETL#22.
+  Converge `PS.Log` and `PS.ETL` off `BuildHelpers`, drop `PS.SSL`'s vestigial entry. Prep for #20 — it removes one known `Build/` difference before the classification work starts. **`PS.Log` done** 2026-10-26 ([PS.Log#56](https://github.com/jjohns-dev/PS.Log/pull/56), merged). `PS.SSL` is a one-line `depend.psd1` deletion; the `PS.ETL` half must wait for PS-MCS/PS.ETL#22.
 - [ ] **pwsh-module-ci** — [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20)
   Stop duplicating `Build/` **and** `Tests/Common/`. Diff the test template only after Phase 1–2 lands, or you classify drift against a moving baseline.
 
@@ -86,7 +86,7 @@ Gated on Phases 1–2.
 
 ## Along the way: AGENTS.md for three repos
 
-- [ ] **PS.Log**
+- [x] **PS.Log** — written in [PS.Log#55](https://github.com/jjohns-dev/PS.Log/pull/55), kept current in [#56](https://github.com/jjohns-dev/PS.Log/pull/56)
 - [ ] **PS.SSL**
 - [ ] **PS.DCU**
 
