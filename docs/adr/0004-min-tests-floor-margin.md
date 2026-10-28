@@ -4,7 +4,7 @@
 
 Accepted — 2026-10-28
 
-Applies to floors derived from this date forward. The six floors derived before it are deliberately **not** back-ported; see Consequences.
+Applies to every floor derived from this date forward. Existing floors move to it opportunistically rather than in a dedicated sweep; see Consequences.
 
 ## Context
 
@@ -29,7 +29,8 @@ Applies to floors derived from this date forward. The six floors derived before 
 ## Consequences
 
 - Every floor becomes materially tighter. `ArcGISEnterprise` goes from a 189-test blind spot to 10, `SecurityTools` from 107 to 10.
-- **The six floors derived before this date are not back-ported.** They remain at 90% until jjohns-dev/pwsh-module-ci#23 re-derives them as part of its own staged rollout, because that issue changes the floor's *input* from `tests` to `tests - disabled` and touching the same numbers twice is wasted work. Until then the documented rule and the deployed values deliberately disagree. **Do not "fix" an existing floor to match this ADR** — it will be re-derived with the #23 rollout.
+- **Existing floors move opportunistically, not in a dedicated sweep.** A repo's floor is re-derived under this formula the next time a pull request touches that repo's floor for any reason. There is no separate back-porting exercise, because re-deriving a floor costs a measure-and-verify cycle and bundling it with work already in flight is free. jjohns-dev/pwsh-module-ci#23 picks up any stragglers when it changes the floor's input from `tests` to `tests - disabled`.
+- **So the documented rule and the deployed values will disagree for a while, by design.** A repo still sitting at the old 90% convention is not a bug and does not need an issue filed against it. Check the repo's last floor-touching pull request before concluding otherwise.
 - It still does not catch a single small test file dropping out. A six-test unit file vanishing stays under a margin of 10. The floor is a blunt instrument for catastrophic collection failure; granular detection needs a different mechanism, such as a committed expected-count, and squeezing the floor further is the wrong tool.
 - A two-term rule is marginally more likely to be misremembered than a one-term rule. The mitigation is that it is written here and pointed at from `docs/shared-ci-standards.md`, rather than re-derived from memory each time.
 - Deliberate test removal now reddens CI sooner, since there is less slack to absorb it. That is intended: the floor update belongs in the same pull request as the removal.
