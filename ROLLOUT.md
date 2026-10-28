@@ -23,8 +23,10 @@ Counts already look correct, so nothing will surface these on their own.
 
 All three issue bodies were corrected on 2026-10-28 before any work started: each was missing the `$_ -and` null guard, and all three banners pointed at a comment for the PSDepend detail. Defect counts went from three to four.
 
-- [ ] **AWSAutomation** — [AWSAutomation#97](https://github.com/jjohns-dev/AWSAutomation/issues/97)
-  Reference implementation others port from. **Only repo with an existing floor (560) — must be re-derived in the same PR.** Also the only repo where the link test is **live rather than dormant**: `Edit-AWSProfile` and `Get-WindowsDisk` declare real URLs, so CI makes two requests to `docs.aws.amazon.com` on every run, on both legs.
+- [x] **AWSAutomation** — [AWSAutomation#97](https://github.com/jjohns-dev/AWSAutomation/issues/97) and [#100](https://github.com/jjohns-dev/AWSAutomation/issues/100), both closed
+  Reference implementation others port from. Three PRs, all merged 2026-10-28: [#98](https://github.com/jjohns-dev/AWSAutomation/pull/98) PSDepend migration (`dbcd482`), [#99](https://github.com/jjohns-dev/AWSAutomation/pull/99) the four defects with the floor re-derived 560 → **430** against 478 collected (`2f49d83`), and [#101](https://github.com/jjohns-dev/AWSAutomation/pull/101) floating the unversioned runtime dependencies (`110e246`).
+  The link test here was **live, not dormant** — `Edit-AWSProfile` and `Get-WindowsDisk` were making real calls to `docs.aws.amazon.com` on every run. That is now an offline shape check.
+  `ubuntu-latest` only, and zero `-Skip` usage, so #23 will not disturb its floor.
 - [ ] **ArcGISEnterprise** — [ArcGISEnterprise#143](https://github.com/PS-MCS/ArcGISEnterprise/issues/143)
   Four defects plus the floor is unset. Zero `Mandatory` coverage elsewhere in its tests. Zero `.LINK` across all 132 public functions, so its link test really is dormant.
 - [ ] **MCS** — [MCS#212](https://github.com/PS-MCS/MCS/issues/212)
@@ -75,6 +77,8 @@ Gated on Phases 1–2.
 
 - [ ] **PS.ETL** — [PS.ETL#22](https://github.com/PS-MCS/PS.ETL/issues/22)
   Pester 5.5.0 → 6.2.0 first, including the `CommandInfo` hang fix. Decoupled from #17, blocks nothing.
+- [ ] **AWSAutomation dependency policy** — recorded as ADR-0002 in that repo, 2026-10-28
+  Its 14 `AWS.Tools.*` modules and `ImportExcel` now resolve to `'latest'`; build tooling stays pinned. **Do not copy this to another repo without re-deriving it** — it turns on those modules being unversioned `RequiredModules`, which no other repo in the fleet has. The NuGet-range trap behind it is recorded on #27.
 
 ## Two sequencing traps
 
