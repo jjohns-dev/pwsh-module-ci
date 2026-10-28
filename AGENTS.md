@@ -29,6 +29,7 @@ Consequences for how you work:
 | `.github/workflows/self-test.yml` | This repo's own CI; exercises the shipped verification step |
 | `tests/` | Fixtures and the harness that runs them |
 | `docs/adr/` | Architecture Decision Records, Nygard format |
+| `docs/shared-ci-standards.md` | Which repo holds the reference version of each copy-pasted file, and the decisions already settled. Interim; #20 removes the need for it |
 | `README.md` | Consumer-facing usage and inputs |
 
 The three reusable workflows are `on: workflow_call` only. `actionlint.yml` and `self-test.yml` are the only workflows that run on this repo's own pushes and PRs.
