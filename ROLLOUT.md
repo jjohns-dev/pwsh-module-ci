@@ -12,9 +12,10 @@ Zero matching-help cases collected. Green because the tests do not exist.
   Done 2026-10-26, merged as [PS.Log#55](https://github.com/jjohns-dev/PS.Log/pull/55). AST discovery binding, defects 1/2/3, `min-tests: 87`. The implementing agent also caught two errors in its brief — see the corrections on #17.
 - [x] **PS.SSL** — [PS.SSL#71](https://github.com/jjohns-dev/PS.SSL/issues/71)
   Done 2026-10-27, merged as [PS.SSL#72](https://github.com/jjohns-dev/PS.SSL/pull/72). AST discovery binding, defects 1/2/3, `min-tests: 337`, and the vestigial `BuildHelpers` entry removed (#24). Floor confirmed against both legs: ubuntu `tests=375`, windows `tests=377`. **Still owes the PSDepend migration** — catch-up, tracked on #27.
-- [ ] **SecurityTools** — [SecurityTools#153](https://github.com/jjohns-dev/SecurityTools/issues/153) closed, **two PRs still owed**
+- [ ] **SecurityTools** — [SecurityTools#153](https://github.com/jjohns-dev/SecurityTools/issues/153) closed, **one PR still owed**
   Discovery binding and the verify step landed 2026-10-27 as [SecurityTools#154](https://github.com/jjohns-dev/SecurityTools/pull/154) — matching-help 0 → 165 cases, per-leg floors 1104 / 20, and all three no-result-file guards. Both failure paths verified in CI as separate claims. Its agent also taught the test to resolve `Get-KEVList`'s conditional `DynamicParam` block.
-  **Still outstanding:** the PSDepend migration (#27), then [SecurityTools#155](https://github.com/jjohns-dev/SecurityTools/issues/155) — defects 1/2/3 plus the missing `$_ -and` null guard, which were comment-only on #153 and so were not in #154's scope. #155 must re-derive the floors; deleting the mandatory-value test drops ubuntu below 1104.
+  The PSDepend migration landed 2026-10-27 as [SecurityTools#156](https://github.com/jjohns-dev/SecurityTools/pull/156) (`6eec42d`), **which answered the fleet-wide `SkipPublisherCheck` question** — see #27.
+  **Still outstanding:** [SecurityTools#155](https://github.com/jjohns-dev/SecurityTools/issues/155) — defects 1/2/3 plus the missing `$_ -and` null guard, which were comment-only on #153 and so were not in #154's scope. #155 must re-derive the floors; deleting the mandatory-value test drops ubuntu below 1104.
 
 ## Phase 2 — The silent ones
 
@@ -81,7 +82,7 @@ Gated on Phases 1–2.
 
 ## Recurring rules for every PR in Phases 1–3
 
-- **Migrate the repo off PSDepend first, in its own PR** (#27). `Import-PowerShellDataFile` on `Build/depend.psd1`, then `Install-PSResource` per entry. All ten `depend.psd1` files are mechanically identical, so it is the same change everywhere. Separate PR, before the Help.Tests work, so a module-install failure surfaces against a three-line diff instead of a large one. `PS.Log` and `PS.SSL` are already past this point and are tracked on #27 instead.
+- **Migrate the repo off PSDepend first, in its own PR** (#27). `Import-PowerShellDataFile` on `Build/depend.psd1`, then `Install-PSResource` per entry. All ten `depend.psd1` files are mechanically identical, so it is the same change everywhere. Separate PR, before the Help.Tests work, so a module-install failure surfaces against a three-line diff instead of a large one. `PS.Log` and `PS.SSL` are already past this point and are tracked on #27 instead. **`SecurityTools` has now done it** ([#156](https://github.com/jjohns-dev/SecurityTools/pull/156)), so the pattern is proven on both legs — including `windows-latest`, which settles `SkipPublisherCheck`. Two things to carry forward: a bare version string is an **exact** pin under `Install-PSResource`, not a minimum; and the loop assumes every `depend.psd1` entry is a plain version string, so confirm that per repo rather than assuming.
 - **Fix first, measure second, set the floor third.** A floor derived before the fix records the defective count as the baseline, and can never trip on a regression back to it.
 - **Acceptance is the mutation, not the count.** Make the thing you are guarding fail, confirm red, revert. A check that never fires is indistinguishable from one that passes.
 - **Verify floors in both directions.** An impossible floor must fail the run *and* leave the result XML uploaded; a correct floor must stay quiet.
