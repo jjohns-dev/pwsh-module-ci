@@ -31,8 +31,10 @@ All three issue bodies were corrected on 2026-10-28 before any work started: eac
   Two PRs, both merged 2026-10-28: [#145](https://github.com/PS-MCS/ArcGISEnterprise/pull/145) PSDepend migration (`9c0bc88`), and [#146](https://github.com/PS-MCS/ArcGISEnterprise/pull/146) the four defects plus the first floor at **1692** against 1,881 collected (`105b60a`).
   **It also pulled [#22](https://github.com/jjohns-dev/pwsh-module-ci/issues/22) forward** — link cases are now generated at discovery from `Get-Help`, so a command with no `.LINK` produces none. That dropped 2,013 → 1,881, i.e. 132 cases that could never fail. This repo is now ahead of the five that already merged the template without it.
   Also normalised the whole repo to LF (89 files, content-identity proven by an empty `git diff --ignore-cr-at-eol`). The `.git-blame-ignore-revs` follow-up landed as [#148](https://github.com/PS-MCS/ArcGISEnterprise/pull/148) (`45a2d48`), closing [#147](https://github.com/PS-MCS/ArcGISEnterprise/issues/147) — blame attribution verified to move off the renormalisation commit and back to the original authors.
-- [ ] **MCS** — [MCS#212](https://github.com/PS-MCS/MCS/issues/212)
-  Defect 3 plus the null guard; 1 and 2 already fixed. Deletion drops CrossPlatform 495 → 444, below the current floor of 445 — re-derive in the same PR. The body previously presented the delete-vs-keep decision as open; it is settled and now says so.
+- [x] **MCS** — [MCS#212](https://github.com/PS-MCS/MCS/issues/212), closed
+  Two PRs, both merged 2026-10-28: [#213](https://github.com/PS-MCS/MCS/pull/213) PSDepend migration (`60fc7de`), and [#214](https://github.com/PS-MCS/MCS/pull/214) the remaining defects plus the floor (`3e8fd71`). Defects 1 and 2 were already fixed here, so the scope was defect 3, the null guard, and the link change.
+  **Also pulled [#22](https://github.com/jjohns-dev/pwsh-module-ci/issues/22) forward**, as ArcGIS did. CrossPlatform went 495 → 444 (51 mandatory cases) → **410** (34 link cases), floor **369**. WindowsOnly unaffected at 136 / 122.
+  `#214` was rebased onto `main` after `#213` merged, so the 410 and the floor are measured under the merged `Install-PSResource` loop rather than inferred. Post-merge CI on `main` is green.
 
 ## Phase 3 — Make regressions visible
 
