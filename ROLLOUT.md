@@ -39,7 +39,9 @@ All three issue bodies were corrected on 2026-10-28 before any work started: eac
 ## Phase 3 — Make regressions visible
 
 - [ ] **pwsh-module-ci** — [#23](https://github.com/jjohns-dev/pwsh-module-ci/issues/23)
-  The floor counts skipped tests, so a mass-skip regression passes. **Also apply to `PS-MCS/mcssec-ops`.** Staged rollout via an immutable `vX.Y.Z` pin. Ideally lands before the two Phase 1 floors.
+  The floor counts skipped tests, so a mass-skip regression passes. **Also apply to `PS-MCS/mcssec-ops`.** Staged rollout via an immutable `vX.Y.Z` pin.
+  **Scope shrank 2026-10-28.** The margin question that used to live here is settled in [ADR-0004](docs/adr/0004-min-tests-floor-margin.md), so what remains is only the change of input from `tests` to `tests - disabled`.
+  **Blocked on one measurement:** `PS.SSL`'s `disabled` count has never been taken. Its skips are whole `Describe` blocks gated on openssl and network reachability, so its executed count could be well below 375 — and this change makes the floor measure executed, not collected. Measure before deriving.
 - [ ] **PS.GHOps** — [PS.GHOps#19](https://github.com/jjohns-dev/PS.GHOps/issues/19)
   Floor only. No `Help.Tests.ps1`, nothing to fix.
 - [ ] **PS.GitHub** — [PS.GitHub#37](https://github.com/jjohns-dev/PS.GitHub/issues/37)
@@ -70,12 +72,14 @@ Gated on Phases 1–2.
 - [ ] **pwsh-module-ci** — [#21](https://github.com/jjohns-dev/pwsh-module-ci/issues/21) — gated on #19
   Centralize SecurityTools CI. Current lean is a second reusable workflow rather than extending `ci.yml`.
 
-## Phase 7 — Deferred
+## Phase 7 — Link-case back-fill, four repos
 
-Gated on Phases 1–2.
+No longer deferred. Pulled forward into Phase 2 for both `PS-MCS` repos, because each was already editing the same `It` block and already re-deriving its floor, so the marginal cost was near zero.
 
 - [ ] **pwsh-module-ci** — [#22](https://github.com/jjohns-dev/pwsh-module-ci/issues/22)
-  Stop generating link-test cases for commands with no `.LINK`. Edits the same `It` block as Phases 1–2.
+  Stop generating link cases for commands with no `.LINK`. **Done in `ArcGISEnterprise` (132 cases removed) and `MCS` (34).** Outstanding in `PS.Log` (~6), `PS.SSL` (~15), `SecurityTools` (~65, it has one real `.LINK`) and `AWSAutomation` (~34, two real `.LINK`s).
+  Reference implementation is `MCS` after [#214](https://github.com/PS-MCS/MCS/pull/214) — URIs collected in `BeforeDiscovery` from `Get-Help`, bound with `-ForEach ... -AllowNullOrEmptyForEach`. **Source from `Get-Help`, not the AST**: the AST returns related-topic names alongside URIs, which would fail the scheme check.
+  **Each back-fill moves that repo's floor**, so re-derive it in the same PR under ADR-0004's formula.
 
 ## Runs on its own clock
 
@@ -86,15 +90,18 @@ Gated on Phases 1–2.
 
 ## Two sequencing traps
 
-**#22 edits the same `It` block as Phases 1–2.** Do it with them, or well after — never between, or the same block gets rebased twice.
+**#22 edits the same `It` block as the Phase 1–2 work.** Resolved for `ArcGISEnterprise` and `MCS` by doing it with them. For the remaining four, that block is now settled on `main`, so the back-fill is a clean single edit rather than a rebase hazard.
 
-**#23 changes floor semantics for the only two repos that use `-Skip`** (PS.SSL, SecurityTools). Everywhere else `tests` and executed counts are identical, so it makes no difference. This one is now **decided by events** — #23 did not land first, so both repos carry floors derived against `tests`, which includes skips, and both need re-deriving when #23 lands. The measured counts are recorded on #23. SecurityTools is the easy half (1 skipped on ubuntu, 0 on windows); **PS.SSL is the real exposure**, since its skips are whole `Describe` blocks gated on openssl and network reachability and its `disabled` counts were never measured.
+**#23 changes floor semantics for the only two repos that use `-Skip`** (PS.SSL, SecurityTools). Everywhere else `tests` and executed counts are identical, so it makes no difference. **Decided by events** — #23 did not land first, so both repos carry floors derived against `tests`, which includes skips, and both need re-deriving when it lands. The measured counts are on #23. SecurityTools is the easy half (1 skipped on ubuntu, 0 on windows); **PS.SSL is the real exposure**, and its `disabled` count is still unmeasured.
 
-## Recurring rules for every PR in Phases 1–3
+## Recurring rules for every PR from here on
 
-- **Migrate the repo off PSDepend first, in its own PR** (#27). `Import-PowerShellDataFile` on `Build/depend.psd1`, then `Install-PSResource` per entry. All ten `depend.psd1` files are identical in **shape** — every entry is a plain `Name = 'version'` string, confirmed across both orgs on 2026-10-27 — so it is the same edit everywhere. They are *not* identical in content; the pinned versions have drifted, and the table is on #20. Separate PR, before the Help.Tests work, so a module-install failure surfaces against a three-line diff instead of a large one. `PS.Log` and `PS.SSL` are already past this point and are tracked on #27 instead. **`SecurityTools` has now done it** ([#156](https://github.com/jjohns-dev/SecurityTools/pull/156)), so the pattern is proven on both legs — including `windows-latest`, which settles `SkipPublisherCheck`. One thing to carry forward: a bare version string is an **exact** pin under `Install-PSResource`, not a minimum.
-- **Fix first, measure second, set the floor third.** A floor derived before the fix records the defective count as the baseline, and can never trip on a regression back to it.
-- **Acceptance is the mutation, not the count.** Make the thing you are guarding fail, confirm red, revert. A check that never fires is indistinguishable from one that passes.
+- **Migrate the repo off PSDepend first, in its own PR** (#27). `Import-PowerShellDataFile` on `Build/depend.psd1`, then `Install-PSResource` per entry. All ten `depend.psd1` files are identical in **shape** — every entry is a plain `Name = 'version'` string — so it is the same edit everywhere. They are *not* identical in content; the pinned versions have drifted, and the table is on #20. Separate PR, before any test work, so a module-install failure surfaces against a three-line diff instead of a large one.
+  **Done in `SecurityTools`, `AWSAutomation`, `ArcGISEnterprise` and `MCS`. `PS.Log` and `PS.SSL` still owe it** — their Help.Tests work landed before this was decided, so they are catch-up, tracked on #27.
+  Carry forward: a bare version string is an **exact** pin under `Install-PSResource`, not a minimum; and a NuGet *range* does not resolve to the newest member, so never use one.
+- **Fix first, measure second, set the floor third.** A floor derived before the fix records the defective count as the baseline, and can never trip on a regression back to it. Read the number from the run's JUnit artifact; never predict it.
+- **The floor is `collected - min(floor(collected * 0.05), 10)`** — [ADR-0004](docs/adr/0004-min-tests-floor-margin.md). Use it for every floor derived from 2026-10-28 on. Existing floors move opportunistically, whenever a PR next touches them; a repo still on the old 90% convention is expected, not a bug.
+- **Acceptance is the mutation, not the count.** Make the thing you are guarding fail, confirm red, revert. A check that never fires is indistinguishable from one that passes. Where a repo cannot produce that evidence incidentally — no `.LINK` anywhere, for instance — the mutation has to be manufactured.
 - **Verify floors in both directions.** An impossible floor must fail the run *and* leave the result XML uploaded; a correct floor must stay quiet.
 
 ## Along the way: AGENTS.md for three repos
