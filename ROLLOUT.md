@@ -21,12 +21,14 @@ Zero matching-help cases collected. Green because the tests do not exist.
 
 Counts already look correct, so nothing will surface these on their own.
 
+All three issue bodies were corrected on 2026-10-28 before any work started: each was missing the `$_ -and` null guard, and all three banners pointed at a comment for the PSDepend detail. Defect counts went from three to four.
+
 - [ ] **AWSAutomation** — [AWSAutomation#97](https://github.com/jjohns-dev/AWSAutomation/issues/97)
-  Reference implementation others port from. **Only repo with an existing floor (560) — must be re-derived in the same PR.**
+  Reference implementation others port from. **Only repo with an existing floor (560) — must be re-derived in the same PR.** Also the only repo where the link test is **live rather than dormant**: `Edit-AWSProfile` and `Get-WindowsDisk` declare real URLs, so CI makes two requests to `docs.aws.amazon.com` on every run, on both legs.
 - [ ] **ArcGISEnterprise** — [ArcGISEnterprise#143](https://github.com/PS-MCS/ArcGISEnterprise/issues/143)
-  Defects 1/2/3 plus the floor is unset. Zero `Mandatory` coverage elsewhere in its tests.
+  Four defects plus the floor is unset. Zero `Mandatory` coverage elsewhere in its tests. Zero `.LINK` across all 132 public functions, so its link test really is dormant.
 - [ ] **MCS** — [MCS#212](https://github.com/PS-MCS/MCS/issues/212)
-  Defect 3 only; 1 and 2 already fixed. Deletion drops CrossPlatform 495 → 444, below the current floor of 445 — re-derive in the same PR.
+  Defect 3 plus the null guard; 1 and 2 already fixed. Deletion drops CrossPlatform 495 → 444, below the current floor of 445 — re-derive in the same PR. The body previously presented the delete-vs-keep decision as open; it is settled and now says so.
 
 ## Phase 3 — Make regressions visible
 
