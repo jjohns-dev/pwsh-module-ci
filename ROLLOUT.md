@@ -12,10 +12,10 @@ Zero matching-help cases collected. Green because the tests do not exist.
   Done 2026-10-26, merged as [PS.Log#55](https://github.com/jjohns-dev/PS.Log/pull/55). AST discovery binding, defects 1/2/3, `min-tests: 87`. The implementing agent also caught two errors in its brief — see the corrections on #17.
 - [x] **PS.SSL** — [PS.SSL#71](https://github.com/jjohns-dev/PS.SSL/issues/71)
   Done 2026-10-27, merged as [PS.SSL#72](https://github.com/jjohns-dev/PS.SSL/pull/72). AST discovery binding, defects 1/2/3, `min-tests: 337`, and the vestigial `BuildHelpers` entry removed (#24). Floor confirmed against both legs: ubuntu `tests=375`, windows `tests=377`. **Still owes the PSDepend migration** — catch-up, tracked on #27.
-- [ ] **SecurityTools** — [SecurityTools#153](https://github.com/jjohns-dev/SecurityTools/issues/153) closed, **one PR still owed**
+- [x] **SecurityTools** — [SecurityTools#153](https://github.com/jjohns-dev/SecurityTools/issues/153) and [#155](https://github.com/jjohns-dev/SecurityTools/issues/155), both closed
   Discovery binding and the verify step landed 2026-10-27 as [SecurityTools#154](https://github.com/jjohns-dev/SecurityTools/pull/154) — matching-help 0 → 165 cases, per-leg floors 1104 / 20, and all three no-result-file guards. Both failure paths verified in CI as separate claims. Its agent also taught the test to resolve `Get-KEVList`'s conditional `DynamicParam` block.
-  The PSDepend migration landed 2026-10-27 as [SecurityTools#156](https://github.com/jjohns-dev/SecurityTools/pull/156) (`6eec42d`), **which answered the fleet-wide `SkipPublisherCheck` question** — see #27.
-  **Still outstanding:** [SecurityTools#155](https://github.com/jjohns-dev/SecurityTools/issues/155) — defects 1/2/3 plus the missing `$_ -and` null guard, which were comment-only on #153 and so were not in #154's scope. #155 must re-derive the floors; deleting the mandatory-value test drops ubuntu below 1104.
+  The PSDepend migration landed as [SecurityTools#156](https://github.com/jjohns-dev/SecurityTools/pull/156) (`6eec42d`), **which answered the fleet-wide `SkipPublisherCheck` question** — see #27.
+  The four remaining defects landed as [SecurityTools#157](https://github.com/jjohns-dev/SecurityTools/pull/157) (`4f1f023`) — null guard, `-BeLike` replacing the `-Contain` tautology, offline URI shape check, and the mandatory-value test deleted with its marker comment. Floors re-derived in the same PR: ubuntu 1227 → 1063 collected, floor **1104 → 956**; windows unchanged at 21 / 20. Both mutations and both floor directions verified on separate runs, and the failing-floor run still uploaded its result XML.
 
 ## Phase 2 — The silent ones
 
@@ -78,7 +78,7 @@ Gated on Phases 1–2.
 
 **#22 edits the same `It` block as Phases 1–2.** Do it with them, or well after — never between, or the same block gets rebased twice.
 
-**#23 changes floor semantics for the only two repos that use `-Skip`** (PS.SSL, SecurityTools). Everywhere else `tests` and executed counts are identical, so it makes no difference. Either land #23 first, or accept re-deriving those two floors.
+**#23 changes floor semantics for the only two repos that use `-Skip`** (PS.SSL, SecurityTools). Everywhere else `tests` and executed counts are identical, so it makes no difference. This one is now **decided by events** — #23 did not land first, so both repos carry floors derived against `tests`, which includes skips, and both need re-deriving when #23 lands. The measured counts are recorded on #23. SecurityTools is the easy half (1 skipped on ubuntu, 0 on windows); **PS.SSL is the real exposure**, since its skips are whole `Describe` blocks gated on openssl and network reachability and its `disabled` counts were never measured.
 
 ## Recurring rules for every PR in Phases 1–3
 
