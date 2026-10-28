@@ -27,8 +27,10 @@ All three issue bodies were corrected on 2026-10-28 before any work started: eac
   Reference implementation others port from. Three PRs, all merged 2026-10-28: [#98](https://github.com/jjohns-dev/AWSAutomation/pull/98) PSDepend migration (`dbcd482`), [#99](https://github.com/jjohns-dev/AWSAutomation/pull/99) the four defects with the floor re-derived 560 → **430** against 478 collected (`2f49d83`), and [#101](https://github.com/jjohns-dev/AWSAutomation/pull/101) floating the unversioned runtime dependencies (`110e246`).
   The link test here was **live, not dormant** — `Edit-AWSProfile` and `Get-WindowsDisk` were making real calls to `docs.aws.amazon.com` on every run. That is now an offline shape check.
   `ubuntu-latest` only, and zero `-Skip` usage, so #23 will not disturb its floor.
-- [ ] **ArcGISEnterprise** — [ArcGISEnterprise#143](https://github.com/PS-MCS/ArcGISEnterprise/issues/143)
-  Four defects plus the floor is unset. Zero `Mandatory` coverage elsewhere in its tests. Zero `.LINK` across all 132 public functions, so its link test really is dormant.
+- [x] **ArcGISEnterprise** — [ArcGISEnterprise#143](https://github.com/PS-MCS/ArcGISEnterprise/issues/143), closed
+  Two PRs, both merged 2026-10-28: [#145](https://github.com/PS-MCS/ArcGISEnterprise/pull/145) PSDepend migration (`9c0bc88`), and [#146](https://github.com/PS-MCS/ArcGISEnterprise/pull/146) the four defects plus the first floor at **1692** against 1,881 collected (`105b60a`).
+  **It also pulled [#22](https://github.com/jjohns-dev/pwsh-module-ci/issues/22) forward** — link cases are now generated at discovery from `Get-Help`, so a command with no `.LINK` produces none. That dropped 2,013 → 1,881, i.e. 132 cases that could never fail. This repo is now ahead of the five that already merged the template without it.
+  Also normalised the whole repo to LF (89 files, content-identity proven by an empty `git diff --ignore-cr-at-eol`). Owed follow-up: [#147](https://github.com/PS-MCS/ArcGISEnterprise/issues/147), a `.git-blame-ignore-revs` naming the squash commit.
 - [ ] **MCS** — [MCS#212](https://github.com/PS-MCS/MCS/issues/212)
   Defect 3 plus the null guard; 1 and 2 already fixed. Deletion drops CrossPlatform 495 → 444, below the current floor of 445 — re-derive in the same PR. The body previously presented the delete-vs-keep decision as open; it is settled and now says so.
 
