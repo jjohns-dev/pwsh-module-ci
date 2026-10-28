@@ -61,7 +61,8 @@ Gated on Phases 1–3.
 Gated on Phases 1–2.
 
 - [ ] **pwsh-module-ci** — [#24](https://github.com/jjohns-dev/pwsh-module-ci/issues/24)
-  Converge `PS.Log` and `PS.ETL` off `BuildHelpers`, drop `PS.SSL`'s vestigial entry. Prep for #20 — it removes one known `Build/` difference before the classification work starts. **`PS.Log` done** 2026-10-26 ([PS.Log#56](https://github.com/jjohns-dev/PS.Log/pull/56), merged). `PS.SSL` is a one-line `depend.psd1` deletion; the `PS.ETL` half must wait for PS-MCS/PS.ETL#22.
+  Converge the fleet off `BuildHelpers`. Prep for #20 — it removes one known `Build/` difference before the classification work starts.
+  **Only `PS.ETL` remains.** `PS.Log` converged 2026-10-26 ([PS.Log#56](https://github.com/jjohns-dev/PS.Log/pull/56)) and `PS.SSL`'s vestigial entry went with [PS.SSL#72](https://github.com/jjohns-dev/PS.SSL/pull/72) — verified 2026-10-28, zero `BuildHelpers` entries in either `depend.psd1`. The `PS.ETL` half waits on PS-MCS/PS.ETL#22.
 - [ ] **pwsh-module-ci** — [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20)
   Stop duplicating `Build/` **and** `Tests/Common/`. Diff the test template only after Phase 1–2 lands, or you classify drift against a moving baseline.
 
@@ -107,8 +108,8 @@ No longer deferred. Pulled forward into Phase 2 for both `PS-MCS` repos, because
 ## Along the way: AGENTS.md for three repos
 
 - [x] **PS.Log** — written in [PS.Log#55](https://github.com/jjohns-dev/PS.Log/pull/55), kept current in [#56](https://github.com/jjohns-dev/PS.Log/pull/56)
-- [ ] **PS.SSL**
-- [ ] **PS.DCU**
+- [x] **PS.SSL** — present on `main`, verified 2026-10-28
+- [ ] **PS.DCU** — still the only one of the three without an `AGENTS.md`
 
 None of these has an `AGENTS.md`, and all three are receiving non-trivial PRs. Writing one first is cheap and pays off on every later session in that repo.
 
