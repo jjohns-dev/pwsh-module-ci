@@ -58,10 +58,11 @@ All three issue bodies were corrected on 2026-10-28 before any work started: eac
 
 Phase 1's boxes are ticked for the Help.Tests work, which is all it was scoped to. Two of those repos still owe the PSDepend migration: their Help.Tests work landed *before* that migration was decided, so they were never sequenced through it. Tracked at [#27](https://github.com/jjohns-dev/pwsh-module-ci/issues/27), verified still outstanding 2026-10-29.
 
-- [ ] **PS.Log** — [PS.Log#57](https://github.com/jjohns-dev/PS.Log/issues/57)
-  `Build/build.ps1` on `main` still calls `Invoke-PSDepend`. Count must stay at 97. Floor stays at 87 — it moves with the #22 back-fill, not here.
-- [ ] **PS.SSL** — no issue yet
-  Same change. Count must stay at 375 / 377. Floor stays at 337.
+- [x] **PS.Log** — [PS.Log#57](https://github.com/jjohns-dev/PS.Log/issues/57)
+  Done 2026-10-29, merged as [PS.Log#58](https://github.com/jjohns-dev/PS.Log/pull/58) (`4152e0c`). Count unchanged at 97 and the test names matched between runs, not just the totals. Floor untouched at 87.
+- [ ] **PS.SSL** — [PS.SSL#73](https://github.com/jjohns-dev/PS.SSL/issues/73)
+  Same change, both legs. Counts must stay at 375 / 377. Floor stays at 337.
+  **Also carries a free measurement:** its per-leg `disabled` count, which is the unmeasured prerequisite blocking #23. Only two repos in the fleet have a non-zero one.
 
 Both are `jjohns-dev` repos, so zero approvals and self-merge. Neither touches `depend.psd1`, tests, or the floor.
 
