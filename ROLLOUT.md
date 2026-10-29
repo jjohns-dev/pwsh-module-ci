@@ -108,10 +108,11 @@ Gated on Phases 1–2.
 No longer deferred. Pulled forward into Phase 2 for both `PS-MCS` repos, because each was already editing the same `It` block and already re-deriving its floor, so the marginal cost was near zero.
 
 - [ ] **pwsh-module-ci** — [#22](https://github.com/jjohns-dev/pwsh-module-ci/issues/22)
-  Stop generating link cases for commands with no `.LINK`. **Done in `ArcGISEnterprise` (132 cases removed), `MCS` (34) and `PS.Log` (6).** Outstanding in `PS.SSL` (~15), `SecurityTools` (~65, it has one real `.LINK`) and `AWSAutomation` (~34, two real `.LINK`s).
+  Stop generating link cases for commands with no `.LINK`. **Done in `ArcGISEnterprise` (132 cases removed), `MCS` (34), `PS.Log` (6) and `PS.SSL` (15).** Outstanding in `SecurityTools` (66) and `AWSAutomation` (34 of 36).
   Reference implementation is `MCS` after [#214](https://github.com/PS-MCS/MCS/pull/214) — URIs collected in `BeforeDiscovery` from `Get-Help`, bound with `-ForEach ... -AllowNullOrEmptyForEach`. **Source from `Get-Help`, not the AST**: the AST returns related-topic names alongside URIs, which would fail the scheme check.
   **Each back-fill moves that repo's floor**, so re-derive it in the same PR under ADR-0004's formula — and record the derivation in the `min-tests` trailing comment, as [PS.Log#60](https://github.com/jjohns-dev/PS.Log/pull/60) did. That matters most when the floor value happens not to change, since the diff then carries no evidence the floor was considered at all.
-  **The last two are different:** `SecurityTools` and `AWSAutomation` have real `.LINK`s, so their link tests still generate cases afterwards. "Zero cases generated" is the wrong assertion there, and they do not need manufactured mutations.
+  **`SecurityTools` is the live test of the AST-vs-`Get-Help` choice.** Its one `.LINK` is `ConvertTo-GZipString`, a related-topic name rather than a URI, so `Get-Help` files it under `linkText` with an empty `uri` and it is correctly dropped — while the AST would return it and fail the scheme check. It is the only repo in the fleet where the wrong source breaks something.
+  **`AWSAutomation` is the genuine exception.** Its two `.LINK`s are real `docs.aws.amazon.com` URLs, so two cases survive the change and "zero cases generated" is the wrong assertion there.
 
 ## Runs on its own clock
 
