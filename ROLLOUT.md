@@ -60,9 +60,9 @@ Phase 1's boxes are ticked for the Help.Tests work, which is all it was scoped t
 
 - [x] **PS.Log** — [PS.Log#57](https://github.com/jjohns-dev/PS.Log/issues/57)
   Done 2026-10-29, merged as [PS.Log#58](https://github.com/jjohns-dev/PS.Log/pull/58) (`4152e0c`). Count unchanged at 97 and the test names matched between runs, not just the totals. Floor untouched at 87.
-- [ ] **PS.SSL** — [PS.SSL#73](https://github.com/jjohns-dev/PS.SSL/issues/73)
-  Same change, both legs. Counts must stay at 375 / 377. Floor stays at 337.
-  **Also carries a free measurement:** its per-leg `disabled` count, which is the unmeasured prerequisite blocking #23. Only two repos in the fleet have a non-zero one.
+- [x] **PS.SSL** — [PS.SSL#73](https://github.com/jjohns-dev/PS.SSL/issues/73)
+  Done 2026-10-29, merged as [PS.SSL#74](https://github.com/jjohns-dev/PS.SSL/pull/74) (`3ec8b96`). Counts unchanged at 375 / 377, floor untouched at 337.
+  **Also delivered the measurement that was blocking #23:** `disabled` is 14 on ubuntu and 15 on windows, so executed is 361 / 362 — both already above the 337 floor.
 
 Both are `jjohns-dev` repos, so zero approvals and self-merge. Neither touches `depend.psd1`, tests, or the floor.
 
@@ -123,7 +123,8 @@ No longer deferred. Pulled forward into Phase 2 for both `PS-MCS` repos, because
 
 **#22 edits the same `It` block as the Phase 1–2 work.** Resolved for `ArcGISEnterprise` and `MCS` by doing it with them. For the remaining four, that block is now settled on `main`, so the back-fill is a clean single edit rather than a rebase hazard.
 
-**#23 changes floor semantics for the only two repos that use `-Skip`** (PS.SSL, SecurityTools). Everywhere else `tests` and executed counts are identical, so it makes no difference. **Decided by events** — #23 did not land first, so both repos carry floors derived against `tests`, which includes skips, and both need re-deriving when it lands. The measured counts are on #23. SecurityTools is the easy half (1 skipped on ubuntu, 0 on windows); **PS.SSL is the real exposure**, and its `disabled` count is still unmeasured.
+**#23 changes floor semantics for the only two repos that use `-Skip`** (PS.SSL, SecurityTools). Everywhere else `tests` and executed counts are identical, so it makes no difference. **Decided by events** — #23 did not land first, so both repos carry floors derived against `tests`, which includes skips, and both need re-deriving when it lands.
+**Measured 2026-10-29 and milder than assumed.** PS.SSL is 14 / 15 disabled, so executed is 361 / 362 against a floor of 337 — already below, so #23 does not redden it. The cause is `ExcludeTag` on `Network`, **not** the openssl and network-reachability `Describe` guards this file previously blamed; openssl is present on both runners and those blocks ran. SecurityTools is 1 skipped on ubuntu, 0 on windows. Full numbers on #23.
 
 ## Reference — recurring rules for every PR from here on
 
