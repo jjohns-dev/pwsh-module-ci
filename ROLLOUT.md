@@ -68,16 +68,47 @@ Both are `jjohns-dev` repos, so zero approvals and self-merge. Neither touches `
 
 ## Phase 3 — Make regressions visible
 
+Two independent tracks. **Track A is unblocked and can start now**; Track B is the staged #23 rollout.
+
+### Track A — first-time floors
+
+None of these three has a floor today, and all three measure `disabled = 0`, so their floors are identical under the old and new semantics. They do **not** need to wait for #23. Counts measured 2026-10-29 from each repo's latest `main` run; `PS.GHOps` and `PS.GitHub` were still at the SHA I measured, so they are current.
+
+- [ ] **PS.GHOps** — [PS.GHOps#19](https://github.com/jjohns-dev/PS.GHOps/issues/19)
+  Floor only. No `Help.Tests.ps1`, nothing to fix. 95 collected, identical on all three legs (ubuntu, windows, macos) → floor **91**.
+- [ ] **PS.GitHub** — [PS.GitHub#37](https://github.com/jjohns-dev/PS.GitHub/issues/37)
+  Floor only. No `Help.Tests.ps1`. 112 collected, identical on all three legs → floor **107**.
+- [ ] **PS.DCU** — [PS.DCU#16](https://github.com/jjohns-dev/PS.DCU/issues/16)
+  Floor **plus stale-help detection**. Best-shaped file in the fleet — keep the single-`It` style, do not convert it to `-ForEach`.
+  **Also switch `os-matrix` from `ubuntu-latest` to `windows-latest`** (user decision, 2026-10-29). The module wraps a Dell utility, so testing it anywhere but Windows is meaningless. Deliberately bundled into the same issue rather than split out: the OS switch **changes which tests collect**, so the floor cannot be derived until it lands. Splitting them would mean deriving the floor twice and the first value would be wrong.
+  The 85 collected / floor 81 measured on ubuntu is therefore a **pre-switch** number — do not reuse it. Re-measure on the Windows leg.
+
+### Track B — the #23 rollout
+
 - [ ] **pwsh-module-ci** — [#23](https://github.com/jjohns-dev/pwsh-module-ci/issues/23)
   The floor counts skipped tests, so a mass-skip regression passes. **Also apply to `PS-MCS/mcssec-ops`.** Staged rollout via an immutable `vX.Y.Z` pin.
   **Scope shrank 2026-10-28.** The margin question that used to live here is settled in [ADR-0004](docs/adr/0004-min-tests-floor-margin.md), so what remains is only the change of input from `tests` to `tests - disabled`.
-  **Blocked on one measurement:** `PS.SSL`'s `disabled` count has never been taken. Its skips are whole `Describe` blocks gated on openssl and network reachability, so its executed count could be well below 375 — and this change makes the floor measure executed, not collected. Measure before deriving.
-- [ ] **PS.GHOps** — [PS.GHOps#19](https://github.com/jjohns-dev/PS.GHOps/issues/19)
-  Floor only. No `Help.Tests.ps1`, nothing to fix.
-- [ ] **PS.GitHub** — [PS.GitHub#37](https://github.com/jjohns-dev/PS.GitHub/issues/37)
-  Floor only. No `Help.Tests.ps1`.
-- [ ] **PS.DCU** — [PS.DCU#16](https://github.com/jjohns-dev/PS.DCU/issues/16)
-  Floor **plus stale-help detection**. Best-shaped file in the fleet — keep the single-`It` style, do not convert it to `-ForEach`.
+  **No longer blocked — measured 2026-10-29** (run `40934797901`, on `main` after [PS.SSL#76](https://github.com/jjohns-dev/PS.SSL/pull/76)):
+
+  | Leg | collected | disabled | executed | floor today |
+  | --- | --------- | -------- | -------- | ----------- |
+  | ubuntu | 360 | 14 | **346** | 350 |
+  | windows | 362 | 15 | **347** | 350 |
+
+  **This change turns `PS.SSL` red on both legs the moment `v1` moves** — executed sits below its floor of 350, which was derived from the *collected* count four hours earlier. Not a regression; the floor and its input would simply stop measuring the same thing.
+  **Correction to what this bullet used to say.** The skips are **not** "whole `Describe` blocks gated on openssl and network reachability". The 14 on both legs are the `Network`-tagged integration tests removed by `Filter.ExcludeTag = 'Network'` in `build.psake.ps1` (added in PS.SSL#50 for `badssl.com` flakiness) — tag exclusion emits no `testcase` node at all. The `-Skip:(-not $NetworkReachable)` wrapper does exist, documented in [PS.SSL#69](https://github.com/jjohns-dev/PS.SSL/issues/69), but never fires in CI because `ExcludeTag` removes those tests first. The 15th on windows is unrelated: `Loader.Tests.ps1` → *"does not warn about missing openssl when openssl is on PATH"*, marked `-Skip:($IsWindows)` because it exercises the Linux/macOS `/usr/bin` probe branch.
+  **`PS.SSL#69` is the authoritative record of *why* those 14 are excluded. Do not restate it here or open a competing issue.** Its proposal adds more `Network`-tagged tests, which raise `collected` and `disabled` but not `executed` — so under today's floor they would silently inflate the number, and under #23's floor they have no effect. #23 should land first for that reason.
+
+  **Ordered rollout. The `PS.SSL` floor changes in step 3, in the same PR as the pin — not before, not after.** Lowering it early would open ~24 tests of slack while the floor still measures `tests`, which is the exact blind spot #23 exists to close.
+
+  1. [ ] Merge #23 to `main`. No consumer is affected; `v1` has not moved.
+  2. [ ] Cut an annotated `vX.Y.Z`. Still no consumer effect.
+  3. [ ] **`PS.SSL` PR, one commit, two changes:** `uses: ...@vX.Y.Z` **and** `min-tests: 350 → 336`. Derive from the lower executed leg: `346 - min(floor(346 * 0.05), 10) = 336`; windows at 347 clears it too. Read the real number from that run's artifact rather than trusting this one. This PR **is** the verification, and `PS.SSL` is never red because pin and floor move together.
+  4. [ ] Spot-check `SecurityTools` the same way — the only other repo measured with `disabled > 0` (1 on ubuntu; executed 996 vs floor 987, so no change expected).
+  5. [ ] Move `v1` to `vX.Y.Z` (admin force-push; see AGENTS.md).
+  6. [ ] Repoint `PS.SSL` to `@v1` to clear the pin debt.
+
+  **Gating input, not yet complete.** "Only `PS.SSL` is affected" rests on a partial survey. Measured: `PS.SSL`, `SecurityTools`, `AWSAutomation`, `PS.Log`, `PS.GHOps`, `PS.GitHub`, `PS.DCU`. **Not measured: `MCS`, `ArcGISEnterprise`, `PS.ETL`, `PS-MCS/mcssec-ops`.** Any of those with `disabled > 0` and a tight floor has the same collision, and the PS-MCS repos need code-owner approval — so finding one late is expensive. Finish this before step 1.
 
 ## Phase 4 — Close the tracker issue
 
