@@ -4,12 +4,30 @@
 
 Authoritative detail lives in the linked issues — this is an index and an ordering, not a substitute. Where the two disagree, the issue wins.
 
+## Where we are
+
+Phase numbers are **names, not a sequence**. They were assigned before #22 moved and before the Phase 2B debt surfaced, and they are cited from issue bodies and merged PRs, so they are not being renumbered. This list is the sequence.
+
+| | Phase | State |
+| - | ----- | ----- |
+| ✓ | **1** — suites that were lying | done 2026-10-27 — PS.Log, PS.SSL, SecurityTools |
+| ✓ | **2** — the silent ones | done 2026-10-28 — AWSAutomation, ArcGISEnterprise, MCS |
+| → | **2B** — catch-up PSDepend migrations | **next.** PS.Log, PS.SSL. No dependencies, zero approvals |
+| | **7** — #22 link-case back-fill | **runs before Phase 3.** It moves four repos' floors, and Phase 3 sets floors; the other order derives them twice |
+| | **3** — make regressions visible | first-time floors for three repos, then #23 |
+| | **4** — close the tracker issue | gated on the above |
+| | **5** — stop the duplication | #24, then #20 |
+| | **6** — migration | #19, then #21 |
+
+Completed phases are closed. New work goes in a later phase or a new one, never back into a phase already marked done — Phase 2B exists because that rule was applied rather than reopening Phase 1.
+
 ## Phase 1 — Suites that are currently lying
 
 Zero matching-help cases collected. Green because the tests do not exist.
 
 - [x] **PS.Log** — [PS.Log#54](https://github.com/jjohns-dev/PS.Log/issues/54)
   Done 2026-10-26, merged as [PS.Log#55](https://github.com/jjohns-dev/PS.Log/pull/55). AST discovery binding, defects 1/2/3, `min-tests: 87`. The implementing agent also caught two errors in its brief — see the corrections on #17.
+  **Still owes the PSDepend migration** — see Catch-up below.
 - [x] **PS.SSL** — [PS.SSL#71](https://github.com/jjohns-dev/PS.SSL/issues/71)
   Done 2026-10-27, merged as [PS.SSL#72](https://github.com/jjohns-dev/PS.SSL/pull/72). AST discovery binding, defects 1/2/3, `min-tests: 337`, and the vestigial `BuildHelpers` entry removed (#24). Floor confirmed against both legs: ubuntu `tests=375`, windows `tests=377`. **Still owes the PSDepend migration** — catch-up, tracked on #27.
 - [x] **SecurityTools** — [SecurityTools#153](https://github.com/jjohns-dev/SecurityTools/issues/153) and [#155](https://github.com/jjohns-dev/SecurityTools/issues/155), both closed
@@ -35,6 +53,17 @@ All three issue bodies were corrected on 2026-10-28 before any work started: eac
   Two PRs, both merged 2026-10-28: [#213](https://github.com/PS-MCS/MCS/pull/213) PSDepend migration (`60fc7de`), and [#214](https://github.com/PS-MCS/MCS/pull/214) the remaining defects plus the floor (`3e8fd71`). Defects 1 and 2 were already fixed here, so the scope was defect 3, the null guard, and the link change.
   **Also pulled [#22](https://github.com/jjohns-dev/pwsh-module-ci/issues/22) forward**, as ArcGIS did. CrossPlatform went 495 → 444 (51 mandatory cases) → **410** (34 link cases), floor **369**. WindowsOnly unaffected at 136 / 122.
   `#214` was rebased onto `main` after `#213` merged, so the 410 and the floor are measured under the merged `Install-PSResource` loop rather than inferred. Post-merge CI on `main` is green.
+
+## Phase 2B — Catch-up: PSDepend migrations owed from Phase 1
+
+Phase 1's boxes are ticked for the Help.Tests work, which is all it was scoped to. Two of those repos still owe the PSDepend migration: their Help.Tests work landed *before* that migration was decided, so they were never sequenced through it. Tracked at [#27](https://github.com/jjohns-dev/pwsh-module-ci/issues/27), verified still outstanding 2026-10-29.
+
+- [ ] **PS.Log** — [PS.Log#57](https://github.com/jjohns-dev/PS.Log/issues/57)
+  `Build/build.ps1` on `main` still calls `Invoke-PSDepend`. Count must stay at 97. Floor stays at 87 — it moves with the #22 back-fill, not here.
+- [ ] **PS.SSL** — no issue yet
+  Same change. Count must stay at 375 / 377. Floor stays at 337.
+
+Both are `jjohns-dev` repos, so zero approvals and self-merge. Neither touches `depend.psd1`, tests, or the floor.
 
 ## Phase 3 — Make regressions visible
 
@@ -86,16 +115,16 @@ No longer deferred. Pulled forward into Phase 2 for both `PS-MCS` repos, because
 
 - [ ] **PS.ETL** — [PS.ETL#22](https://github.com/PS-MCS/PS.ETL/issues/22)
   Pester 5.5.0 → 6.2.0 first, including the `CommandInfo` hang fix. Decoupled from #17, blocks nothing.
-- [ ] **AWSAutomation dependency policy** — recorded as ADR-0002 in that repo, 2026-10-28
-  Its 14 `AWS.Tools.*` modules and `ImportExcel` now resolve to `'latest'`; build tooling stays pinned. **Do not copy this to another repo without re-deriving it** — it turns on those modules being unversioned `RequiredModules`, which no other repo in the fleet has. The NuGet-range trap behind it is recorded on #27.
 
-## Two sequencing traps
+**Not work, a standing caveat:** `AWSAutomation`'s dependency policy is recorded as ADR-0002 in that repo, 2026-10-28. Its 14 `AWS.Tools.*` modules and `ImportExcel` resolve to `'latest'`; build tooling stays pinned. **Do not copy it to another repo without re-deriving it** — it turns on those modules being unversioned `RequiredModules`, which no other repo in the fleet has. The NuGet-range trap behind it is on #27.
+
+## Reference — two sequencing traps
 
 **#22 edits the same `It` block as the Phase 1–2 work.** Resolved for `ArcGISEnterprise` and `MCS` by doing it with them. For the remaining four, that block is now settled on `main`, so the back-fill is a clean single edit rather than a rebase hazard.
 
 **#23 changes floor semantics for the only two repos that use `-Skip`** (PS.SSL, SecurityTools). Everywhere else `tests` and executed counts are identical, so it makes no difference. **Decided by events** — #23 did not land first, so both repos carry floors derived against `tests`, which includes skips, and both need re-deriving when it lands. The measured counts are on #23. SecurityTools is the easy half (1 skipped on ubuntu, 0 on windows); **PS.SSL is the real exposure**, and its `disabled` count is still unmeasured.
 
-## Recurring rules for every PR from here on
+## Reference — recurring rules for every PR from here on
 
 - **Migrate the repo off PSDepend first, in its own PR** (#27). `Import-PowerShellDataFile` on `Build/depend.psd1`, then `Install-PSResource` per entry. All ten `depend.psd1` files are identical in **shape** — every entry is a plain `Name = 'version'` string — so it is the same edit everywhere. They are *not* identical in content; the pinned versions have drifted, and the table is on #20. Separate PR, before any test work, so a module-install failure surfaces against a three-line diff instead of a large one.
   **Done in `SecurityTools`, `AWSAutomation`, `ArcGISEnterprise` and `MCS`. `PS.Log` and `PS.SSL` still owe it** — their Help.Tests work landed before this was decided, so they are catch-up, tracked on #27.
@@ -111,7 +140,7 @@ No longer deferred. Pulled forward into Phase 2 for both `PS-MCS` repos, because
 - [x] **PS.SSL** — present on `main`, verified 2026-10-28
 - [ ] **PS.DCU** — still the only one of the three without an `AGENTS.md`
 
-None of these has an `AGENTS.md`, and all three are receiving non-trivial PRs. Writing one first is cheap and pays off on every later session in that repo.
+Only `PS.DCU` is outstanding, and it is receiving a non-trivial PR in Phase 3. Writing the file first is cheap and pays off on every later session in that repo.
 
 Give the prompt below to an agent working **in that repo** rather than drafting the file from elsewhere — most of an `AGENTS.md` is claims about what commands work and what has bitten people, and those have to be verified by running them. Substitute the repo's own issue number for `#<N>`: PS.Log → 54, PS.SSL → 71, PS.DCU → 16.
 
