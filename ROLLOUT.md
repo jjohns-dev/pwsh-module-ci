@@ -108,7 +108,22 @@ None of these three has a floor today, and all three measure `disabled = 0`, so 
   5. [ ] Move `v1` to `vX.Y.Z` (admin force-push; see AGENTS.md).
   6. [ ] Repoint `PS.SSL` to `@v1` to clear the pin debt.
 
-  **Gating input, not yet complete.** "Only `PS.SSL` is affected" rests on a partial survey. Measured: `PS.SSL`, `SecurityTools`, `AWSAutomation`, `PS.Log`, `PS.GHOps`, `PS.GitHub`, `PS.DCU`. **Not measured: `MCS`, `ArcGISEnterprise`, `PS.ETL`, `PS-MCS/mcssec-ops`.** Any of those with `disabled > 0` and a tight floor has the same collision, and the PS-MCS repos need code-owner approval — so finding one late is expensive. Finish this before step 1.
+  **Survey complete, 2026-10-29. `PS.SSL` is the only repo that breaks.**
+
+  | Repo | Floor | `disabled` | Under #23 |
+  | ---- | ----- | ---------- | --------- |
+  | `PS.SSL` | 350 | 14 / 15 | **RED on both legs** — executed 346 / 347 |
+  | `SecurityTools` | 987 / 20 | 1 / 0 | safe, executed 996 |
+  | `AWSAutomation` | 430 | 0 | safe |
+  | `PS.Log` | 87 | 0 | safe |
+  | `PS.GHOps` · `PS.GitHub` · `PS.DCU` | none yet | 0 | safe, Track A sets them |
+  | `MCS` | 369 / 122 | 0 | safe |
+  | `ArcGISEnterprise` | 1692 | 0 | safe |
+  | `PS.ETL` | **none passed** | n/a | safe — an unset `MIN_TESTS` reads as 0, which disables the check |
+
+  **`mcssec-ops` cannot be staged the way `pwsh-module-ci` can.** It holds its own copy of the verify step as a reusable workflow, `ps-module-validate.yml`, taking `min-tests` as an input. Its two consumers — `ArcGISEnterprise` and `PS.ETL` — both pin **`@main`**, not a version tag. There is no immutable tag to stage through, so the edit reaches both the moment it merges. That is tolerable here only because both are safe (`ArcGISEnterprise` has `disabled = 0`; `PS.ETL` passes no floor), but it means the `mcssec-ops` change must be verified before merge, not after. Do not assume the `vX.Y.Z` staging dance from step 2 is available on that side.
+
+  `PS.ETL`'s `validate.yml` runs on `pull_request` only, which is why its `main` history shows no test artifacts. That is not an absence of CI.
 
 ## Phase 4 — Close the tracker issue
 
