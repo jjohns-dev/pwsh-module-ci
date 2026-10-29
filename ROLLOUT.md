@@ -12,8 +12,8 @@ Phase numbers are **names, not a sequence**. They were assigned before #22 moved
 | - | ----- | ----- |
 | ✓ | **1** — suites that were lying | done 2026-10-27 — PS.Log, PS.SSL, SecurityTools |
 | ✓ | **2** — the silent ones | done 2026-10-28 — AWSAutomation, ArcGISEnterprise, MCS |
-| → | **2B** — catch-up PSDepend migrations | **next.** PS.Log, PS.SSL. No dependencies, zero approvals |
-| | **7** — #22 link-case back-fill | **runs before Phase 3.** It moves four repos' floors, and Phase 3 sets floors; the other order derives them twice |
+| ✓ | **2B** — catch-up PSDepend migrations | done 2026-10-29 — PS.Log, PS.SSL. All six repos are now off PSDepend |
+| → | **7** — #22 link-case back-fill | **next.** PS.Log, PS.SSL, SecurityTools, AWSAutomation. Each moves that repo's floor, so each re-derives under ADR-0004 in the same PR |
 | | **3** — make regressions visible | first-time floors for three repos, then #23 |
 | | **4** — close the tracker issue | gated on the above |
 | | **5** — stop the duplication | #24, then #20 |
