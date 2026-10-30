@@ -101,6 +101,8 @@ None of these three has a floor today, and all three measure `disabled = 0`, so 
 
   **Ordered rollout. The `PS.SSL` floor changes in step 3, in the same PR as the pin — not before, not after.** Lowering it early would open ~24 tests of slack while the floor still measures `tests`, which is the exact blind spot #23 exists to close.
 
+  **Hold lifted 2026-10-30.** The floor change was paused pending an explanation of the disabled tests. That explanation is now complete and **confirms the plan rather than changing it**: the 14 are excluded from the gate permanently and by design, so `executed` stays at ~346 no matter what happens to [PS.SSL#69](https://github.com/jjohns-dev/PS.SSL/issues/69). The separate network workflow #69 proposes does **not** affect this floor — the gating run excludes those tests either way. Two problems sharing a cause, not one problem. Track B is clear to start.
+
   1. [ ] Merge #23 to `main`. No consumer is affected; `v1` has not moved.
   2. [ ] Cut an annotated `vX.Y.Z`. Still no consumer effect.
   3. [ ] **`PS.SSL` PR, one commit, two changes:** `uses: ...@vX.Y.Z` **and** `min-tests: 350 → 336`. Derive from the lower executed leg: `346 - min(floor(346 * 0.05), 10) = 336`; windows at 347 clears it too. Read the real number from that run's artifact rather than trusting this one. This PR **is** the verification, and `PS.SSL` is never red because pin and floor move together.
