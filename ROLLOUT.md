@@ -74,10 +74,13 @@ Two independent tracks. **Track A is unblocked and can start now**; Track B is t
 
 None of these three has a floor today, and all three measure `disabled = 0`, so their floors are identical under the old and new semantics. They do **not** need to wait for #23. Counts measured 2026-10-29 from each repo's latest `main` run; `PS.GHOps` and `PS.GitHub` were still at the SHA I measured, so they are current.
 
-- [ ] **PS.GHOps** — [PS.GHOps#19](https://github.com/jjohns-dev/PS.GHOps/issues/19)
-  Floor only. No `Help.Tests.ps1`, nothing to fix. 95 collected, identical on all three legs (ubuntu, windows, macos) → floor **91**.
+- [x] **PS.GHOps** — [PS.GHOps#19](https://github.com/jjohns-dev/PS.GHOps/issues/19) — **done 2026-10-30**
+  Floor only. No `Help.Tests.ps1`, nothing to fix. 95 collected, identical on all three legs → floor **91**. Two PRs: [#20](https://github.com/jjohns-dev/PS.GHOps/pull/20) PSDepend → `Install-PSResource` (`f17c19c`), [#21](https://github.com/jjohns-dev/PS.GHOps/pull/21) the floor (`93ce0a1`).
+  **It is now the reference for the other two**, closer than the `SecurityTools` loop the standards doc names: identical starting shape — same three exact pins, same bootstrap at `build.ps1` lines 31-51, same `ci.yml` with no `with:` block. First repo where ADR-0004's *percentage* term binds rather than the cap, `floor(95 * 0.05) = 4`.
+  Verified independently: the sabotage run failed **and** uploaded all three artifacts, re-parsed to `tests=95`. The failure annotation quoted the repo's own `9999` back, which is what proves the input reaches the reusable workflow — a green run cannot distinguish a working floor from an unset one, since `MIN_TESTS` defaults to `0` and disables the check.
+  **Small debt, tidy later:** `build.ps1` still carries four cosmetic `PSDepend` references — `$psdependencyConfigPath` twice, the `Import-PowerShellDataFile` line, and the `PSDependOptions` filter. The filter is load-bearing because `depend.psd1` keeps PSDepend's schema; the variable name is not. Grepping `PSDepend` to check whether the migration happened returns four hits in a file that no longer uses it.
 - [ ] **PS.GitHub** — [PS.GitHub#37](https://github.com/jjohns-dev/PS.GitHub/issues/37)
-  Floor only. No `Help.Tests.ps1`. 112 collected, identical on all three legs → floor **107**.
+  Floor only. No `Help.Tests.ps1`. 112 collected, identical on all three legs → floor **107**. Starting shape is byte-for-byte the same problem as `PS.GHOps`; use its two PRs as the model and a neutral variable name, so only `PS.GHOps` is left to rename.
 - [ ] **PS.DCU** — [PS.DCU#16](https://github.com/jjohns-dev/PS.DCU/issues/16)
   Floor **plus stale-help detection**. Best-shaped file in the fleet — keep the single-`It` style, do not convert it to `-ForEach`.
   **Also switch `os-matrix` from `ubuntu-latest` to `windows-latest`** (user decision, 2026-10-29). The module wraps a Dell utility, so testing it anywhere but Windows is meaningless. Deliberately bundled into the same issue rather than split out: the OS switch **changes which tests collect**, so the floor cannot be derived until it lands. Splitting them would mean deriving the floor twice and the first value would be wrong.
