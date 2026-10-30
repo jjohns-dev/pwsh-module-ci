@@ -13,8 +13,8 @@ Phase numbers are **names, not a sequence**. They were assigned before #22 moved
 | ✓ | **1** — suites that were lying | done 2026-10-27 — PS.Log, PS.SSL, SecurityTools |
 | ✓ | **2** — the silent ones | done 2026-10-28 — AWSAutomation, ArcGISEnterprise, MCS |
 | ✓ | **2B** — catch-up PSDepend migrations | done 2026-10-29 — PS.Log, PS.SSL. All six repos are now off PSDepend |
-| → | **7** — #22 link-case back-fill | **next.** PS.Log, PS.SSL, SecurityTools, AWSAutomation. Each moves that repo's floor, so each re-derives under ADR-0004 in the same PR |
-| | **3** — make regressions visible | first-time floors for three repos, then #23 |
+| ✓ | **7** — #22 link-case back-fill | done 2026-10-29 — all six repos. Each moved that repo's floor, re-derived under ADR-0004 in the same PR |
+| → | **3** — make regressions visible | **next.** Two tracks: **A** first-time floors for PS.GHOps, PS.GitHub, PS.DCU (unblocked); **B** the staged #23 rollout |
 | | **4** — close the tracker issue | gated on the above |
 | | **5** — stop the duplication | #24, then #20 |
 | | **6** — migration | #19, then #21 |
@@ -149,16 +149,26 @@ Gated on Phases 1–2.
 - [ ] **pwsh-module-ci** — [#21](https://github.com/jjohns-dev/pwsh-module-ci/issues/21) — gated on #19
   Centralize SecurityTools CI. Current lean is a second reusable workflow rather than extending `ci.yml`.
 
-## Phase 7 — Link-case back-fill, four repos
+## Phase 7 — Link-case back-fill — COMPLETE
 
-No longer deferred. Pulled forward into Phase 2 for both `PS-MCS` repos, because each was already editing the same `It` block and already re-deriving its floor, so the marginal cost was near zero.
+No longer deferred. Pulled forward into Phase 2 for both `PS-MCS` repos, because each was already editing the same `It` block and already re-deriving its floor, so the marginal cost was near zero. **All six repos landed 2026-10-28/29.**
 
-- [ ] **pwsh-module-ci** — [#22](https://github.com/jjohns-dev/pwsh-module-ci/issues/22)
-  Stop generating link cases for commands with no `.LINK`. **Done in `ArcGISEnterprise` (132 cases removed), `MCS` (34), `PS.Log` (6), `PS.SSL` (15) and `SecurityTools` (66).** Outstanding in `AWSAutomation` (34 of 36) only.
-  Reference implementation is `MCS` after [#214](https://github.com/PS-MCS/MCS/pull/214) — URIs collected in `BeforeDiscovery` from `Get-Help`, bound with `-ForEach ... -AllowNullOrEmptyForEach`. **Source from `Get-Help`, not the AST**: the AST returns related-topic names alongside URIs, which would fail the scheme check.
-  **Each back-fill moves that repo's floor**, so re-derive it in the same PR under ADR-0004's formula — and record the derivation in the `min-tests` trailing comment, as [PS.Log#60](https://github.com/jjohns-dev/PS.Log/pull/60) did. That matters most when the floor value happens not to change, since the diff then carries no evidence the floor was considered at all.
-  **`SecurityTools` was the live test of the AST-vs-`Get-Help` choice, and it passed.** Its one `.LINK` is `ConvertTo-GZipString`, a related-topic name rather than a URI, so `Get-Help` files it under `linkText` with an empty `uri` and it is correctly dropped — while the AST would return it and fail the scheme check. Confirmed in [#159](https://github.com/jjohns-dev/SecurityTools/pull/159): all 66 cases gone, `ConvertFrom-GZipString` keeps its other 10 help cases and fails nothing. Its mutation runs collected 998 tests with 1 link case, which is the part that matters — a filter that returned nothing unconditionally would have produced 0 cases and passed green.
-  **`AWSAutomation` is the genuine exception.** Its two `.LINK`s are real `docs.aws.amazon.com` URLs, so two cases survive the change and "zero cases generated" is the wrong assertion there.
+- [x] **pwsh-module-ci** — [#22](https://github.com/jjohns-dev/pwsh-module-ci/issues/22)
+  Stop generating link cases for commands with no `.LINK`. **Done everywhere: `ArcGISEnterprise` (132 cases removed), `SecurityTools` (66), `MCS` (34), `AWSAutomation` (34 of 36), `PS.SSL` (15 per leg), `PS.Log` (6).**
+  Reference implementation is `MCS` after [#214](https://github.com/PS-MCS/MCS/pull/214) — URIs collected in `BeforeDiscovery` from `Get-Help`, bound with `-ForEach ... -AllowNullOrEmptyForEach`. **Source from `Get-Help`, not the AST**: the AST returns related-topic names alongside URIs, which would fail the scheme check. Filter on a non-empty `uri`, since a command with no `.LINK` still yields an entry with an empty one.
+  **Each back-fill moved that repo's floor**, re-derived in the same PR under ADR-0004 with the derivation recorded in the `min-tests` trailing comment, as [PS.Log#60](https://github.com/jjohns-dev/PS.Log/pull/60) did. That matters most when the floor value happens not to change, since the diff then carries no evidence the floor was considered at all.
+
+  | Repo | Cases | Collected after | Floor | PR |
+  | ---- | ----- | --------------- | ----- | -- |
+  | `ArcGISEnterprise` | 132 → 0 | 1881 | 1692 | [#146](https://github.com/PS-MCS/ArcGISEnterprise/pull/146) |
+  | `SecurityTools` | 66 → 0 | 997 / 21 | 987 / 20 | [#159](https://github.com/jjohns-dev/SecurityTools/pull/159) `48c1ffe` |
+  | `MCS` | 34 → 0 | 410 / 136 | 369 / 122 | [#214](https://github.com/PS-MCS/MCS/pull/214) |
+  | `AWSAutomation` | 36 → **2** | 444 | 430 → **434** | [#103](https://github.com/jjohns-dev/AWSAutomation/pull/103) `b11313b` |
+  | `PS.SSL` | 15 → 0 per leg | 360 / 362 | 337 → 350 | [#76](https://github.com/jjohns-dev/PS.SSL/pull/76) `90d9a6d` |
+  | `PS.Log` | 6 → 0 | 91 | 87 unchanged | [#60](https://github.com/jjohns-dev/PS.Log/pull/60) `9f0b086` |
+
+  **`SecurityTools` was the live test of the AST-vs-`Get-Help` choice, and it passed.** Its one `.LINK` is `ConvertTo-GZipString`, a related-topic name rather than a URI, so `Get-Help` files it under `linkText` with an empty `uri` and it is correctly dropped — while the AST would return it and fail the scheme check. It is the only repo in the fleet where the wrong source breaks something.
+  **`AWSAutomation` was the genuine exception, and it closed the one remaining hole.** Its two `.LINK`s are real `docs.aws.amazon.com` URLs, so two cases survive and "zero cases generated" would have been the wrong assertion. More importantly it is the only repo that could prove the *generator* still works: its mutation runs collected 445 tests with **3** link cases and exactly one failure each, the two real links passing alongside the broken one. In the other five, a filter returning nothing unconditionally would have produced zero cases and passed green through every check. That failure mode is now ruled out by measurement rather than by argument — generalized into `docs/shared-ci-standards.md`.
 
 ## Runs on its own clock
 
