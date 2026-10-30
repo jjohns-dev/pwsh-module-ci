@@ -4,38 +4,133 @@
 
 Authoritative detail lives in the linked issues — this is an index and an ordering, not a substitute. Where the two disagree, the issue wins.
 
+## Where we are
+
+Phase numbers are **names, not a sequence**. They were assigned before #22 moved and before the Phase 2B debt surfaced, and they are cited from issue bodies and merged PRs, so they are not being renumbered. This list is the sequence.
+
+| | Phase | State |
+| - | ----- | ----- |
+| ✓ | **1** — suites that were lying | done 2026-10-27 — PS.Log, PS.SSL, SecurityTools |
+| ✓ | **2** — the silent ones | done 2026-10-28 — AWSAutomation, ArcGISEnterprise, MCS |
+| ✓ | **2B** — catch-up PSDepend migrations | done 2026-10-29 — PS.Log, PS.SSL. All six repos are now off PSDepend |
+| ✓ | **7** — #22 link-case back-fill | done 2026-10-29 — all six repos. Each moved that repo's floor, re-derived under ADR-0004 in the same PR |
+| → | **3** — make regressions visible | **in progress.** Track A **2 of 3** — PS.GHOps `91`, PS.GitHub `107` done; **PS.DCU next**. Track B (#23) unblocked, not started |
+| | **4** — close the tracker issue | gated on the above |
+| | **5** — stop the duplication | #24, then #20 |
+| | **6** — migration | #19, then #21 |
+
+Completed phases are closed. New work goes in a later phase or a new one, never back into a phase already marked done — Phase 2B exists because that rule was applied rather than reopening Phase 1.
+
 ## Phase 1 — Suites that are currently lying
 
 Zero matching-help cases collected. Green because the tests do not exist.
 
 - [x] **PS.Log** — [PS.Log#54](https://github.com/jjohns-dev/PS.Log/issues/54)
   Done 2026-10-26, merged as [PS.Log#55](https://github.com/jjohns-dev/PS.Log/pull/55). AST discovery binding, defects 1/2/3, `min-tests: 87`. The implementing agent also caught two errors in its brief — see the corrections on #17.
-- [ ] **PS.SSL** — [PS.SSL#71](https://github.com/jjohns-dev/PS.SSL/issues/71)
-  Same as PS.Log. Floor semantics affected by #23 — uses `Describe -Skip:` on openssl and network reachability.
-- [ ] **SecurityTools** — [SecurityTools#153](https://github.com/jjohns-dev/SecurityTools/issues/153)
-  Same, **plus add the verify step** — the only repo without one, so container and discovery errors still pass green. Per-leg floor. Also affected by #23.
+  **Still owes the PSDepend migration** — see Catch-up below.
+- [x] **PS.SSL** — [PS.SSL#71](https://github.com/jjohns-dev/PS.SSL/issues/71)
+  Done 2026-10-27, merged as [PS.SSL#72](https://github.com/jjohns-dev/PS.SSL/pull/72). AST discovery binding, defects 1/2/3, `min-tests: 337`, and the vestigial `BuildHelpers` entry removed (#24). Floor confirmed against both legs: ubuntu `tests=375`, windows `tests=377`. **Still owes the PSDepend migration** — catch-up, tracked on #27.
+- [x] **SecurityTools** — [SecurityTools#153](https://github.com/jjohns-dev/SecurityTools/issues/153) and [#155](https://github.com/jjohns-dev/SecurityTools/issues/155), both closed
+  Discovery binding and the verify step landed 2026-10-27 as [SecurityTools#154](https://github.com/jjohns-dev/SecurityTools/pull/154) — matching-help 0 → 165 cases, per-leg floors 1104 / 20, and all three no-result-file guards. Both failure paths verified in CI as separate claims. Its agent also taught the test to resolve `Get-KEVList`'s conditional `DynamicParam` block.
+  The PSDepend migration landed as [SecurityTools#156](https://github.com/jjohns-dev/SecurityTools/pull/156) (`6eec42d`), **which answered the fleet-wide `SkipPublisherCheck` question** — see #27.
+  The four remaining defects landed as [SecurityTools#157](https://github.com/jjohns-dev/SecurityTools/pull/157) (`4f1f023`) — null guard, `-BeLike` replacing the `-Contain` tautology, offline URI shape check, and the mandatory-value test deleted with its marker comment. Floors re-derived in the same PR: ubuntu 1227 → 1063 collected, floor **1104 → 956**; windows unchanged at 21 / 20. Both mutations and both floor directions verified on separate runs, and the failing-floor run still uploaded its result XML.
 
 ## Phase 2 — The silent ones
 
 Counts already look correct, so nothing will surface these on their own.
 
-- [ ] **AWSAutomation** — [AWSAutomation#97](https://github.com/jjohns-dev/AWSAutomation/issues/97)
-  Reference implementation others port from. **Only repo with an existing floor (560) — must be re-derived in the same PR.**
-- [ ] **ArcGISEnterprise** — [ArcGISEnterprise#143](https://github.com/PS-MCS/ArcGISEnterprise/issues/143)
-  Defects 1/2/3 plus the floor is unset. Zero `Mandatory` coverage elsewhere in its tests.
-- [ ] **MCS** — [MCS#212](https://github.com/PS-MCS/MCS/issues/212)
-  Defect 3 only; 1 and 2 already fixed. Deletion drops CrossPlatform 495 → 444, below the current floor of 445 — re-derive in the same PR.
+All three issue bodies were corrected on 2026-10-28 before any work started: each was missing the `$_ -and` null guard, and all three banners pointed at a comment for the PSDepend detail. Defect counts went from three to four.
+
+- [x] **AWSAutomation** — [AWSAutomation#97](https://github.com/jjohns-dev/AWSAutomation/issues/97) and [#100](https://github.com/jjohns-dev/AWSAutomation/issues/100), both closed
+  Reference implementation others port from. Three PRs, all merged 2026-10-28: [#98](https://github.com/jjohns-dev/AWSAutomation/pull/98) PSDepend migration (`dbcd482`), [#99](https://github.com/jjohns-dev/AWSAutomation/pull/99) the four defects with the floor re-derived 560 → **430** against 478 collected (`2f49d83`), and [#101](https://github.com/jjohns-dev/AWSAutomation/pull/101) floating the unversioned runtime dependencies (`110e246`).
+  The link test here was **live, not dormant** — `Edit-AWSProfile` and `Get-WindowsDisk` were making real calls to `docs.aws.amazon.com` on every run. That is now an offline shape check.
+  `ubuntu-latest` only, and zero `-Skip` usage, so #23 will not disturb its floor.
+- [x] **ArcGISEnterprise** — [ArcGISEnterprise#143](https://github.com/PS-MCS/ArcGISEnterprise/issues/143), closed
+  Two PRs, both merged 2026-10-28: [#145](https://github.com/PS-MCS/ArcGISEnterprise/pull/145) PSDepend migration (`9c0bc88`), and [#146](https://github.com/PS-MCS/ArcGISEnterprise/pull/146) the four defects plus the first floor at **1692** against 1,881 collected (`105b60a`).
+  **It also pulled [#22](https://github.com/jjohns-dev/pwsh-module-ci/issues/22) forward** — link cases are now generated at discovery from `Get-Help`, so a command with no `.LINK` produces none. That dropped 2,013 → 1,881, i.e. 132 cases that could never fail. This repo is now ahead of the five that already merged the template without it.
+  Also normalised the whole repo to LF (89 files, content-identity proven by an empty `git diff --ignore-cr-at-eol`). The `.git-blame-ignore-revs` follow-up landed as [#148](https://github.com/PS-MCS/ArcGISEnterprise/pull/148) (`45a2d48`), closing [#147](https://github.com/PS-MCS/ArcGISEnterprise/issues/147) — blame attribution verified to move off the renormalisation commit and back to the original authors.
+- [x] **MCS** — [MCS#212](https://github.com/PS-MCS/MCS/issues/212), closed
+  Two PRs, both merged 2026-10-28: [#213](https://github.com/PS-MCS/MCS/pull/213) PSDepend migration (`60fc7de`), and [#214](https://github.com/PS-MCS/MCS/pull/214) the remaining defects plus the floor (`3e8fd71`). Defects 1 and 2 were already fixed here, so the scope was defect 3, the null guard, and the link change.
+  **Also pulled [#22](https://github.com/jjohns-dev/pwsh-module-ci/issues/22) forward**, as ArcGIS did. CrossPlatform went 495 → 444 (51 mandatory cases) → **410** (34 link cases), floor **369**. WindowsOnly unaffected at 136 / 122.
+  `#214` was rebased onto `main` after `#213` merged, so the 410 and the floor are measured under the merged `Install-PSResource` loop rather than inferred. Post-merge CI on `main` is green.
+
+## Phase 2B — Catch-up: PSDepend migrations owed from Phase 1
+
+Phase 1's boxes are ticked for the Help.Tests work, which is all it was scoped to. Two of those repos still owe the PSDepend migration: their Help.Tests work landed *before* that migration was decided, so they were never sequenced through it. Tracked at [#27](https://github.com/jjohns-dev/pwsh-module-ci/issues/27), verified still outstanding 2026-10-29.
+
+- [x] **PS.Log** — [PS.Log#57](https://github.com/jjohns-dev/PS.Log/issues/57)
+  Done 2026-10-29, merged as [PS.Log#58](https://github.com/jjohns-dev/PS.Log/pull/58) (`4152e0c`). Count unchanged at 97 and the test names matched between runs, not just the totals. Floor untouched at 87.
+- [x] **PS.SSL** — [PS.SSL#73](https://github.com/jjohns-dev/PS.SSL/issues/73)
+  Done 2026-10-29, merged as [PS.SSL#74](https://github.com/jjohns-dev/PS.SSL/pull/74) (`3ec8b96`). Counts unchanged at 375 / 377, floor untouched at 337.
+  **Also delivered the measurement that was blocking #23:** `disabled` is 14 on ubuntu and 15 on windows, so executed is 361 / 362 — both already above the 337 floor.
+
+Both are `jjohns-dev` repos, so zero approvals and self-merge. Neither touches `depend.psd1`, tests, or the floor.
 
 ## Phase 3 — Make regressions visible
 
-- [ ] **pwsh-module-ci** — [#23](https://github.com/jjohns-dev/pwsh-module-ci/issues/23)
-  The floor counts skipped tests, so a mass-skip regression passes. **Also apply to `PS-MCS/mcssec-ops`.** Staged rollout via an immutable `vX.Y.Z` pin. Ideally lands before the two Phase 1 floors.
-- [ ] **PS.GHOps** — [PS.GHOps#19](https://github.com/jjohns-dev/PS.GHOps/issues/19)
-  Floor only. No `Help.Tests.ps1`, nothing to fix.
-- [ ] **PS.GitHub** — [PS.GitHub#37](https://github.com/jjohns-dev/PS.GitHub/issues/37)
-  Floor only. No `Help.Tests.ps1`.
+Two independent tracks. **Track A is unblocked and can start now**; Track B is the staged #23 rollout.
+
+### Track A — first-time floors
+
+None of these three has a floor today, and all three measure `disabled = 0`, so their floors are identical under the old and new semantics. They do **not** need to wait for #23. Counts measured 2026-10-29 from each repo's latest `main` run; `PS.GHOps` and `PS.GitHub` were still at the SHA I measured, so they are current.
+
+- [x] **PS.GHOps** — [PS.GHOps#19](https://github.com/jjohns-dev/PS.GHOps/issues/19) — **done 2026-10-30**
+  Floor only. No `Help.Tests.ps1`, nothing to fix. 95 collected, identical on all three legs → floor **91**. Two PRs: [#20](https://github.com/jjohns-dev/PS.GHOps/pull/20) PSDepend → `Install-PSResource` (`f17c19c`), [#21](https://github.com/jjohns-dev/PS.GHOps/pull/21) the floor (`93ce0a1`).
+  **It is now the reference for the other two**, closer than the `SecurityTools` loop the standards doc names: identical starting shape — same three exact pins, same bootstrap at `build.ps1` lines 31-51, same `ci.yml` with no `with:` block. First repo where ADR-0004's *percentage* term binds rather than the cap, `floor(95 * 0.05) = 4`.
+  Verified independently: the sabotage run failed **and** uploaded all three artifacts, re-parsed to `tests=95`. The failure annotation quoted the repo's own `9999` back, which is what proves the input reaches the reusable workflow — a green run cannot distinguish a working floor from an unset one, since `MIN_TESTS` defaults to `0` and disables the check.
+  **Small debt, tidy later:** `build.ps1` still carries four cosmetic `PSDepend` references — `$psdependencyConfigPath` twice, the `Import-PowerShellDataFile` line, and the `PSDependOptions` filter. The filter is load-bearing because `depend.psd1` keeps PSDepend's schema; the variable name is not. Grepping `PSDepend` to check whether the migration happened returns four hits in a file that no longer uses it.
+- [x] **PS.GitHub** — [PS.GitHub#37](https://github.com/jjohns-dev/PS.GitHub/issues/37) — **done 2026-10-30**
+  Floor only. No `Help.Tests.ps1`. 112 collected, identical on all three legs → floor **107**. Two PRs: [#38](https://github.com/jjohns-dev/PS.GitHub/pull/38) PSDepend → `Install-PSResource` (`161ffa7`), [#39](https://github.com/jjohns-dev/PS.GitHub/pull/39) the floor (`5c1ebde`).
+  **Took the neutral-variable improvement, so this is the cleanest of the three.** `build.ps1` now greps to exactly **one** `PSDepend` hit — the load-bearing `PSDependOptions` filter — against four in `PS.GHOps`. `PS.DCU` should match this, leaving `PS.GHOps` as the only rename outstanding.
+  **Correction carried back from that work:** these repos are **not** under classic branch protection. `GET /branches/main/protection` returns 404. The three required checks come from a repository **ruleset** named `protect` (id `18439023`, target `branch`, enforcement `active`, condition `~DEFAULT_BRANCH`), which also carries `required_signatures`, `required_linear_history`, `non_fast_forward`, `deletion`, and `pull_request` with 0 approvals. Verified 2026-10-30. This matters for `PS.DCU`: its `os-matrix` switch renames the required checks, so the **ruleset** is what must be edited, not a branch-protection setting.
 - [ ] **PS.DCU** — [PS.DCU#16](https://github.com/jjohns-dev/PS.DCU/issues/16)
   Floor **plus stale-help detection**. Best-shaped file in the fleet — keep the single-`It` style, do not convert it to `-ForEach`.
+  **Also switch `os-matrix` from `ubuntu-latest` to `windows-latest`** (user decision, 2026-10-29). The module wraps a Dell utility, so testing it anywhere but Windows is meaningless. Deliberately bundled into the same issue rather than split out: the OS switch **changes which tests collect**, so the floor cannot be derived until it lands. Splitting them would mean deriving the floor twice and the first value would be wrong.
+  The 85 collected / floor 81 measured on ubuntu is therefore a **pre-switch** number — do not reuse it. Re-measure on the Windows leg.
+
+### Track B — the #23 rollout
+
+- [ ] **pwsh-module-ci** — [#23](https://github.com/jjohns-dev/pwsh-module-ci/issues/23)
+  The floor counts skipped tests, so a mass-skip regression passes. **Also apply to `PS-MCS/mcssec-ops`.** Staged rollout via an immutable `vX.Y.Z` pin.
+  **Scope shrank 2026-10-28.** The margin question that used to live here is settled in [ADR-0004](docs/adr/0004-min-tests-floor-margin.md), so what remains is only the change of input from `tests` to `tests - disabled`.
+  **No longer blocked — measured 2026-10-29** (run `40934797901`, on `main` after [PS.SSL#76](https://github.com/jjohns-dev/PS.SSL/pull/76)):
+
+  | Leg | collected | disabled | executed | floor today |
+  | --- | --------- | -------- | -------- | ----------- |
+  | ubuntu | 360 | 14 | **346** | 350 |
+  | windows | 362 | 15 | **347** | 350 |
+
+  **This change turns `PS.SSL` red on both legs the moment `v1` moves** — executed sits below its floor of 350, which was derived from the *collected* count four hours earlier. Not a regression; the floor and its input would simply stop measuring the same thing.
+  **Correction to what this bullet used to say.** The skips are **not** "whole `Describe` blocks gated on openssl and network reachability". The 14 on both legs are the `Network`-tagged integration tests removed by `Filter.ExcludeTag = 'Network'` in `build.psake.ps1` (added in PS.SSL#50 for `badssl.com` flakiness) — tag exclusion emits no `testcase` node at all. The `-Skip:(-not $NetworkReachable)` wrapper does exist, documented in [PS.SSL#69](https://github.com/jjohns-dev/PS.SSL/issues/69), but never fires in CI because `ExcludeTag` removes those tests first. The 15th on windows is unrelated: `Loader.Tests.ps1` → *"does not warn about missing openssl when openssl is on PATH"*, marked `-Skip:($IsWindows)` because it exercises the Linux/macOS `/usr/bin` probe branch.
+  **`PS.SSL#69` is the authoritative record of *why* those 14 are excluded. Do not restate it here or open a competing issue.** Its proposal adds more `Network`-tagged tests, which raise `collected` and `disabled` but not `executed` — so under today's floor they would silently inflate the number, and under #23's floor they have no effect. #23 should land first for that reason.
+
+  **Ordered rollout. The `PS.SSL` floor changes in step 3, in the same PR as the pin — not before, not after.** Lowering it early would open ~24 tests of slack while the floor still measures `tests`, which is the exact blind spot #23 exists to close.
+
+  **Hold lifted 2026-10-30.** The floor change was paused pending an explanation of the disabled tests. That explanation is now complete and **confirms the plan rather than changing it**: the 14 are excluded from the gate permanently and by design, so `executed` stays at ~346 no matter what happens to [PS.SSL#69](https://github.com/jjohns-dev/PS.SSL/issues/69). The separate network workflow #69 proposes does **not** affect this floor — the gating run excludes those tests either way. Two problems sharing a cause, not one problem. Track B is clear to start.
+
+  1. [ ] Merge #23 to `main`. No consumer is affected; `v1` has not moved.
+  2. [ ] Cut an annotated `vX.Y.Z`. Still no consumer effect.
+  3. [ ] **`PS.SSL` PR, one commit, two changes:** `uses: ...@vX.Y.Z` **and** `min-tests: 350 → 336`. Derive from the lower executed leg: `346 - min(floor(346 * 0.05), 10) = 336`; windows at 347 clears it too. Read the real number from that run's artifact rather than trusting this one. This PR **is** the verification, and `PS.SSL` is never red because pin and floor move together.
+  4. [ ] Spot-check `SecurityTools` the same way — the only other repo measured with `disabled > 0` (1 on ubuntu; executed 996 vs floor 987, so no change expected).
+  5. [ ] Move `v1` to `vX.Y.Z` (admin force-push; see AGENTS.md).
+  6. [ ] Repoint `PS.SSL` to `@v1` to clear the pin debt.
+
+  **Survey complete, 2026-10-29. `PS.SSL` is the only repo that breaks.**
+
+  | Repo | Floor | `disabled` | Under #23 |
+  | ---- | ----- | ---------- | --------- |
+  | `PS.SSL` | 350 | 14 / 15 | **RED on both legs** — executed 346 / 347 |
+  | `SecurityTools` | 987 / 20 | 1 / 0 | safe, executed 996 |
+  | `AWSAutomation` | 430 | 0 | safe |
+  | `PS.Log` | 87 | 0 | safe |
+  | `PS.GHOps` · `PS.GitHub` · `PS.DCU` | none yet | 0 | safe, Track A sets them |
+  | `MCS` | 369 / 122 | 0 | safe |
+  | `ArcGISEnterprise` | 1692 | 0 | safe |
+  | `PS.ETL` | **none passed** | n/a | safe — an unset `MIN_TESTS` reads as 0, which disables the check |
+
+  **`mcssec-ops` cannot be staged the way `pwsh-module-ci` can.** It holds its own copy of the verify step as a reusable workflow, `ps-module-validate.yml`, taking `min-tests` as an input. Its two consumers — `ArcGISEnterprise` and `PS.ETL` — both pin **`@main`**, not a version tag. There is no immutable tag to stage through, so the edit reaches both the moment it merges. That is tolerable here only because both are safe (`ArcGISEnterprise` has `disabled = 0`; `PS.ETL` passes no floor), but it means the `mcssec-ops` change must be verified before merge, not after. Do not assume the `vX.Y.Z` staging dance from step 2 is available on that side.
+
+  `PS.ETL`'s `validate.yml` runs on `pull_request` only, which is why its `main` history shows no test artifacts. That is not an absence of CI.
 
 ## Phase 4 — Close the tracker issue
 
@@ -49,7 +144,8 @@ Gated on Phases 1–3.
 Gated on Phases 1–2.
 
 - [ ] **pwsh-module-ci** — [#24](https://github.com/jjohns-dev/pwsh-module-ci/issues/24)
-  Converge `PS.Log` and `PS.ETL` off `BuildHelpers`, drop `PS.SSL`'s vestigial entry. Prep for #20 — it removes one known `Build/` difference before the classification work starts. **`PS.Log` done** 2026-10-26 ([PS.Log#56](https://github.com/jjohns-dev/PS.Log/pull/56), merged). `PS.SSL` is a one-line `depend.psd1` deletion; the `PS.ETL` half must wait for PS-MCS/PS.ETL#22.
+  Converge the fleet off `BuildHelpers`. Prep for #20 — it removes one known `Build/` difference before the classification work starts.
+  **Only `PS.ETL` remains.** `PS.Log` converged 2026-10-26 ([PS.Log#56](https://github.com/jjohns-dev/PS.Log/pull/56)) and `PS.SSL`'s vestigial entry went with [PS.SSL#72](https://github.com/jjohns-dev/PS.SSL/pull/72) — verified 2026-10-28, zero `BuildHelpers` entries in either `depend.psd1`. The `PS.ETL` half waits on PS-MCS/PS.ETL#22.
 - [ ] **pwsh-module-ci** — [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20)
   Stop duplicating `Build/` **and** `Tests/Common/`. Diff the test template only after Phase 1–2 lands, or you classify drift against a moving baseline.
 
@@ -60,37 +156,62 @@ Gated on Phases 1–2.
 - [ ] **pwsh-module-ci** — [#21](https://github.com/jjohns-dev/pwsh-module-ci/issues/21) — gated on #19
   Centralize SecurityTools CI. Current lean is a second reusable workflow rather than extending `ci.yml`.
 
-## Phase 7 — Deferred
+## Phase 7 — Link-case back-fill — COMPLETE
 
-Gated on Phases 1–2.
+No longer deferred. Pulled forward into Phase 2 for both `PS-MCS` repos, because each was already editing the same `It` block and already re-deriving its floor, so the marginal cost was near zero. **All six repos landed 2026-10-28/29.**
 
-- [ ] **pwsh-module-ci** — [#22](https://github.com/jjohns-dev/pwsh-module-ci/issues/22)
-  Stop generating link-test cases for commands with no `.LINK`. Edits the same `It` block as Phases 1–2.
+- [x] **pwsh-module-ci** — [#22](https://github.com/jjohns-dev/pwsh-module-ci/issues/22)
+  Stop generating link cases for commands with no `.LINK`. **Done everywhere: `ArcGISEnterprise` (132 cases removed), `SecurityTools` (66), `MCS` (34), `AWSAutomation` (34 of 36), `PS.SSL` (15 per leg), `PS.Log` (6).**
+  Reference implementation is `MCS` after [#214](https://github.com/PS-MCS/MCS/pull/214) — URIs collected in `BeforeDiscovery` from `Get-Help`, bound with `-ForEach ... -AllowNullOrEmptyForEach`. **Source from `Get-Help`, not the AST**: the AST returns related-topic names alongside URIs, which would fail the scheme check. Filter on a non-empty `uri`, since a command with no `.LINK` still yields an entry with an empty one.
+  **Each back-fill moved that repo's floor**, re-derived in the same PR under ADR-0004 with the derivation recorded in the `min-tests` trailing comment, as [PS.Log#60](https://github.com/jjohns-dev/PS.Log/pull/60) did. That matters most when the floor value happens not to change, since the diff then carries no evidence the floor was considered at all.
+
+  | Repo | Cases | Collected after | Floor | PR |
+  | ---- | ----- | --------------- | ----- | -- |
+  | `ArcGISEnterprise` | 132 → 0 | 1881 | 1692 | [#146](https://github.com/PS-MCS/ArcGISEnterprise/pull/146) |
+  | `SecurityTools` | 66 → 0 | 997 / 21 | 987 / 20 | [#159](https://github.com/jjohns-dev/SecurityTools/pull/159) `48c1ffe` |
+  | `MCS` | 34 → 0 | 410 / 136 | 369 / 122 | [#214](https://github.com/PS-MCS/MCS/pull/214) |
+  | `AWSAutomation` | 36 → **2** | 444 | 430 → **434** | [#103](https://github.com/jjohns-dev/AWSAutomation/pull/103) `b11313b` |
+  | `PS.SSL` | 15 → 0 per leg | 360 / 362 | 337 → 350 | [#76](https://github.com/jjohns-dev/PS.SSL/pull/76) `90d9a6d` |
+  | `PS.Log` | 6 → 0 | 91 | 87 unchanged | [#60](https://github.com/jjohns-dev/PS.Log/pull/60) `9f0b086` |
+
+  **`SecurityTools` was the live test of the AST-vs-`Get-Help` choice, and it passed.** Its one `.LINK` is `ConvertTo-GZipString`, a related-topic name rather than a URI, so `Get-Help` files it under `linkText` with an empty `uri` and it is correctly dropped — while the AST would return it and fail the scheme check. It is the only repo in the fleet where the wrong source breaks something.
+  **`AWSAutomation` was the genuine exception, and it closed the one remaining hole.** Its two `.LINK`s are real `docs.aws.amazon.com` URLs, so two cases survive and "zero cases generated" would have been the wrong assertion. More importantly it is the only repo that could prove the *generator* still works: its mutation runs collected 445 tests with **3** link cases and exactly one failure each, the two real links passing alongside the broken one. In the other five, a filter returning nothing unconditionally would have produced zero cases and passed green through every check. That failure mode is now ruled out by measurement rather than by argument — generalized into `docs/shared-ci-standards.md`.
 
 ## Runs on its own clock
 
 - [ ] **PS.ETL** — [PS.ETL#22](https://github.com/PS-MCS/PS.ETL/issues/22)
   Pester 5.5.0 → 6.2.0 first, including the `CommandInfo` hang fix. Decoupled from #17, blocks nothing.
 
-## Two sequencing traps
+**Not work, a standing caveat:** `AWSAutomation`'s dependency policy is recorded as ADR-0002 in that repo, 2026-10-28. Its 14 `AWS.Tools.*` modules and `ImportExcel` resolve to `'latest'`; build tooling stays pinned. **Do not copy it to another repo without re-deriving it** — it turns on those modules being unversioned `RequiredModules`, which no other repo in the fleet has. The NuGet-range trap behind it is on #27.
 
-**#22 edits the same `It` block as Phases 1–2.** Do it with them, or well after — never between, or the same block gets rebased twice.
+## Reference — two sequencing traps
 
-**#23 changes floor semantics for the only two repos that use `-Skip`** (PS.SSL, SecurityTools). Everywhere else `tests` and executed counts are identical, so it makes no difference. Either land #23 first, or accept re-deriving those two floors.
+**#22 edits the same `It` block as the Phase 1–2 work.** Resolved for `ArcGISEnterprise` and `MCS` by doing it with them. For the remaining four, that block is now settled on `main`, so the back-fill is a clean single edit rather than a rebase hazard.
 
-## Recurring rules for every PR in Phases 1–3
+**#23 changes floor semantics for the only two repos that use `-Skip`** (PS.SSL, SecurityTools). Everywhere else `tests` and executed counts are identical, so it makes no difference. **Decided by events** — #23 did not land first, so both repos carry floors derived against `tests`, which includes skips, and both need re-deriving when it lands.
+**Measured 2026-10-29 and milder than assumed.** PS.SSL is 14 / 15 disabled, so executed is 361 / 362 against a floor of 337 — already below, so #23 does not redden it. The cause is `ExcludeTag` on `Network`, **not** the openssl and network-reachability `Describe` guards this file previously blamed; openssl is present on both runners and those blocks ran. SecurityTools is 1 skipped on ubuntu, 0 on windows. Full numbers on #23.
 
-- **Fix first, measure second, set the floor third.** A floor derived before the fix records the defective count as the baseline, and can never trip on a regression back to it.
-- **Acceptance is the mutation, not the count.** Make the thing you are guarding fail, confirm red, revert. A check that never fires is indistinguishable from one that passes.
+## Reference — recurring rules for every PR from here on
+
+- **Migrate the repo off PSDepend first, in its own PR** (#27). `Import-PowerShellDataFile` on `Build/depend.psd1`, then `Install-PSResource` per entry. All ten `depend.psd1` files are identical in **shape** — every entry is a plain `Name = 'version'` string — so it is the same edit everywhere. They are *not* identical in content; the pinned versions have drifted, and the table is on #20. Separate PR, before any test work, so a module-install failure surfaces against a three-line diff instead of a large one.
+  **Done in `SecurityTools`, `AWSAutomation`, `ArcGISEnterprise` and `MCS`. `PS.Log` and `PS.SSL` still owe it** — their Help.Tests work landed before this was decided, so they are catch-up, tracked on #27.
+  Carry forward: a bare version string is an **exact** pin under `Install-PSResource`, not a minimum; and a NuGet *range* does not resolve to the newest member, so never use one.
+- **Fix first, measure second, set the floor third.** A floor derived before the fix records the defective count as the baseline, and can never trip on a regression back to it. Read the number from the run's JUnit artifact; never predict it.
+- **The floor is `collected - min(floor(collected * 0.05), 10)`** — [ADR-0004](docs/adr/0004-min-tests-floor-margin.md). Use it for every floor derived from 2026-10-28 on. Existing floors move opportunistically, whenever a PR next touches them; a repo still on the old 90% convention is expected, not a bug.
+- **Acceptance is the mutation, not the count.** Make the thing you are guarding fail, confirm red, revert. A check that never fires is indistinguishable from one that passes. Where a repo cannot produce that evidence incidentally — no `.LINK` anywhere, for instance — the mutation has to be manufactured.
 - **Verify floors in both directions.** An impossible floor must fail the run *and* leave the result XML uploaded; a correct floor must stay quiet.
 
 ## Along the way: AGENTS.md for three repos
 
 - [x] **PS.Log** — written in [PS.Log#55](https://github.com/jjohns-dev/PS.Log/pull/55), kept current in [#56](https://github.com/jjohns-dev/PS.Log/pull/56)
-- [ ] **PS.SSL**
-- [ ] **PS.DCU**
+- [x] **PS.SSL** — present on `main`, verified 2026-10-28
+- [ ] **PS.DCU** — still the only one of the three without an `AGENTS.md`
 
-None of these has an `AGENTS.md`, and all three are receiving non-trivial PRs. Writing one first is cheap and pays off on every later session in that repo.
+Only `PS.DCU` is outstanding, and it is receiving a non-trivial PR in Phase 3.
+
+**Decided 2026-10-30 — fold it into the PS.DCU prompt rather than tracking it separately, and sequence it after the OS switch, not before.** The general advice above is "write it first", and for a repo in a steady state that is right. PS.DCU is not in a steady state: the Track A work removes the PSDepend bootstrap and moves CI from `ubuntu-latest` to `windows-latest`. Those are exactly the two things an `AGENTS.md` would lead with, so a file written first would be documenting a repo that no longer exists by the end of the same session, and would need correcting in the PR that invalidated it.
+
+Write it in or after the PR that lands the OS switch, so the Windows-only rationale — *the module wraps a Dell utility, so testing it anywhere else asserts nothing* — is recorded as a current fact rather than a pending change. `PS.GHOps` and `PS.GitHub` already have an `AGENTS.md`; they need theirs **checked for staleness** against the PSDepend removal instead, in the PR that causes it.
 
 Give the prompt below to an agent working **in that repo** rather than drafting the file from elsewhere — most of an `AGENTS.md` is claims about what commands work and what has bitten people, and those have to be verified by running them. Substitute the repo's own issue number for `#<N>`: PS.Log → 54, PS.SSL → 71, PS.DCU → 16.
 
