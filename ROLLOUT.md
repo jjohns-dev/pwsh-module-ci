@@ -202,7 +202,11 @@ No longer deferred. Pulled forward into Phase 2 for both `PS-MCS` repos, because
 - [x] **PS.SSL** — present on `main`, verified 2026-10-28
 - [ ] **PS.DCU** — still the only one of the three without an `AGENTS.md`
 
-Only `PS.DCU` is outstanding, and it is receiving a non-trivial PR in Phase 3. Writing the file first is cheap and pays off on every later session in that repo.
+Only `PS.DCU` is outstanding, and it is receiving a non-trivial PR in Phase 3.
+
+**Decided 2026-10-30 — fold it into the PS.DCU prompt rather than tracking it separately, and sequence it after the OS switch, not before.** The general advice above is "write it first", and for a repo in a steady state that is right. PS.DCU is not in a steady state: the Track A work removes the PSDepend bootstrap and moves CI from `ubuntu-latest` to `windows-latest`. Those are exactly the two things an `AGENTS.md` would lead with, so a file written first would be documenting a repo that no longer exists by the end of the same session, and would need correcting in the PR that invalidated it.
+
+Write it in or after the PR that lands the OS switch, so the Windows-only rationale — *the module wraps a Dell utility, so testing it anywhere else asserts nothing* — is recorded as a current fact rather than a pending change. `PS.GHOps` and `PS.GitHub` already have an `AGENTS.md`; they need theirs **checked for staleness** against the PSDepend removal instead, in the PR that causes it.
 
 Give the prompt below to an agent working **in that repo** rather than drafting the file from elsewhere — most of an `AGENTS.md` is claims about what commands work and what has bitten people, and those have to be verified by running them. Substitute the repo's own issue number for `#<N>`: PS.Log → 54, PS.SSL → 71, PS.DCU → 16.
 
