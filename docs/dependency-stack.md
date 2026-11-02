@@ -15,13 +15,15 @@ Unlike `shared-ci-standards.md`, this file is **not** interim. It outlives #20, 
 | `PSScriptAnalyzer` | static analysis | `1.25.0` | The only real linter for PowerShell. Also drives the SARIF upload to the Security tab |
 | `PSResourceGet` | dependency resolution | runner-supplied | Replaced `PSDepend` fleet-wide. Ships with the runner images, so it adds nothing to install |
 | `ConvertToSARIF` | PSSA output conversion | unpinned | Only consumed by `pssa-sarif.yml`. Exists solely to feed the Security tab |
-| `PlatyPS` | external help generation | `0.14.2` | **`AWSAutomation` only.** Not fleet policy; no other repo generates external help |
 
 Deliberately **not** in the set:
 
 - **`PSDepend`** — removed fleet-wide. It required bootstrapping itself before it could resolve anything, and the registration-state flakiness tracked in [#27](https://github.com/jjohns-dev/pwsh-module-ci/issues/27) was the trigger. `Install-PSResource` needs no bootstrap.
 - **`BuildHelpers`** — a real dependency in `PS.Log` and `PS.ETL` only, vestigial elsewhere, and a naming fossil (`$env:BH*`) in the rest. Being removed under [#24](https://github.com/jjohns-dev/pwsh-module-ci/issues/24).
+- **`PlatyPS`** — pinned at `0.14.2` in `AWSAutomation`'s `depend.psd1` and **never invoked**. Verified 2026-11-02 across all 69 text files in that repo: no `New-MarkdownHelp`, `New-ExternalHelp` or `Update-MarkdownHelp`; no `en-US/`, no `*-help.xml`, no markdown help; no docs task in `build.psake.ps1`; `HelpInfoURI` commented out in the manifest. All three mentions are declarative — the pin, a line in `AGENTS.md`, and ADR-0002. It is installed on every CI run and does nothing.
 - **A mutation-testing tool** — none adopted. See *Under evaluation*.
+
+**`AWSAutomation`'s ADR-0002 states a premise that does not hold.** It justifies pinning `PlatyPS` on the grounds that it, like Pester and psake, *"change[s] test and analysis outcomes"*. A tool that is never called cannot change any outcome. The ADR's actual decision — float runtime dependencies, pin build tooling — is unaffected and remains correct; it is the supporting enumeration that is wrong. Worth correcting when `PlatyPS` is removed, so the ADR is not left citing a dependency that no longer exists.
 
 ## Pinning policy
 
@@ -44,7 +46,7 @@ Two mechanical consequences worth knowing:
 | `PS.GitHub` | 6.2.0 | 5.0.4 | 1.24.0 | |
 | `PS.DCU` | 6.2.0 | 5.0.4 | 1.24.0 | |
 | `SecurityTools` | 6.2.0 | 5.0.4 | 1.24.0 | ImportExcel 7.8.10 |
-| `AWSAutomation` | 6.2.0 | **4.9.1** | 1.24.0 | PlatyPS 0.14.2, ImportExcel `latest` |
+| `AWSAutomation` | 6.2.0 | **4.9.1** | 1.24.0 | PlatyPS 0.14.2 (**unused**), ImportExcel `latest` |
 
 Two things this surfaces:
 
@@ -69,6 +71,7 @@ Neither is adopted. Both are independent decisions at different layers — adopt
 Applied when considering anything new:
 
 - **Does the job need a dependency at all?** The `min-tests` floor is ~30 lines of inline PowerShell precisely because no dependency was warranted.
+- **Is it still doing the job?** A pin outlives its purpose silently. `PlatyPS` above is the worked example — pinned, installed on every run, invoked nowhere, and described in two documents as something it does not do.
 - **One tool per job.** Two linters or two test runners means two sets of results to reconcile, and the PSScriptAnalyzer split above shows what that costs even when it is the *same* tool at two versions.
 - **Maintained, with evidence.** Assess the project, not the README — #19's Sampler evaluation is the worked example.
 - **Can it be pinned exactly?** Anything that cannot is a runtime dependency decision, not a build one.
