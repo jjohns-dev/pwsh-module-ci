@@ -47,6 +47,11 @@ $cases = @(
     @{ Description = 'below min-tests floor'; Fixture = 'Test-Healthy.xml'; MinTests = 433; ShouldFail = $true }
     @{ Description = 'exactly at min-tests floor'; Fixture = 'Test-Healthy.xml'; MinTests = 432; ShouldFail = $false }
     @{ Description = 'min-tests 0 disables the floor'; Fixture = 'Test-Healthy.xml'; MinTests = 0; ShouldFail = $false }
+    # THE REGRESSION THIS STEP EXISTS TO CATCH: 'tests' IS UNCHANGED, THE SUITE STOPPED RUNNING
+    @{ Description = 'mass skip: collected meets the floor but executed does not'; Fixture = 'Test-MassSkip.xml'; MinTests = 432; ShouldFail = $true }
+    @{ Description = 'mass skip: executed exactly at the floor'; Fixture = 'Test-MassSkip.xml'; MinTests = 332; ShouldFail = $false }
+    @{ Description = 'some skips, executed still clears the floor'; Fixture = 'Test-SomeSkipped.xml'; MinTests = 400; ShouldFail = $false }
+    @{ Description = 'some skips, executed falls below the floor'; Fixture = 'Test-SomeSkipped.xml'; MinTests = 425; ShouldFail = $true }
 )
 
 #endregion ====================================================================
