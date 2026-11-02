@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<testsuites name="Pester" tests="432" disabled="10" errors="0" failures="0" time="47.2210">
+  <testsuite name="Module.tests.ps1" tests="432" disabled="10" errors="0" failures="0" time="47.2210">
+    <testcase name="Exports every public function" classname="Module" time="0.3310" />
+  </testsuite>
+</testsuites>
