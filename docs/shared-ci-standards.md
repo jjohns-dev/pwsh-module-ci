@@ -29,7 +29,7 @@ Do not relitigate these. Each was decided once, with evidence, and the link goes
 - **Floors are derived after the fixes land, never before.** A floor measured before the fix records the defective count as the baseline and can never trip on a regression back to it. Read the number from the run's JUnit artifact; do not predict it.
 - **Record the derivation in the `min-tests` trailing comment**, naming the collected count and the arithmetic. This matters most when the floor value does not change — `PS.Log` stayed at 87 across a back-fill that removed six cases, and without the comment the diff carries no evidence the floor was considered at all. A reviewer cannot tell "re-derived, unchanged" from "forgotten" otherwise.
 - **The floor margin is `min(floor(collected * 0.05), 10)`** — see [ADR-0004](adr/0004-min-tests-floor-margin.md) for why the cap is the operative part. Use it for every floor you derive. **Existing floors move to it opportunistically**: when a PR touches a repo's floor for any reason, re-derive under this formula while you are there. There is no dedicated back-port sweep, and #23 catches any stragglers when it changes the floor's input from `tests` to `tests - disabled`. A repo still on the old 90% convention is expected, not a bug.
-- **Build tooling stays exactly pinned everywhere.** Pester, psake, PSScriptAnalyzer and PlatyPS change test and analysis outcomes.
+- **Build tooling stays exactly pinned everywhere.** Pester, psake, PSScriptAnalyzer and PlatyPS change test and analysis outcomes. The full stack, the pinning policy and the `Install-PSResource` version-string mechanics live in [`dependency-stack.md`](dependency-stack.md), which outlives this file.
 
 ## Traps that have cost real time
 
