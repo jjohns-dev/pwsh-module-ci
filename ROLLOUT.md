@@ -14,7 +14,7 @@ Phase numbers are **names, not a sequence**. They were assigned before #22 moved
 | ✓ | **2** — the silent ones | done 2026-10-28 — AWSAutomation, ArcGISEnterprise, MCS |
 | ✓ | **2B** — catch-up PSDepend migrations | done 2026-10-29 — PS.Log, PS.SSL. All six repos are now off PSDepend |
 | ✓ | **7** — #22 link-case back-fill | done 2026-10-29 — all six repos. Each moved that repo's floor, re-derived under ADR-0004 in the same PR |
-| → | **3** — make regressions visible | **in progress.** Track A **2 of 3** — PS.GHOps `91`, PS.GitHub `107` done; **PS.DCU next**. Track B (#23) unblocked, not started |
+| → | **3** — make regressions visible | **Track A done** 2026-11-02 — PS.GHOps `91`, PS.GitHub `107`, PS.DCU `81`, all predictions matched. **Track B (#23) is the only thing left in this phase** |
 | | **4** — close the tracker issue | gated on the above |
 | | **5** — stop the duplication | #24, then #20 |
 | | **6** — migration | #19, then #21 |
@@ -70,9 +70,17 @@ Both are `jjohns-dev` repos, so zero approvals and self-merge. Neither touches `
 
 Two independent tracks. **Track A is unblocked and can start now**; Track B is the staged #23 rollout.
 
-### Track A — first-time floors
+### Track A — first-time floors — COMPLETE 2026-11-02
 
-None of these three has a floor today, and all three measure `disabled = 0`, so their floors are identical under the old and new semantics. They do **not** need to wait for #23. Counts measured 2026-10-29 from each repo's latest `main` run; `PS.GHOps` and `PS.GitHub` were still at the SHA I measured, so they are current.
+All three now carry a floor derived under ADR-0004, and all three measured `disabled = 0`, so none is affected by #23. Each repo was two PRs — PSDepend migration first, then the floor — except `PS.DCU`, which needed five.
+
+| Repo | Collected | Floor | Margin term that bound |
+| ---- | --------- | ----- | ---------------------- |
+| PS.GHOps | 95 (3 legs) | **91** | percentage, `floor(95 * 0.05) = 4` |
+| PS.GitHub | 112 (3 legs) | **107** | percentage, `floor(112 * 0.05) = 5` |
+| PS.DCU | 85 (1 leg) | **81** | percentage, `floor(85 * 0.05) = 4` |
+
+None of the three hit ADR-0004's cap of 10 — every suite is small enough that the 5% term binds. The cap only matters for `ArcGISEnterprise`, `SecurityTools` and `AWSAutomation`.
 
 - [x] **PS.GHOps** — [PS.GHOps#19](https://github.com/jjohns-dev/PS.GHOps/issues/19) — **done 2026-10-30**
   Floor only. No `Help.Tests.ps1`, nothing to fix. 95 collected, identical on all three legs → floor **91**. Two PRs: [#20](https://github.com/jjohns-dev/PS.GHOps/pull/20) PSDepend → `Install-PSResource` (`f17c19c`), [#21](https://github.com/jjohns-dev/PS.GHOps/pull/21) the floor (`93ce0a1`).
@@ -83,10 +91,12 @@ None of these three has a floor today, and all three measure `disabled = 0`, so 
   Floor only. No `Help.Tests.ps1`. 112 collected, identical on all three legs → floor **107**. Two PRs: [#38](https://github.com/jjohns-dev/PS.GitHub/pull/38) PSDepend → `Install-PSResource` (`161ffa7`), [#39](https://github.com/jjohns-dev/PS.GitHub/pull/39) the floor (`5c1ebde`).
   **Took the neutral-variable improvement, so this is the cleanest of the three.** `build.ps1` now greps to exactly **one** `PSDepend` hit — the load-bearing `PSDependOptions` filter — against four in `PS.GHOps`. `PS.DCU` should match this, leaving `PS.GHOps` as the only rename outstanding.
   **Correction carried back from that work:** these repos are **not** under classic branch protection. `GET /branches/main/protection` returns 404. The three required checks come from a repository **ruleset** named `protect` (id `18439023`, target `branch`, enforcement `active`, condition `~DEFAULT_BRANCH`), which also carries `required_signatures`, `required_linear_history`, `non_fast_forward`, `deletion`, and `pull_request` with 0 approvals. Verified 2026-10-30. This matters for `PS.DCU`: its `os-matrix` switch renames the required checks, so the **ruleset** is what must be edited, not a branch-protection setting.
-- [ ] **PS.DCU** — [PS.DCU#16](https://github.com/jjohns-dev/PS.DCU/issues/16)
-  Floor **plus stale-help detection**. Best-shaped file in the fleet — keep the single-`It` style, do not convert it to `-ForEach`.
-  **Also switch `os-matrix` from `ubuntu-latest` to `windows-latest`** (user decision, 2026-10-29). The module wraps a Dell utility, so testing it anywhere but Windows is meaningless. Deliberately bundled into the same issue rather than split out: the OS switch **changes which tests collect**, so the floor cannot be derived until it lands. Splitting them would mean deriving the floor twice and the first value would be wrong.
-  The 85 collected / floor 81 measured on ubuntu is therefore a **pre-switch** number — do not reuse it. Re-measure on the Windows leg.
+- [x] **PS.DCU** — [PS.DCU#16](https://github.com/jjohns-dev/PS.DCU/issues/16) — **done 2026-11-02, issue closed**
+  Five PRs, not two: [#17](https://github.com/jjohns-dev/PS.DCU/pull/17) PSDepend (`2bc4569`), [#18](https://github.com/jjohns-dev/PS.DCU/pull/18) psake 4.9.1 → 5.0.4 (`d600bc3`), [#19](https://github.com/jjohns-dev/PS.DCU/pull/19) `os-matrix` → Windows + new `AGENTS.md` (`54611fd`), [#21](https://github.com/jjohns-dev/PS.DCU/pull/21) stale-help detection (`7865c25`), [#22](https://github.com/jjohns-dev/PS.DCU/pull/22) the floor (`d38c98c`). Plus one ruleset edit by the repo owner.
+  **85 collected, `disabled` 0, floor 81.** The pre-switch ubuntu number happened to be identical — confirmed coincidental, since the Windows run was measured independently. Comparing the two artifacts showed 76 raw differences, **all** of them `Meta.Tests` names embedding paths with `\` versus `/`; normalised, the suites are identical. The OS switch changed nothing about what is collected.
+  **The ruleset had to change before the OS switch could merge.** Ruleset `22407813` required `validate / validate (ubuntu-latest)`; switching the matrix makes CI produce `(windows-latest)`, so the required check would never report and the PR could never merge. Changed to `(windows-latest)` with all six rules preserved, verified through both the ruleset object and `/rules/branches/main`. **The update verb is `PUT`; `PATCH` returns 404** — and `gh` failing does not throw in PowerShell, so a failed call prints a tidy "after" section and changes nothing. Compare before and after, do not trust the exit path.
+  **The OS rationale we started with was wrong, and the measurement is why.** We said "testing it anywhere but Windows is meaningless". Measured: the 85 tests are `Meta` 42, `Help` 32, `Manifest` 11 — the only three test files in the repo, none using `Mock` or `Should -Invoke`, none executing module logic, against 12 source files carrying 25 `dcu-cli` and 24 `System.Management` references. The suite is **metadata-only on every OS**. Windows-only is still correct, but because CI should match the target platform, not because the Windows leg tests something the ubuntu leg did not. The real gap is tracked at [PS.DCU#20](https://github.com/jjohns-dev/PS.DCU/issues/20).
+  **It also exposed a floor blind spot**, now generalized into `docs/shared-ci-standards.md`: the stale-help assertion loops inside an existing `It`, so it produces no `testcase` node, the count stayed at 85, and deleting it would leave the floor silent. `AGENTS.md` records it as the cost of the deliberate run-time loop rather than a defect — *"a green floor means the suite still collects, not that this check is still present."*
 
 ### Track B — the #23 rollout
 
