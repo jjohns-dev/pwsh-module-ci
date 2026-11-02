@@ -104,11 +104,12 @@ The verification step is the gate; the `dorny/test-reporter` step is display onl
 ### Minimum test count
 
 A suite can also shrink with `errors = 0`: a test-file glob that stops matching, a file moved
-outside `Run.Path`, or a `-ForEach` data source that shrinks rather than empties. To catch
-that, pass the optional `min-tests` input to `ci.yml`. The run then fails when a result
-file's root `tests` count is below it. The default, `0`, disables the check. `release.yml`
-does not take the input: a release is cut from a commit that already passed `ci.yml`, so the
-floor is set in one place.
+outside `Run.Path`, or a `-ForEach` data source that shrinks rather than empties. It can also
+stop *running* without shrinking at all, when tests become skipped or tag-excluded. To catch
+both, pass the optional `min-tests` input to `ci.yml`. The run then fails when a result file's
+**executed** count — root `tests` minus `disabled` — is below it. The default, `0`, disables the
+check. `release.yml` does not take the input: a release is cut from a commit that already
+passed `ci.yml`, so the floor is set in one place.
 
 ```yaml
 jobs:
@@ -121,8 +122,10 @@ jobs:
       checks: write
 ```
 
-`min-tests` is a floor, not an exact count, so adding tests never fails a run. Set it about
-10% below the current count, using the lowest count across your runner OSes when they differ.
+`min-tests` is a floor, not an exact count, so adding tests never fails a run. Derive it from
+the **executed** count, using the lowest across your runner OSes when they differ — Pester's
+JUnitXml routes both skipped and tag-excluded tests to `disabled` while still counting them in
+`tests`, so a repo that skips anything has an executed count below its collected one.
 It catches a large drop rather than a single lost file, and it only stays useful if you raise
 it as the suite grows.
 
