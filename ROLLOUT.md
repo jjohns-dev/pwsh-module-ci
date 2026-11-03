@@ -249,7 +249,8 @@ So the last phase is a drain, not a `git rm`. **Nothing is deleted until its des
 ## Runs on its own clock
 
 - [ ] **PS.ETL** — [PS.ETL#22](https://github.com/PS-MCS/PS.ETL/issues/22)
-  Pester 5.5.0 → 6.2.0 first, including the `CommandInfo` hang fix. Decoupled from #17, blocks nothing.
+  Pester 5.5.0 → 6.2.0 first, passing command **names** rather than `CommandInfo` objects to `-ForEach`. Decoupled from #17, blocks nothing.
+  **This was recorded fleet-wide as a "hang" and it is not one.** Measured 2026-11-03 during PS.ETL step 1: 6.2.0 renames every affected test to `Management.Automation.FunctionInfo{Name='...'} help`, which would have moved 68 of that repo's 78 test names. 6.0.0 did not hang either — it finished in 52s and wrote a **1.2 GB** result file, which is almost certainly what the original report described. The change is still required; the reason was wrong.
 
 ### Found during the rollout, deliberately not folded into it
 
