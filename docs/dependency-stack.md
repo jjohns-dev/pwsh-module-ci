@@ -10,7 +10,7 @@ Unlike `shared-ci-standards.md`, this file is **not** interim. It outlives #20, 
 
 | Tool | Role | Pin | Why it is in the set |
 | ---- | ---- | --- | -------------------- |
-| `Pester` | test runner | `6.2.0` | No alternative worth considering in PowerShell. 6.x is required for the `CommandInfo`-in-`-ForEach` discovery hang fixed in 6.2.0 |
+| `Pester` | test runner | `6.2.0` | No alternative worth considering in PowerShell. 6.x renders a `CommandInfo` passed to `-ForEach` as its full type name, so every affected test is renamed unless names are passed instead — see the note below |
 | `psake` | build orchestration | `5.0.4` | Incumbent. Under review against Sampler — see *Under evaluation* |
 | `PSScriptAnalyzer` | static analysis | `1.25.0` | The only real linter for PowerShell. Also drives the SARIF upload to the Security tab |
 | `PSResourceGet` | dependency resolution | runner-supplied | Replaced `PSDepend` fleet-wide. Ships with the runner images, so it adds nothing to install |
@@ -24,6 +24,10 @@ Deliberately **not** in the set:
 - **A mutation-testing tool** — none adopted. See *Under evaluation*.
 
 **`AWSAutomation`'s ADR-0002 states a premise that does not hold.** It justifies pinning `PlatyPS` on the grounds that it, like Pester and psake, *"change[s] test and analysis outcomes"*. A tool that is never called cannot change any outcome. The ADR's actual decision — float runtime dependencies, pin build tooling — is unaffected and remains correct; it is the supporting enumeration that is wrong. Worth correcting when `PlatyPS` is removed, so the ADR is not left citing a dependency that no longer exists.
+
+**The `CommandInfo`-in-`-ForEach` problem was recorded fleet-wide as a hang, and it is not one.** Measured 2026-11-03 in `PS-MCS/PS.ETL`: on **6.2.0** a `CommandInfo` passed to `-ForEach` renders as `Management.Automation.FunctionInfo{Name='...'} help`, renaming 68 of that repo's 78 tests — so the real cost is that every affected test name changes, which breaks name-level comparison between runs. On **6.0.0** it did not hang either; it completed in 52s and wrote a **1.2 GB** result file, which is almost certainly what the original report described. Pass `.Name` and re-resolve with `Get-Command` inside the block. The fix is unchanged; the stated reason was wrong.
+
+**The correction is older than this note, which is the part worth remembering.** `PS-MCS/MCS#207` measured and recorded it during that repo's own 6.2.0 upgrade — *"does not hang: 34 blocks, 517 tests, 1.1s"* — while naming `#206` and earlier prior art as the source of the hang story. The claim still reached `PS.ETL#22`, `ROLLOUT.md` and this file afterwards, because it was copied from the older sources rather than from the reference that had already disproved it. Citing a reference is not the same as reading it.
 
 ## Pinning policy
 
