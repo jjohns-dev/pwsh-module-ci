@@ -18,6 +18,7 @@ Phase numbers are **names, not a sequence**. They were assigned before #22 moved
 | ✓ | **4** — close the tracker issue | **done 2026-11-03** — #17 closed after auditing every box against the repos. Only `PS.ETL` outstanding, decoupled to PS.ETL#22 |
 | → | **5** — stop the duplication | **next.** #24 (BuildHelpers + the unused PlatyPS pin), then #20 |
 | | **6** — migration | #19, then #21 |
+| | **8** — drain this file, then delete it | last. Nothing is deleted until its destination is named |
 
 Completed phases are closed. New work goes in a later phase or a new one, never back into a phase already marked done — Phase 2B exists because that rule was applied rather than reopening Phase 1.
 
@@ -212,6 +213,32 @@ No longer deferred. Pulled forward into Phase 2 for both `PS-MCS` repos, because
 
   **`SecurityTools` was the live test of the AST-vs-`Get-Help` choice, and it passed.** Its one `.LINK` is `ConvertTo-GZipString`, a related-topic name rather than a URI, so `Get-Help` files it under `linkText` with an empty `uri` and it is correctly dropped — while the AST would return it and fail the scheme check. It is the only repo in the fleet where the wrong source breaks something.
   **`AWSAutomation` was the genuine exception, and it closed the one remaining hole.** Its two `.LINK`s are real `docs.aws.amazon.com` URLs, so two cases survive and "zero cases generated" would have been the wrong assertion. More importantly it is the only repo that could prove the *generator* still works: its mutation runs collected 445 tests with **3** link cases and exactly one failure each, the two real links passing alongside the broken one. In the other five, a filter returning nothing unconditionally would have produced zero cases and passed green through every check. That failure mode is now ruled out by measurement rather than by argument — generalized into `docs/shared-ci-standards.md`.
+
+## Phase 8 — Drain this file, then delete it
+
+Gated on everything else. The header says to delete this file when the last box is checked, which is right about the file and wrong about its contents: several sections are the only written record of something measured once and expensive to re-derive. The "Found during the rollout" section already concedes the point — it exists *"so they are not lost when this file is deleted."*
+
+So the last phase is a drain, not a `git rm`. **Nothing is deleted until its destination is named**, and a destination means a merged commit rather than an intention.
+
+**Considered and rejected: moving this file to `docs/specs/`.** It is not a spec — no requirements, no design, and the task list is a byproduct rather than the artifact. It was written during and after execution rather than before, so filing it as one would imply approval gates that never happened. The decisive objection is the third: `docs/specs/` is read as *current intent*, and this file disclaims authority in its own header — *"Where the two disagree, the issue wins."* A permanent, unmaintained, non-authoritative document in a directory agents treat as intent is how stale guidance gets manufactured. `docs/adr/` is already this repo's mechanism for the durable half.
+
+- [ ] **Disposition pass**, one row at a time.
+
+  | Section | Destination |
+  | ------- | ----------- |
+  | Phase table, every checkbox, all sequencing and gating | **delete** — coordination state, worthless once the batch lands |
+  | Per-repo phase narratives | **delete** — the issues and PRs are authoritative and already linked from here |
+  | `Install-PSResource` exact-pin and NuGet-range traps | `docs/dependency-stack.md` |
+  | Floor and measurement facts not already captured | `docs/shared-ci-standards.md`, beside the three vacuity traps |
+  | The opportunistic-floor blind spot | **new ADR** — a decision with a known gap and a proposed second half |
+  | Repo-local gotchas | that repo's `AGENTS.md`, verified in the repo rather than copied across |
+  | Anything still open | its issue, in the body |
+  | `mcssec-ops` cannot be staged; the four copies of the verify step | [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20), where that argument gets settled |
+  | `AWSAutomation`'s ADR-0002 caveat | already an ADR there — confirm the caveat is in it, then delete |
+
+- [ ] **Delete `ROLLOUT.md` from `main`** in its own PR, once every row above is worked.
+
+**Open question, not decided.** Whether the through-line deserves one short retrospective: *every defect this batch fixed was a check that could not fail, and tooling caught none of them*. It is the most valuable thing the rollout produced and it is not any single repo's ADR. One page, if it is written at all.
 
 ## Runs on its own clock
 
