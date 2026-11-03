@@ -229,7 +229,7 @@ So the last phase is a drain, not a `git rm`. **Nothing is deleted until its des
   | Phase table, every checkbox, all sequencing and gating | **delete** — coordination state, worthless once the batch lands |
   | Per-repo phase narratives | **delete** — the issues and PRs are authoritative and already linked from here |
   | `Install-PSResource` exact-pin and NuGet-range traps | `docs/dependency-stack.md` |
-  | Floor and measurement facts not already captured | `docs/shared-ci-standards.md`, beside the three vacuity traps |
+  | Floor, vacuity and measurement traps — **including the four already written in `docs/shared-ci-standards.md`** | **a new non-interim doc**, see below. That file is interim scaffolding and deletes itself when #20 lands |
   | The opportunistic-floor blind spot | **new ADR** — a decision with a known gap and a proposed second half |
   | Repo-local gotchas | that repo's `AGENTS.md`, verified in the repo rather than copied across |
   | Anything still open | its issue, in the body |
@@ -238,7 +238,13 @@ So the last phase is a drain, not a `git rm`. **Nothing is deleted until its des
 
 - [ ] **Delete `ROLLOUT.md` from `main`** in its own PR, once every row above is worked.
 
-**Open question, not decided.** Whether the through-line deserves one short retrospective: *every defect this batch fixed was a check that could not fail, and tooling caught none of them*. It is the most valuable thing the rollout produced and it is not any single repo's ADR. One page, if it is written at all.
+**Two things that looked like they needed a retrospective, and do not.** Checked 2026-11-03, and the check corrected a row above.
+
+**The traps are already written — in a file scheduled for deletion.** `docs/shared-ci-standards.md` declares itself *"Interim scaffolding. Delete it when #20 lands"*, and it carries four lessons that are in no way interim: a check that never fires is indistinguishable from one that passes; a test that generates no cases is a **second, separate** vacuity; the floor cannot see an assertion inside a run-time loop; the floor measures executed, not collected. Carve them into a non-interim doc exactly as [`dependency-stack.md`](docs/dependency-stack.md) was carved out — `shared-ci-standards.md` already says that file *"outlives this file"*, so the pattern is established rather than invented. Until that happens, draining into `shared-ci-standards.md` would be draining into a bucket with a hole in it.
+
+**The evidence catalogue belongs on [#34](https://github.com/jjohns-dev/pwsh-module-ci/issues/34), not in a doc.** #34 makes the argument but names its evidence in a single sentence — four defects, no links, no commits. Its decisive checkbox asks whether `PSMutant` would have caught the defects already fixed, and answering it needs the actual list: repo, pre-fix commit, what the defect was, and the mutation that proved it red. Evidence serving a pending decision has a home; a free-floating retrospective would be the same content with nowhere to act on it.
+
+**So: no retrospective.** What looked like a page-sized gap is a misfiled set of traps plus a thin evidence section on an open issue.
 
 ## Runs on its own clock
 
