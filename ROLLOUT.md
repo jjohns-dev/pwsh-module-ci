@@ -251,6 +251,18 @@ So the last phase is a drain, not a `git rm`. **Nothing is deleted until its des
 - [ ] **PS.ETL** — [PS.ETL#22](https://github.com/PS-MCS/PS.ETL/issues/22)
   Pester 5.5.0 → 6.2.0 first, passing command **names** rather than `CommandInfo` objects to `-ForEach`. Decoupled from #17, blocks nothing.
   **This was recorded fleet-wide as a "hang" and it is not one.** Measured 2026-11-03 during PS.ETL step 1: 6.2.0 renames every affected test to `Management.Automation.FunctionInfo{Name='...'} help`, which would have moved 68 of that repo's 78 test names. 6.0.0 did not hang either — it finished in 52s and wrote a **1.2 GB** result file, which is almost certainly what the original report described. The change is still required; the reason was wrong.
+  **Restructured into eight steps 2026-11-03**, each its own PR: `0` PSDepend · `1` Pester 6.2.0 **and** the psake gate · `2` matching-help binding · `3` the three other defects · `3A` remove the dead docs pipeline · `4` psake · `5` the floor · `6` CI on `main`. `3A` is lettered because the later numbers are cited in merged commits; it must land before `4`, since both touch `depend.psd1` and one removes a pin while the other bumps one.
+
+  | Step | State |
+  | ---- | ----- |
+  | 0 — PSDepend → `Install-PSResource` | done, `b9c5699` ([#23](https://github.com/PS-MCS/PS.ETL/pull/23)) |
+  | 1 — Pester 6.2.0 + the `Result` gate | done, `69ced39` ([#24](https://github.com/PS-MCS/PS.ETL/pull/24)) |
+  | 2 — matching-help discovery binding | done, `907dd41` ([#25](https://github.com/PS-MCS/PS.ETL/pull/25)) |
+  | 3 · 3A · 4 · 5 · 6 | outstanding |
+
+  **Step 2 is the one that paid off visibly: 78 → 102 collected, with the matching-help cases going 0 → 24.** They had never run in this repo. Both mutations were required and proved different things — a bogus `.PARAMETER` took the count to 25 with exactly one failure named `BOGUS` (the assertion works), while stripping a function's help took its cases to 0 with no case named `$null` (the generator and the `$_ -and` guard work). Either alone would have been insufficient.
+  **A side effect worth recording:** under step 2's second mutation, with *all* comment-based help removed from a function, `Should not be auto-generated` still **passed**. That is the `-Contain` tautology step 3 deletes, caught surviving the total removal of the thing it tests.
+  **`PS.ETL` was also the last repo on PSDepend** — every other `Build/build.ps1` in both orgs had migrated.
 
 ### Found during the rollout, deliberately not folded into it
 
