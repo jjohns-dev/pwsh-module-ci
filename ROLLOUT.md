@@ -14,8 +14,8 @@ Phase numbers are **names, not a sequence**. They were assigned before #22 moved
 | ✓ | **2** — the silent ones | done 2026-10-28 — AWSAutomation, ArcGISEnterprise, MCS |
 | ✓ | **2B** — catch-up PSDepend migrations | done 2026-10-29 — PS.Log, PS.SSL. All six repos are now off PSDepend |
 | ✓ | **7** — #22 link-case back-fill | done 2026-10-29 — all six repos. Each moved that repo's floor, re-derived under ADR-0004 in the same PR |
-| → | **3** — make regressions visible | **Track A done** 2026-11-02 — PS.GHOps `91`, PS.GitHub `107`, PS.DCU `81`, all predictions matched. **Track B (#23) is the only thing left in this phase** |
-| | **4** — close the tracker issue | gated on the above |
+| ✓ | **3** — make regressions visible | **done 2026-11-03.** Track A: first floors for PS.GHOps `91`, PS.GitHub `107`, PS.DCU `81`. Track B: the floor now measures **executed**, shipped as `v1.5.0` and live fleet-wide |
+| → | **4** — close the tracker issue | **next.** Gated on Phases 1–3, which are now all complete |
 | | **5** — stop the duplication | #24, then #20 |
 | | **6** — migration | #19, then #21 |
 
@@ -131,7 +131,20 @@ None of the three hit ADR-0004's cap of 10 — every suite is small enough that 
      `docs/shared-ci-standards.md` corrected at this point, not earlier ([#38](https://github.com/jjohns-dev/pwsh-module-ci/pull/38)): its "a mass-skip regression sails past a floor" line was true for every consumer until this moment.
   6. [x] Repoint `PS.SSL` to `@v1` to clear the pin debt. **Done 2026-11-03** — [PS.SSL#78](https://github.com/jjohns-dev/PS.SSL/pull/78) `e5a6cb2`, one line. Deliberately done while it was a behavioural no-op: `v1` (tag object `ffbef62`) and `v1.5.0` (`2cfc303`) both dereference to commit `9aa935a`, so only the ref name changed. The same repoint after a `v1.6.0` lands would have carried real change.
      **No staging pins remain anywhere in the fleet** — every `pwsh-module-ci` reference across all seven repos' workflows resolves to `@v1`, verified 2026-11-03. The floor, `os-matrix`, `Build/` and the LF encoding were untouched; `min-tests: 336` still reads *executed*.
-  7. [ ] **`PS-MCS/mcssec-ops`'s `ps-module-validate.yml`** — same category as step 4, a private copy of the same step. Cannot be staged: its consumers `ArcGISEnterprise` and `PS.ETL` both pin `@main`, so verify before merge. **This is the last item in Track B, and the last of Phase 3.**
+  7. [x] **`PS-MCS/mcssec-ops`'s `ps-module-validate.yml`** — a private copy of the same step, not reachable by the tag. **Done 2026-11-03** — [mcssec-ops#152](https://github.com/PS-MCS/mcssec-ops/pull/152) `1613cad`, signed. The `run:` block is **byte-identical** to `ci.yml@v1.5.0` (3156 chars, `-ceq` true), matching `SecurityTools`; `MIN_TESTS: ${{ inputs.min-tests }}` and the `inputs:` block untouched.
+     **Could not be staged**, since `ArcGISEnterprise` and `PS.ETL` both pin `@main` — so all verification was pre-merge, and there is no `required_status_checks` rule on that repo to catch a mistake afterwards. Both consumers were re-measured safe first: ArcGIS `disabled = 0`, PS.ETL passes no floor at all.
+     **Confirmed live at a consumer**, which a green run alone could never show. `ArcGISEnterprise`'s next run — its first since the merge, five days after its previous one — produced the **new** message format: `1881 tests executed (1881 collected, 0 disabled), below the min-tests floor of 999999`. The failing run also still uploaded a well-formed artifact.
+     Merged under the org-admin bypass on ruleset `2420725`, as all four earlier PS-MCS rollout PRs were. Review came from Copilot code review, which that ruleset requires; the repo-owner decision and its rationale — CI-only scope, discussed with the team — are recorded on the PR.
+
+**Track B is complete. Phase 3 is complete.**
+
+### Picked up while finishing Track B
+
+- [x] **`ArcGISEnterprise` floor re-derived** — [#149](https://github.com/PS-MCS/ArcGISEnterprise/issues/149) closed by [#150](https://github.com/PS-MCS/ArcGISEnterprise/pull/150) `b3444f8`. **1692 → 1871**, cutting headroom from **189 tests to 10**. It was the widest gap in the fleet. Its floor had been set hours before ADR-0004 landed and nothing had touched it since.
+  This PR doubled as the step 7 confirmation above — real work rather than a throwaway run, and its impossible-floor test is what proved `mcssec-ops#152` had taken effect.
+- [ ] **`MCS` floors re-derived** — [MCS#215](https://github.com/PS-MCS/MCS/issues/215). ubuntu `369 → 400`, windows `122 → 130`. Note the windows leg lands at a margin of **6, not 10**: ADR-0004's percentage term binds below the cap at that size, `floor(136 * 0.05) = 6`.
+- **Audit result, 2026-11-03:** every other floor in the fleet already matches ADR-0004. Only these two PS-MCS repos were stale, both for the same reason — set in Phase 2 just before the ADR, and untouched since.
+  **This is a gap in the opportunistic rule**, not a one-off. ADR-0004 says floors move when a PR next touches them, which assumes a PR will come. For a stable repo it may not, and ArcGIS sat at 189 tests of slack precisely because nothing needed to change there. A periodic audit is the missing half; it takes one pass over nine repos.
 
   **Survey complete, 2026-10-29. `PS.SSL` is the only repo that breaks.**
 
