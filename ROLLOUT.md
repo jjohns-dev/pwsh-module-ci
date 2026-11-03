@@ -15,8 +15,8 @@ Phase numbers are **names, not a sequence**. They were assigned before #22 moved
 | ✓ | **2B** — catch-up PSDepend migrations | done 2026-10-29 — PS.Log, PS.SSL. All six repos are now off PSDepend |
 | ✓ | **7** — #22 link-case back-fill | done 2026-10-29 — all six repos. Each moved that repo's floor, re-derived under ADR-0004 in the same PR |
 | ✓ | **3** — make regressions visible | **done 2026-11-03.** Track A: first floors for PS.GHOps `91`, PS.GitHub `107`, PS.DCU `81`. Track B: the floor now measures **executed**, shipped as `v1.5.0` and live fleet-wide |
-| → | **4** — close the tracker issue | **next.** Gated on Phases 1–3, which are now all complete |
-| | **5** — stop the duplication | #24, then #20 |
+| ✓ | **4** — close the tracker issue | **done 2026-11-03** — #17 closed after auditing every box against the repos. Only `PS.ETL` outstanding, decoupled to PS.ETL#22 |
+| → | **5** — stop the duplication | **next.** #24 (BuildHelpers + the unused PlatyPS pin), then #20 |
 | | **6** — migration | #19, then #21 |
 
 Completed phases are closed. New work goes in a later phase or a new one, never back into a phase already marked done — Phase 2B exists because that rule was applied rather than reopening Phase 1.
@@ -163,12 +163,13 @@ None of the three hit ADR-0004's cap of 10 — every suite is small enough that 
 
   `PS.ETL`'s `validate.yml` runs on `pull_request` only, which is why its `main` history shows no test artifacts. That is not an absence of CI.
 
-## Phase 4 — Close the tracker issue
+## Phase 4 — Close the tracker issue — COMPLETE
 
-Gated on Phases 1–3.
-
-- [ ] **Close** [#17](https://github.com/jjohns-dev/pwsh-module-ci/issues/17)
-  PS.ETL, PS.DCU and the Open question are already re-homed, so nothing else holds it open.
+- [x] **Close** [#17](https://github.com/jjohns-dev/pwsh-module-ci/issues/17) — **done 2026-11-03**, `closed/completed`.
+  **Every checkbox was audited against the repositories, not against memory**, and the audit was worth running: eleven boxes were unticked but already complete, and two carried stale numbers. `AWSAutomation` was recorded at `560` and is now `434`; `ArcGISEnterprise` had moved `1692 → 1871`. Both corrected in place rather than silently re-ticked.
+  **Seven of eight repos with a `Help.Tests.ps1` now source parameter names from the AST.** `PS.GHOps` and `PS.GitHub` never needed the fix — they have no such file — and got floors only. `ECSNext` is archived.
+  **`PS.ETL` is the sole outstanding item, in both sections**, and the decoupling was real rather than convenient: verified 2026-11-03 that its `Help.Tests.ps1` still does not use the AST and it passes no floor. It needs a Pester 5.5.0 → 6.2.0 upgrade first, which no other repo did, and is tracked at [PS.ETL#22](https://github.com/PS-MCS/PS.ETL/issues/22).
+  The closing summary records what the issue turned into: #22, #23, #27, ADR-0004 and both docs all grew out of one tautology. Their shared signature — *a check that could not fail, indistinguishable from one that passes* — is now three documented vacuity traps in `docs/shared-ci-standards.md`.
 
 ## Phase 5 — Stop the duplication
 
