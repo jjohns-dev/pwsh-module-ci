@@ -29,16 +29,17 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
+          # PSResourceGet never calls Get-PackageSource, so the unregistered-PSGallery flake cannot recur (#27).
           $moduleParams = @{
               Name            = 'powershell-yaml'
-              RequiredVersion = '0.4.12'
+              Version         = '0.4.12'
               Scope           = 'CurrentUser'
-              Force           = $true
               Repository      = 'PSGallery'
+              TrustRepository = $true
               ErrorAction     = 'Stop'
           }
 
-          Install-Module @moduleParams
+          Install-PSResource @moduleParams
 
       # Extracts the "Verify Pester results" step out of ci.yml and release.yml
       # and runs it against fixtures, asserting both that it fires on a false
