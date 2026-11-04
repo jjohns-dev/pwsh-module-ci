@@ -258,10 +258,14 @@ So the last phase is a drain, not a `git rm`. **Nothing is deleted until its des
   | 0 — PSDepend → `Install-PSResource` | done, `b9c5699` ([#23](https://github.com/PS-MCS/PS.ETL/pull/23)) |
   | 1 — Pester 6.2.0 + the `Result` gate | done, `69ced39` ([#24](https://github.com/PS-MCS/PS.ETL/pull/24)) |
   | 2 — matching-help discovery binding | done, `907dd41` ([#25](https://github.com/PS-MCS/PS.ETL/pull/25)) |
-  | 3 · 3A · 4 · 5 · 6 | outstanding |
+  | 3 — the three remaining defects | done, `19c3e6f` ([#28](https://github.com/PS-MCS/PS.ETL/pull/28)) |
+  | 3A — remove the dead docs pipeline | done, `dfdf2c2` ([#29](https://github.com/PS-MCS/PS.ETL/pull/29)) |
+  | 4 · 5 · 6 | outstanding — psake, the floor, CI on `main` |
 
   **Step 2 is the one that paid off visibly: 78 → 102 collected, with the matching-help cases going 0 → 24.** They had never run in this repo. Both mutations were required and proved different things — a bogus `.PARAMETER` took the count to 25 with exactly one failure named `BOGUS` (the assertion works), while stripping a function's help took its cases to 0 with no case named `$null` (the generator and the `$_ -and` guard work). Either alone would have been insufficient.
-  **A side effect worth recording:** under step 2's second mutation, with *all* comment-based help removed from a function, `Should not be auto-generated` still **passed**. That is the `-Contain` tautology step 3 deletes, caught surviving the total removal of the thing it tests.
+  **Step 3 then took it to 73**, deleting 24 mandatory-value cases and 5 link cases. **Its mutation is the cleanest demonstration in the rollout of why a fix needs proving in both directions:** the same sabotage — all comment-based help stripped from one function — left `Should not be auto-generated` **passing** under the old `-Contain` assertion and **failing** under the new `-BeLike` one. The "after" run alone would have proved nothing.
+  **No function in this repo has a `.LINK`**, so the link test's `if` was never true: five cases that asserted nothing on every run, invisible to the floor because they still emitted `testcase` nodes. Applying [#22](https://github.com/jjohns-dev/pwsh-module-ci/issues/22)'s generator here therefore yields **zero** cases, and this repo cannot prove that generator works — `AWSAutomation`, the only repo with real `.LINK` URLs, is where that proof lives.
+  **Step 3A deleted the PlatyPS pipeline**, which was wired into `CombineFunctionsAndStage` via `$pathsToCopy` — so the published release asset had been shipping six stale markdown files, and deleting the folder without that line would have failed staging and every task depending on it. The patch block in `build.ps1` turned out not to be merely dead: it ran on every invocation and had been printing `Get-Content: Cannot find path` on every **local** build, silently, because nothing imports PlatyPS. Three further edit sites — a `ValidateSet`, a `CONTRIBUTING.md` step and a stale comment — were found by grepping during implementation rather than during scoping.
   **`PS.ETL` was also the last repo on PSDepend** — every other `Build/build.ps1` in both orgs had migrated.
 
 ### Found during the rollout, deliberately not folded into it
