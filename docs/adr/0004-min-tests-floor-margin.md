@@ -31,7 +31,7 @@ Found 2026-11-04 while deriving `PS-MCS/PS.ETL`'s floor, where `disabled` is 0 a
 - Read aloud: *five percent of executed, but never more than ten tests*.
 - The percentage term exists only so that very small legs do not get a zero margin. The cap is the operative part.
 - The cap of 10 is calibrated, not arbitrary: it sits just below the smallest per-command test density in the fleet, so losing a single command's worth of tests trips the floor in every repo.
-- This supersedes the previous convention of `floor(collected * 0.9)` and removes the need for its small-leg exception — `SecurityTools`' windows leg was hand-reasoned to 20 against 21 collected, and this formula yields exactly 20.
+- This supersedes the previous convention of `floor(collected * 0.9)` and removes the need for its small-leg exception — `SecurityTools`' windows leg was hand-reasoned to 20 against 21 collected, none of them disabled, so this formula yields exactly 20 on either input.
 - The floor is derived **after** the fixes in a pull request land, read from that run's JUnit artifact. Never predicted, never carried forward from a previous value.
 
 ## Consequences
