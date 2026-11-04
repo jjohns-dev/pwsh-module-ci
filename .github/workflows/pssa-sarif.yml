@@ -30,15 +30,16 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
+          # PSResourceGet never calls Get-PackageSource, so the unregistered-PSGallery flake cannot recur (#27).
           $moduleParams = @{
-            Scope       = 'CurrentUser'
-            Force       = $true
-            Repository  = 'PSGallery'
-            ErrorAction = 'Stop'
+            Scope           = 'CurrentUser'
+            Repository      = 'PSGallery'
+            TrustRepository = $true
+            ErrorAction     = 'Stop'
           }
 
-          Install-Module -Name 'PSScriptAnalyzer' -RequiredVersion '1.25.0' @moduleParams
-          Install-Module -Name 'ConvertToSARIF' @moduleParams
+          Install-PSResource -Name 'PSScriptAnalyzer' -Version '1.25.0' @moduleParams
+          Install-PSResource -Name 'ConvertToSARIF' @moduleParams
 
           Import-Module -Name 'PSScriptAnalyzer' -RequiredVersion '1.25.0' -Force -ErrorAction Stop
           Import-Module -Name 'ConvertToSARIF' -Force -ErrorAction Stop
