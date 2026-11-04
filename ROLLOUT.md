@@ -13,9 +13,9 @@ Phase numbers are **names, not a sequence**. They were assigned before #22 moved
 | ✓ | **1**, **2**, **2B**, **7** | complete 2026-10-27 to 10-29. Narratives drained 2026-11-04; the issues and PRs are authoritative |
 | ✓ | **3** — make regressions visible | complete 2026-11-03. The floor measures **executed**, shipped as `v1.5.0` and live fleet-wide |
 | ✓ | **4** — close the tracker issue | complete 2026-11-03 — #17 closed after auditing every box against the repos |
-| ✓ | **8** — drain this file | **complete 2026-11-04** — [#43](https://github.com/jjohns-dev/pwsh-module-ci/issues/43), closed. 391 lines to 113 |
-| → | [#27](https://github.com/jjohns-dev/pwsh-module-ci/issues/27) | **next.** `pssa-sarif.yml` → `Install-PSResource`. A staged rollout: it is `workflow_call` and reaches every consumer |
-| | **5** — stop the duplication | #24, then #20 |
+| ✓ | **8** — drain this file | **complete 2026-11-04** — [#43](https://github.com/jjohns-dev/pwsh-module-ci/issues/43), closed. 391 lines to 117 |
+| ✓ | [#27](https://github.com/jjohns-dev/pwsh-module-ci/issues/27) | **complete 2026-11-04** — `pssa-sarif.yml` moved to `Install-PSResource`, released as `v1.5.1`, `v1` moved and verified on a live consumer run |
+| → | **5** — stop the duplication | **next.** [#24](https://github.com/jjohns-dev/pwsh-module-ci/issues/24) only. #20 comes in its own time, not as part of this |
 | | **6** — migration | #19, then #21 |
 | | [#9](https://github.com/jjohns-dev/pwsh-module-ci/issues/9) | parked deliberately until Phases 5 and 6 inform it, and may be absorbed by them |
 | | **Final phase** — delete this file | once it has nothing left to carry |
@@ -26,9 +26,11 @@ Completed phases are closed. New work goes in a later phase or a new one, never 
 
 ## Phase 5 — Stop the duplication
 
+**`jjohns-dev` repos only.** `PS-MCS` is downstream: changes are incubated and vetted here, then promoted, so its repos are not in scope for this phase and will pick the work up with that promotion.
+
 - [ ] **pwsh-module-ci** — [#24](https://github.com/jjohns-dev/pwsh-module-ci/issues/24)
   Converge the fleet off `BuildHelpers`. Prep for #20 — it removes one known `Build/` difference before the classification work starts.
-  **Only `PS.ETL` remains.** `PS.Log` converged 2026-10-26 ([PS.Log#56](https://github.com/jjohns-dev/PS.Log/pull/56)) and `PS.SSL`'s vestigial entry went with [PS.SSL#72](https://github.com/jjohns-dev/PS.SSL/pull/72) — verified 2026-10-28, zero `BuildHelpers` entries in either `depend.psd1`. The `PS.ETL` half waits on PS-MCS/PS.ETL#22.
+  **Re-scoped 2026-11-04, and it is smaller and different than this said.** Measured across the seven `jjohns-dev` repos: **none declares, imports, installs or calls `BuildHelpers`** — `Set-BuildEnvironment` appears zero times. Each repo assigns `$env:BHProjectPath`, `$env:BHProjectName` and `$env:BHPSModuleManifest` itself, identically. So what remains is a **naming fossil, not a dependency**, and because the three assignments are identical fleet-wide it removes no `Build/` difference either. Full measurement on the issue.
 - [ ] **pwsh-module-ci** — [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20)
   Stop duplicating `Build/` **and** `Tests/Common/`. Diff the test template only after Phase 1–2 lands, or you classify drift against a moving baseline.
 
