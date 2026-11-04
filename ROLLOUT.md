@@ -230,8 +230,9 @@ So the last phase is a drain, not a `git rm`. **Nothing is deleted until its des
   | Per-repo phase narratives | **delete** — the issues and PRs are authoritative and already linked from here |
   | `Install-PSResource` exact-pin and NuGet-range traps | ✓ **done** — already stated in `docs/dependency-stack.md`; the copies here and in `shared-ci-standards.md` were duplicates, so deleted rather than moved |
   | Floor, vacuity and measurement traps | ✓ **done 2026-11-04** — [`docs/test-integrity.md`](docs/test-integrity.md) |
-  | The opportunistic-floor blind spot | **new ADR** — a decision with a known gap and a proposed second half |
+  | The opportunistic-floor blind spot | ✓ **done 2026-11-04** — [ADR-0005](docs/adr/0005-floor-sweeps-scoped-by-repo-list.md) |
   | Repo-local gotchas | that repo's `AGENTS.md`, verified in the repo rather than copied across |
+  | GitHub ruleset mechanics — `PUT` not `PATCH`, and no classic branch protection anywhere in the fleet | this repo's `AGENTS.md`, under *Gotchas that have bitten here*, which already carries the tag-ruleset lore |
   | Anything still open | its issue, in the body |
   | `mcssec-ops` cannot be staged; the four copies of the verify step | [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20), where that argument gets settled |
   | `AWSAutomation`'s ADR-0002 caveat | already an ADR there — confirm the caveat is in it, then delete |
