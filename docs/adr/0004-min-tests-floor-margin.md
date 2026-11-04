@@ -3,8 +3,15 @@
 ## Status
 
 Accepted — 2026-10-28
+Amended — 2026-11-04
 
 Applies to every floor derived from this date forward. Existing floors move to it opportunistically rather than in a dedicated sweep; see Consequences.
+
+**Amendment, 2026-11-04 — the input is `executed`, not `collected`.** [#23](https://github.com/jjohns-dev/pwsh-module-ci/issues/23) changed the floor's input from `tests` to `tests - disabled` and shipped in `v1.5.0`, but the Decision below was never updated to match. The margin rule itself is unchanged; only what it is measured against. The Decision is corrected in place because it is operative guidance that people derive floors from.
+
+Context is deliberately **not** rewritten — it records the forces as they stood on 2026-10-28, and one of its bullets, *"skipped tests are still counted"*, is exactly what #23 went on to fix. Reading Context as current guidance is the mistake; reading it as history is correct.
+
+Found 2026-11-04 while deriving `PS-MCS/PS.ETL`'s floor, where `disabled` is 0 and the two inputs coincide. It is not harmless everywhere: deriving from `collected` in a repo with disabled tests yields a floor **above** the executed count, which is the defect #23 exists to remove.
 
 ## Context
 
@@ -19,17 +26,18 @@ Applies to every floor derived from this date forward. Existing floors move to i
 
 ## Decision
 
-- The floor is `collected - margin`, where **`margin = min(floor(collected * 0.05), 10)`**.
-- Read aloud: *five percent of collected, but never more than ten tests*.
+- The floor is `executed - margin`, where **`margin = min(floor(executed * 0.05), 10)`**.
+- `executed` is the JUnit root's `tests` attribute minus its `disabled` attribute. Pester routes skipped and tag-excluded tests to `disabled` while still counting them in `tests`, so the two differ wherever anything is skipped.
+- Read aloud: *five percent of executed, but never more than ten tests*.
 - The percentage term exists only so that very small legs do not get a zero margin. The cap is the operative part.
 - The cap of 10 is calibrated, not arbitrary: it sits just below the smallest per-command test density in the fleet, so losing a single command's worth of tests trips the floor in every repo.
-- This supersedes the previous convention of `floor(collected * 0.9)` and removes the need for its small-leg exception — `SecurityTools`' windows leg was hand-reasoned to 20 against 21 collected, and this formula yields exactly 20.
+- This supersedes the previous convention of `floor(collected * 0.9)` and removes the need for its small-leg exception — `SecurityTools`' windows leg was hand-reasoned to 20 against 21 collected, none of them disabled, so this formula yields exactly 20 on either input.
 - The floor is derived **after** the fixes in a pull request land, read from that run's JUnit artifact. Never predicted, never carried forward from a previous value.
 
 ## Consequences
 
 - Every floor becomes materially tighter. `ArcGISEnterprise` goes from a 189-test blind spot to 10, `SecurityTools` from 107 to 10.
-- **Existing floors move opportunistically, not in a dedicated sweep.** A repo's floor is re-derived under this formula the next time a pull request touches that repo's floor for any reason. There is no separate back-porting exercise, because re-deriving a floor costs a measure-and-verify cycle and bundling it with work already in flight is free. jjohns-dev/pwsh-module-ci#23 picks up any stragglers when it changes the floor's input from `tests` to `tests - disabled`.
+- **Existing floors move opportunistically, not in a dedicated sweep.** A repo's floor is re-derived under this formula the next time a pull request touches that repo's floor for any reason. There is no separate back-porting exercise, because re-deriving a floor costs a measure-and-verify cycle and bundling it with work already in flight is free. jjohns-dev/pwsh-module-ci#23 picked up the stragglers when it changed the floor's input from `tests` to `tests - disabled`, landing in `v1.5.0` on 2026-11-03.
 - **So the documented rule and the deployed values will disagree for a while, by design.** A repo still sitting at the old 90% convention is not a bug and does not need an issue filed against it. Check the repo's last floor-touching pull request before concluding otherwise.
 - It still does not catch a single small test file dropping out. A six-test unit file vanishing stays under a margin of 10. The floor is a blunt instrument for catastrophic collection failure; granular detection needs a different mechanism, such as a committed expected-count, and squeezing the floor further is the wrong tool.
 - A two-term rule is marginally more likely to be misremembered than a one-term rule. The mitigation is that it is written here and pointed at from `docs/shared-ci-standards.md`, rather than re-derived from memory each time.
