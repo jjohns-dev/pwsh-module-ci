@@ -13,14 +13,16 @@ Phase numbers are **names, not a sequence**. They were assigned before #22 moved
 | ✓ | **1**, **2**, **2B**, **7** | complete 2026-10-27 to 10-29. Narratives drained 2026-11-04; the issues and PRs are authoritative |
 | ✓ | **3** — make regressions visible | complete 2026-11-03. The floor measures **executed**, shipped as `v1.5.0` and live fleet-wide |
 | ✓ | **4** — close the tracker issue | complete 2026-11-03 — #17 closed after auditing every box against the repos |
-| → | **8** — drain this file | **in progress**, tracked item by item at [#43](https://github.com/jjohns-dev/pwsh-module-ci/issues/43) |
-| | [#27](https://github.com/jjohns-dev/pwsh-module-ci/issues/27) | `pssa-sarif.yml` → `Install-PSResource`. A staged rollout: it is `workflow_call` and reaches every consumer |
+| ✓ | **8** — drain this file | **complete 2026-11-04** — [#43](https://github.com/jjohns-dev/pwsh-module-ci/issues/43), closed. 391 lines to 113 |
+| → | [#27](https://github.com/jjohns-dev/pwsh-module-ci/issues/27) | **next.** `pssa-sarif.yml` → `Install-PSResource`. A staged rollout: it is `workflow_call` and reaches every consumer |
 | | **5** — stop the duplication | #24, then #20 |
 | | **6** — migration | #19, then #21 |
 | | [#9](https://github.com/jjohns-dev/pwsh-module-ci/issues/9) | parked deliberately until Phases 5 and 6 inform it, and may be absorbed by them |
 | | **Final phase** — delete this file | once it has nothing left to carry |
 
 Completed phases are closed. New work goes in a later phase or a new one, never back into a phase already marked done — Phase 2B exists because that rule was applied rather than reopening Phase 1.
+
+**The table above is the running order. The section order below is not** — sections sit where their phase number put them, and phase numbers are names. Read the table to find what is live; read a section for its detail.
 
 ## Phase 5 — Stop the duplication
 
@@ -45,7 +47,7 @@ So this phase is a drain, not a `git rm`. **Nothing is deleted until its destina
 
 **Considered and rejected: moving this file to `docs/specs/`.** It is not a spec — no requirements, no design, and the task list is a byproduct rather than the artifact. It was written during and after execution rather than before, so filing it as one would imply approval gates that never happened. The decisive objection is the third: `docs/specs/` is read as *current intent*, and this file disclaims authority in its own header — *"Where the two disagree, the issue wins."* A permanent, unmaintained, non-authoritative document in a directory agents treat as intent is how stale guidance gets manufactured. `docs/adr/` is already this repo's mechanism for the durable half.
 
-- [ ] **Disposition pass**, one row at a time.
+- [x] **Disposition pass**, one row at a time. **Complete 2026-11-04**, worked as [#43](https://github.com/jjohns-dev/pwsh-module-ci/issues/43) items 0–5.
 
   | Section | Destination |
   | ------- | ----------- |
@@ -54,9 +56,9 @@ So this phase is a drain, not a `git rm`. **Nothing is deleted until its destina
   | `Install-PSResource` exact-pin and NuGet-range traps | ✓ **done** — already stated in `docs/dependency-stack.md`; the copies here and in `shared-ci-standards.md` were duplicates, so deleted rather than moved |
   | Floor, vacuity and measurement traps | ✓ **done 2026-11-04** — [`docs/test-integrity.md`](docs/test-integrity.md) |
   | The opportunistic-floor blind spot | ✓ **done 2026-11-04** — [ADR-0005](docs/adr/0005-floor-sweeps-scoped-by-repo-list.md) |
-  | Repo-local gotchas | that repo's `AGENTS.md`, verified in the repo rather than copied across |
-  | GitHub ruleset mechanics — `PUT` not `PATCH`, and no classic branch protection anywhere in the fleet | this repo's `AGENTS.md`, under *Gotchas that have bitten here*, which already carries the tag-ruleset lore |
-  | Anything still open | its issue, in the body |
+  | Repo-local gotchas | ✓ **done 2026-11-04 — nothing to move.** Measured: no repo-local gotcha remained here, and no `AGENTS.md` in the seven `jjohns-dev` repos asserts anything the rollout invalidated — zero stale `PSDepend` or `Install-Module` claims. This row always said *verified in the repo rather than copied across*, so the repo was the source, not this file. The three `PS-MCS` repos with no `AGENTS.md` at all are [mcssec-ops#154](https://github.com/PS-MCS/mcssec-ops/issues/154) |
+  | GitHub ruleset mechanics — `PUT` not `PATCH`, and no classic branch protection anywhere in the fleet | ✓ **done 2026-11-04** — `AGENTS.md`, under *Gotchas that have bitten here* |
+  | Anything still open | ✓ **done 2026-11-04** — each open item is carried by its own issue: [#24](https://github.com/jjohns-dev/pwsh-module-ci/issues/24), [#34](https://github.com/jjohns-dev/pwsh-module-ci/issues/34), [PS.DCU#20](https://github.com/jjohns-dev/PS.DCU/issues/20), [mcssec-ops#154](https://github.com/PS-MCS/mcssec-ops/issues/154) |
   | `mcssec-ops` cannot be staged; the copies of the verify step | ✓ **done 2026-11-04** — [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20), with the copy count re-measured at **5**, not four |
   | `AWSAutomation`'s ADR-0002 caveat | ✓ **drained 2026-11-04** — but the confirmation this row asked for **failed**: the caveat is *not* in that repo's ADR. Removing it from here was safe only because [`docs/dependency-stack.md`](docs/dependency-stack.md) states it independently. **Putting it into that ADR is still outstanding**, carried by [#24](https://github.com/jjohns-dev/pwsh-module-ci/issues/24) |
 
