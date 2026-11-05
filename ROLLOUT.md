@@ -15,7 +15,7 @@ Phase numbers are **names, not a sequence**. They were assigned before #22 moved
 | ✓ | **4** — close the tracker issue | complete 2026-11-03 — #17 closed after auditing every box against the repos |
 | ✓ | **8** — drain this file | **complete 2026-11-04** — [#43](https://github.com/jjohns-dev/pwsh-module-ci/issues/43), closed. 391 lines to 117 |
 | ✓ | [#27](https://github.com/jjohns-dev/pwsh-module-ci/issues/27) | **complete 2026-11-04** — `pssa-sarif.yml` moved to `Install-PSResource`, released as `v1.5.1`, `v1` moved and verified on a live consumer run |
-| → | **5** — stop the duplication | **next.** [#24](https://github.com/jjohns-dev/pwsh-module-ci/issues/24) only. #20 comes in its own time, not as part of this |
+| → | **5** — stop the duplication | **in progress.** [#24](https://github.com/jjohns-dev/pwsh-module-ci/issues/24) complete 2026-11-05; [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20) is what remains, and it gates Phase 6 |
 | | **6** — migration | #19, then #21 |
 | | [#9](https://github.com/jjohns-dev/pwsh-module-ci/issues/9) | parked deliberately until Phases 5 and 6 inform it, and may be absorbed by them |
 | | **Final phase** — delete this file | once it has nothing left to carry |
