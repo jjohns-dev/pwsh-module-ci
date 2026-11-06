@@ -15,9 +15,8 @@ Phase numbers are **names, not a sequence**. They were assigned before #22 moved
 | ✓ | **4** — close the tracker issue | complete 2026-11-03 — #17 closed after auditing every box against the repos |
 | ✓ | **8** — drain this file | **complete 2026-11-04** — [#43](https://github.com/jjohns-dev/pwsh-module-ci/issues/43), closed. 391 lines to 117 |
 | ✓ | [#27](https://github.com/jjohns-dev/pwsh-module-ci/issues/27) | **complete 2026-11-04** — `pssa-sarif.yml` moved to `Install-PSResource`, released as `v1.5.1`, `v1` moved and verified on a live consumer run |
-| → | **5** — stop the duplication | **in progress.** [#24](https://github.com/jjohns-dev/pwsh-module-ci/issues/24) complete 2026-11-05; [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20) is what remains, and it gates Phase 6 |
-| | **6** — migration | #19, then #21 |
-| | [#9](https://github.com/jjohns-dev/pwsh-module-ci/issues/9) | parked deliberately until Phases 5 and 6 inform it, and may be absorbed by them |
+| → | **5** — stop the duplication | **in progress.** [#24](https://github.com/jjohns-dev/pwsh-module-ci/issues/24) complete 2026-11-05, [#53](https://github.com/jjohns-dev/pwsh-module-ci/issues/53) **decided** 2026-11-06. Five items remain, in order: [#9](https://github.com/jjohns-dev/pwsh-module-ci/issues/9), [SecurityTools#166](https://github.com/jjohns-dev/SecurityTools/issues/166), [#21](https://github.com/jjohns-dev/pwsh-module-ci/issues/21), [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20), then [#53](https://github.com/jjohns-dev/pwsh-module-ci/issues/53) **implement**, with optional [#55](https://github.com/jjohns-dev/pwsh-module-ci/issues/55) last. #20 gates Phase 6 |
+| | **6** — migration | [#19](https://github.com/jjohns-dev/pwsh-module-ci/issues/19) only. #21 moved into Phase 5 on 2026-11-05, once [ADR-0006](docs/adr/0006-host-the-build-harness-in-this-repo.md) removed its dependency on the Sampler decision |
 | | **Final phase** — delete this file | once it has nothing left to carry |
 
 Completed phases are closed. New work goes in a later phase or a new one, never back into a phase already marked done — Phase 2B exists because that rule was applied rather than reopening Phase 1.
@@ -32,18 +31,51 @@ Completed phases are closed. New work goes in a later phase or a new one, never 
   Converge the fleet off `BuildHelpers`. Prep for #20 — it removes one known `Build/` difference before the classification work starts.
   **Re-scoped 2026-11-04, and it is smaller and different than this said.** Measured across the seven `jjohns-dev` repos: **none declares, imports, installs or calls `BuildHelpers`** — `Set-BuildEnvironment` appears zero times. Each repo assigns `$env:BHProjectPath`, `$env:BHProjectName` and `$env:BHPSModuleManifest` itself, identically. So what remains is a **naming fossil, not a dependency**, and because the three assignments are identical fleet-wide it removes no `Build/` difference either. Full measurement on the issue.
   **`AWSAutomation` half complete 2026-11-04** — [#106](https://github.com/jjohns-dev/AWSAutomation/pull/106), squashed to `2e6e7fb`. Dropped the unused `PlatyPS` pin, **amended** ADR-0002 rather than superseding it, and gave that ADR the do-not-copy caveat the Phase 8 row below found missing. It also took `psake 4.9.1 → 5.0.4` and `PSScriptAnalyzer 1.24.0 → 1.25.0`, both current PSGallery latest — `AWSAutomation` was the last module repo in the fleet on psake 4.x, and the major bump needed no change to `build.psake.ps1`. Post-merge run on `main` green, 444 executed with `disabled=0` on both sides.
-  **Closed 2026-11-05.** The rename was decided against — roughly 130 call sites, no behaviour change, and #20 may replace the files that carry them — and the outcome is recorded on [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20) so its `Build/` diff starts from the converged state rather than a moving baseline. That comment also notes what is **not** yet uniform: `psake` and `Pester` now match fleet-wide, `PSScriptAnalyzer` does not.
+  **Closed 2026-11-05.** The rename was decided against — **526 live `$env:BH*` sites across the seven repos**, no behaviour change, and #20 may replace the files that carry them — and the outcome is recorded on [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20) so its `Build/` diff starts from the converged state rather than a moving baseline. That comment also notes what is **not** yet uniform: `psake` and `Pester` now match fleet-wide, `PSScriptAnalyzer` does not.
+  **The call-site figure was re-measured 2026-11-05 and is ~4x the earlier one.** 556 raw occurrences, 526 of them live code — 13 in comments, 0 in single-quoted literals, 17 in non-PowerShell files. `SecurityTools` alone holds 316 live, almost all in `Tests/`. The earlier "roughly 130" was not wrong, it was scoped to `Build/` plus `Tests/Common/`. The larger figure strengthens the decision rather than reopening it.
   **`PS-MCS/PS.ETL` moved out of Phase 5 scope 2026-11-05, and converged the same day.** It was the last repo with live `BuildHelpers` usage — `BuildHelpers = '2.0.16'` in `depend.psd1` plus `Set-BuildEnvironment -Force` in `build.ps1` — and `PS-MCS` is downstream, so it was handled directly in that repo rather than carried here. [PS.ETL#33](https://github.com/PS-MCS/PS.ETL/pull/33) merged as `61b45cd`, post-merge run on `main` green, 73 executed and unchanged either side. The scope boundary held *and* the work was not deferred; those were never the only two options.
   **`BuildHelpers` is now absent from all ten module repos across both orgs** — verified 2026-11-05 against `depend.psd1`, `build.ps1` and `build.psake.ps1` on each repo's `main`. The three `$env:BH*` assignments stay, by decision rather than by omission.
+### The remaining sequence, agreed 2026-11-05
+
+Seven items, in order. The ordering is not arbitrary and it is not a simple chain — each item records what it gates.
+
+- [x] **1 — [#53](https://github.com/jjohns-dev/pwsh-module-ci/issues/53), decide the test-scaffold minimum** — **complete 2026-11-06**
+  **Decided:** centralise the disk-based common tests — `Manifest`, `Module`, `Meta`, `PathLiterals` — into the harness, keeping help and function unit tests in the module repos. Pester is the only dependency. PS.DCU's empty-exports assertion was dropped and replaced with *no export field contains `'*'`*, after measurement showed three repos deliberately export aliases or variables. `Meta` is per-file but tag-excluded from the floor, so file deletions cannot trip it. Measured red list: SecurityTools has four files carrying a UTF-8 BOM its current check cannot detect, AWSAutomation has three exported functions with `"$HOME\Desktop"` literals. Full write-up on the issue.
+  **Why here:** First because it is reading and deciding — no code, no test-count change — and because it **gates #20**: if the minimum includes a shared file, the harness has to carry it. Did not block #9.
+- [ ] **2 — [#9](https://github.com/jjohns-dev/pwsh-module-ci/issues/9), `os-matrix-include`**
+  **Closes when** `ci.yml` accepts a JSON array of objects **alongside** `os-matrix`; a caller passing SecurityTools' include list gets both legs with their own `pester-scope` and `min-tests`; and a caller that omits the new input runs exactly as before. Both directions proven in a real run, not one.
+  **Why here:** Smallest change that tests ADR-0006's whole thesis — per-repo variation as an input rather than a vendored file. Spike-proven 2026-11-05, so the shape is known. Gates #21.
+- [ ] **3 — [SecurityTools#166](https://github.com/jjohns-dev/SecurityTools/issues/166), cross-platform tests only run on Linux**
+  **Closes when** the 65 cross-platform files either run on both runners with **both** floors recalculated, or a comment beside the matrix records why Linux-only is deliberate.
+  **Why here:** Before #21, because changing which tests run on which runner moves the floors #21 would otherwise carry across unchanged. Fixing it afterwards means recalculating twice.
+- [ ] **4 — [#21](https://github.com/jjohns-dev/pwsh-module-ci/issues/21), centralize SecurityTools CI**
+  **Closes when** `SecurityTools` deletes `validate.yml` and calls `ci.yml@v1` with `os-matrix-include`; its **ruleset is updated in the same change** for the renamed required checks; and a run shows both legs green with executed counts unchanged.
+  **Why here:** Needs #9 to exist and #166 settled. Lands the hardest consumer before the harness moves, so #20 moves once with all seven already consuming `ci.yml`.
+- [ ] **5 — [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20), move the harness**
+  **Closes when** all four `Build/` files live in this repo, no consumer vendors a copy, the four inputs exist, and all seven repos are green with executed counts unchanged either side.
+  **Why here:** Classification is complete; what remains is the move itself, and it should happen once. Gates Phase 6.
+- [ ] **6 — [#53](https://github.com/jjohns-dev/pwsh-module-ci/issues/53), implement the minimum**
+  **Closes when** every repo satisfies the agreed minimum, the shared half is centralised, and all seven floors are recalculated from the new executed counts. Note that PS.DCU's counted total **falls**, because 42 of its current common tests are per-file encoding checks that the floor stops counting.
+  **Why here:** **After #20, and must not overlap it.** #20's closing condition is that executed counts are unchanged; #53 deliberately changes which tests exist, so running them together makes it impossible to tell which one moved a count. The centralisation mechanism also already exists by then.
+- [ ] **7 — [#55](https://github.com/jjohns-dev/pwsh-module-ci/issues/55), merge the `Help.Tests.ps1` variants — *optional***
+  **Closes when** either a merged help suite ships in the harness and every affected floor is recalculated from a real run, or a comment records why help stays per-repo permanently, naming the constraint that makes it so.
+  **Why here:** Last, and **gates nothing** — Phase 5 completes without it. Split out of #53 for two structural reasons: help is the only category that requires the module to be *imported* rather than read from disk, so it inherits every per-repo import constraint; and the suites are different checks rather than variants, so merging them is its own decision. It is nonetheless the worst drift in the set — five repos, five distinct variants, no two identical, with three of them asserting the same six things in 19 lines' worth of differing code.
+
+**The boundary, agreed 2026-11-05.** Centralise what is common to every module and every function — manifest validity, loader import, exports matching `Public/`. Function-level unit tests stay in their own repo, where the behaviour they assert lives. That split is what makes a shared suite stable rather than something each repo immediately wants to override, and it is the same reason this work reduces bug propagation: the shared half stops drifting, and the local half was never shared to begin with.
+
+A consequence of choosing *a new minimum both satisfy* rather than converging on either existing approach: **both** groups change, so all seven repos' floors move, not just the five with `Tests/Common/`.
+
 - [ ] **pwsh-module-ci** — [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20)
-  Stop duplicating `Build/` **and** `Tests/Common/`. Diff the test template only after Phase 1–2 lands, or you classify drift against a moving baseline.
+  Stop duplicating `Build/`. **Classification complete 2026-11-05** — all five duplicated files measured across the seven repos, consolidated in the issue body, which supersedes its own comment thread.
+  **Ten file variants reduce to four inputs**: test selection, Pester tag exclusion, PSScriptAnalyzer `ExcludeRules`, and `min-tests` per runner. Everything else is drift, dead code, stale comments or style.
+  **Eight corrections were found stranded in one or two repos each**, none propagated — including a silent dead gate in six of seven, where `Analyze`'s `default` branch asserts on a variable that is never defined. Measured: it passes and the build succeeds. Unreachable today only because every repo uses `'Error'`, which the `[ValidateSet]` does not require.
+  `Tests/Common/` was split out to [#53](https://github.com/jjohns-dev/pwsh-module-ci/issues/53).
 
 ## Phase 6 — Migration
 
 - [ ] **pwsh-module-ci** — [#19](https://github.com/jjohns-dev/pwsh-module-ci/issues/19) — gated on Phases 1–5
   psake → Sampler. Design for SecurityTools' per-leg test scope from the start, migrate that repo last.
-- [ ] **pwsh-module-ci** — [#21](https://github.com/jjohns-dev/pwsh-module-ci/issues/21) — gated on #19
-  Centralize SecurityTools CI. Current lean is a second reusable workflow rather than extending `ci.yml`.
+  **Re-scoped 2026-11-05.** The question is no longer *"migrate psake to Sampler"* but *"should the centralised harness be Sampler-based or hand-rolled?"* — a decision taken once here, with no per-repo migration, and one that #20's outcome informs. All three of this issue's `$env:BH*` checkboxes were answered on 2026-11-05.
 
 ## Phase 8 — Drain this file
 
@@ -112,7 +144,7 @@ The floor procedure, the mutation rule, the vacuity traps and the `-ceq` distinc
 
 **Not "Phase 9", and not "Phase X"** — X reads as Roman numeral 10 among numbered phases. This is the only unnumbered phase, because it is the only one whose position cannot change.
 
-Gated on everything: the drain ([#43](https://github.com/jjohns-dev/pwsh-module-ci/issues/43)), then [#27](https://github.com/jjohns-dev/pwsh-module-ci/issues/27)'s remaining half, then Phase 5, then Phase 6, then [#9](https://github.com/jjohns-dev/pwsh-module-ci/issues/9). The file stays until all of those are done, because it still carries the Phase 5 and Phase 6 sections and the running order at the top.
+Gated on everything: the drain ([#43](https://github.com/jjohns-dev/pwsh-module-ci/issues/43)), then [#27](https://github.com/jjohns-dev/pwsh-module-ci/issues/27)'s remaining half, then Phase 5 — which now carries #9, SecurityTools#166, #21 and #20 — then Phase 6. The file stays until all of those are done, because it still carries the Phase 5 and Phase 6 sections and the running order at the top.
 
 - [ ] **Delete `ROLLOUT.md` from `main`**, in its own PR, once nothing here is unrecorded elsewhere.
 
