@@ -6,7 +6,7 @@ Guidance for AI coding agents working in `pwsh-module-ci`.
 
 Reusable GitHub Actions workflows called by six PowerShell module repos: PS.Log, PS.GHOps, PS.GitHub, PS.SSL, PS.DCU, AWSAutomation. It contains no application code and no PowerShell module — only workflow definitions, their pinned action versions, and the docs describing both.
 
-SecurityTools is **not** a consumer. It pairs each runner with a `PesterScope` psake property via `matrix.include`, which the flat `os-matrix` input cannot express. Do not add it to consumer lists.
+SecurityTools is **not** a consumer yet. It pairs each runner with a `PesterScope` psake property and a per-leg `minTests` via `matrix.include`. As of #9 the `os-matrix` input *can* express that — it accepts an array of objects carrying `os`, `pesterScope` and `minTests` — so what remains is the adoption itself, tracked in #21. Do not add it to consumer lists until that lands.
 
 ## Blast radius — read before editing a workflow
 

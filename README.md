@@ -2,8 +2,9 @@
 
 Reusable GitHub Actions workflows shared by [johnsarie27](https://github.com/johnsarie27)'s
 PowerShell module repos (PS.Log, PS.GHOps, PS.GitHub, PS.SSL, PS.DCU, AWSAutomation).
-SecurityTools is deliberately not a consumer: it pairs each runner with a `PesterScope`
-psake property through `matrix.include`, which `os-matrix` cannot express. Each module
+SecurityTools is not a consumer *yet*: it pairs each runner with a `PesterScope` psake
+property and its own per-leg floor, which `os-matrix` now expresses through its object
+form, so what remains is adopting it. Each module
 repo's own `Build/build.ps1` (psake) already does the real
 work — `Init`, `CombineFunctionsAndStage`, `Analyze`, `Test`, `CreateBuildArtifact` — these
 workflows just standardize how that gets invoked in CI, and centralize the third-party
@@ -72,8 +73,9 @@ jobs:
 ```
 
 `os-matrix` (ci.yml) and `psscriptanalyzer-settings-path` (pssa-sarif.yml) are optional
-`with:` inputs — omit them to use the defaults, which match most repos. `min-tests` (ci.yml) is
-covered under [Minimum test count](#minimum-test-count).
+`with:` inputs — omit them to use the defaults, which match most repos. `os-matrix` has a
+second form for repos whose runners differ, covered under [Runner matrix](#runner-matrix).
+`min-tests` (ci.yml) is covered under [Minimum test count](#minimum-test-count).
 
 `artifact-name` (release.yml) sets the uploaded build artifact's display name — default
 `'Artifacts'`. Set it to something like `'MyModule-${{ github.ref_name }}'` in the consumer
@@ -132,6 +134,11 @@ declares both `os:` and `include:`, an `os` leg that no `include` entry matches 
 carrying empty values. A caller who supplied the include list but forgot to narrow `os-matrix`
 would get an extra leg whose empty `pesterScope` fell through to the psake default — green, and
 wrong. Measured; see ADR-0006.
+
+Expanding the input is done by a small `normalize` job that runs before `validate`. It adds one
+check name, `<your job> / normalize matrix`, and leaves the existing
+`<your job> / validate (<os>)` names unchanged — measured, so required-check rules do not need
+editing when you adopt this.
 
 ## Pester result verification
 
