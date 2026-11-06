@@ -5,12 +5,12 @@ on:
   workflow_call:
     inputs:
       os-matrix:
-        description: 'JSON array of runner OSes to validate against'
+        description: 'JSON array of runner OSes, or of objects carrying os plus optional pesterScope and minTests'
         required: false
         type: string
         default: '["ubuntu-latest", "windows-latest", "macos-latest"]'
       min-tests:
-        description: 'Fail when a Pester result file executes fewer tests than this (collected minus disabled); 0 disables the check'
+        description: 'Fail when a Pester result file executes fewer tests than this (collected minus disabled); 0 disables the check. A per-leg minTests in os-matrix overrides it'
         required: false
         type: number
         default: 0
@@ -20,14 +20,50 @@ permissions:
   checks: write
 
 jobs:
+  # Normalising here rather than taking a second input is deliberate: when `os:`
+  # and `include:` coexist, an `os` leg that no include entry matches still runs
+  # with empty values, which would reach psake as its default scope and pass.
+  # Measured in run 42295351419; see ADR-0006.
+  normalize:
+    name: normalize matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.norm.outputs.matrix }}
+    steps:
+      - name: Expand os-matrix to include form
+        id: norm
+        shell: pwsh
+        env:
+          OS_MATRIX: ${{ inputs.os-matrix }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          try { $parsed = @($env:OS_MATRIX | ConvertFrom-Json) }
+          catch { throw ('os-matrix is not valid JSON: {0}' -f $_.Exception.Message) }
+
+          if ($parsed.Count -eq 0) { throw 'os-matrix is empty; at least one runner is required.' }
+
+          $include = foreach ($entry in $parsed) {
+              if ($entry -is [string]) { @{ os = $entry }; continue }
+              if (-not $entry.os) { throw ('os-matrix object entry has no os key: {0}' -f ($entry | ConvertTo-Json -Compress)) }
+              $entry
+          }
+
+          $json = ConvertTo-Json -InputObject @($include) -Compress -Depth 5
+          Write-Host ('normalized os-matrix: {0}' -f $json)
+          ('matrix={0}' -f $json) | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          exit 0
+
   validate:
+    needs: normalize
     name: validate (${{ matrix.os }})
     strategy:
       # false keeps the other runners going if one OS fails, so cross-OS
       # divergence surfaces in a single run instead of fix-push-wait-repeat.
       fail-fast: false
       matrix:
-        os: ${{ fromJSON(inputs.os-matrix) }}
+        include: ${{ fromJSON(needs.normalize.outputs.matrix) }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
@@ -44,7 +80,20 @@ jobs:
 
       - shell: pwsh # pester
         id: pester
-        run: ./Build/build.ps1 -TaskList 'Test'
+        env:
+          # Read from env, never interpolated into the script: this value is
+          # caller-supplied once the harness is centralised.
+          PESTER_SCOPE: ${{ matrix.pesterScope }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          # An absent matrix key is '', not null. Passing @{ PesterScope = '' }
+          # would override the psake default with nothing; omit it instead.
+          if ([string]::IsNullOrWhiteSpace($env:PESTER_SCOPE)) {
+              ./Build/build.ps1 -TaskList 'Test'
+          }
+          else {
+              ./Build/build.ps1 -TaskList 'Test' -Properties @{ PesterScope = $env:PESTER_SCOPE }
+          }
 
       - name: Verify Pester results
         shell: pwsh
@@ -55,7 +104,9 @@ jobs:
         # not inferred. Do not rewrite this as a positive test; see AGENTS.md.
         if: always() && steps.pester.outcome != 'skipped'
         env:
-          MIN_TESTS: ${{ inputs.min-tests }}
+          # A per-leg minTests wins over the workflow-wide input; '' is falsy,
+          # so a leg that declares none falls back to inputs.min-tests.
+          MIN_TESTS: ${{ matrix.minTests || inputs.min-tests }}
         run: |
           $ErrorActionPreference = 'Stop'
 
