@@ -79,6 +79,60 @@ covered under [Minimum test count](#minimum-test-count).
 `'Artifacts'`. Set it to something like `'MyModule-${{ github.ref_name }}'` in the consumer
 workflow to preserve a repo-specific naming convention.
 
+## Runner matrix
+
+`os-matrix` accepts **two forms**, and `ci.yml` normalises them into one before building its
+matrix. Most repos never need the second.
+
+**A JSON array of OS names.** The common case — every runner does the same thing.
+
+```yaml
+jobs:
+  validate:
+    uses: jjohns-dev/pwsh-module-ci/.github/workflows/ci.yml@v1
+    with:
+      os-matrix: '["ubuntu-latest", "windows-latest"]'
+      min-tests: 91
+    permissions:
+      contents: read
+      checks: write
+```
+
+The default is `'["ubuntu-latest", "windows-latest", "macos-latest"]'`.
+
+**A JSON array of objects.** Use this when runners need *different* values — a different psake
+property, a different floor, or both. Each object must carry `os`; `pesterScope` and `minTests`
+are optional and apply only to that leg.
+
+```yaml
+jobs:
+  validate:
+    uses: jjohns-dev/pwsh-module-ci/.github/workflows/ci.yml@v1
+    with:
+      os-matrix: >-
+        [{"os":"ubuntu-latest","pesterScope":"CrossPlatform","minTests":986},
+         {"os":"windows-latest","pesterScope":"WindowsOnly","minTests":20}]
+    permissions:
+      contents: read
+      checks: write
+```
+
+| Key | Required | Effect |
+| --- | -------- | ------ |
+| `os` | yes | The runner label, as `runs-on` |
+| `pesterScope` | no | Passed to the `Test` task as `-Properties @{ PesterScope = ... }`. Omitted entirely when absent, so your psake default stands |
+| `minTests` | no | This leg's floor. Overrides the workflow-wide `min-tests` for this leg only |
+
+The two forms are interchangeable per call, not per entry — do not mix strings and objects in
+the same array. Supplying an object without an `os` key fails the `normalize` job with a
+message naming the offending entry, rather than producing a leg that silently does nothing.
+
+Why one polymorphic input rather than a second `os-matrix-include` input: when a matrix
+declares both `os:` and `include:`, an `os` leg that no `include` entry matches **still runs**,
+carrying empty values. A caller who supplied the include list but forgot to narrow `os-matrix`
+would get an extra leg whose empty `pesterScope` fell through to the psake default — green, and
+wrong. Measured; see ADR-0006.
+
 ## Pester result verification
 
 `ci.yml` verifies the JUnit XML that the `Test` task writes, after the Pester step and
@@ -128,6 +182,12 @@ JUnitXml routes both skipped and tag-excluded tests to `disabled` while still co
 `tests`, so a repo that skips anything has an executed count below its collected one.
 It catches a large drop rather than a single lost file, and it only stays useful if you raise
 it as the suite grows.
+
+When the lowest-across-OSes compromise costs too much — one leg running a fraction of the
+suite, so a single floor is either far too low for the other leg or fails it outright — give
+each leg its own `minTests` through the object form of `os-matrix`, described under
+[Runner matrix](#runner-matrix). A leg that declares no `minTests` falls back to the
+workflow-wide `min-tests`.
 
 The floor is compared against each result file separately, so it assumes one `Test-*.xml`
 per run, which is what every current consumer writes.
