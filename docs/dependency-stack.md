@@ -19,11 +19,11 @@ Unlike `shared-ci-standards.md`, this file is **not** interim. It outlives #20, 
 Deliberately **not** in the set:
 
 - **`PSDepend`** — removed fleet-wide. It required bootstrapping itself before it could resolve anything, and the registration-state flakiness tracked in [#27](https://github.com/jjohns-dev/pwsh-module-ci/issues/27) was the trigger. `Install-PSResource` needs no bootstrap.
-- **`BuildHelpers`** — a real dependency in `PS.Log` and `PS.ETL` only, vestigial elsewhere, and a naming fossil (`$env:BH*`) in the rest. Being removed under [#24](https://github.com/jjohns-dev/pwsh-module-ci/issues/24).
-- **`PlatyPS`** — pinned at `0.14.2` in `AWSAutomation`'s `depend.psd1` and **never invoked**. Verified 2026-11-02 across all 69 text files in that repo: no `New-MarkdownHelp`, `New-ExternalHelp` or `Update-MarkdownHelp`; no `en-US/`, no `*-help.xml`, no markdown help; no docs task in `build.psake.ps1`; `HelpInfoURI` commented out in the manifest. All three mentions are declarative — the pin, a line in `AGENTS.md`, and ADR-0002. It is installed on every CI run and does nothing.
+- **`BuildHelpers`** — **absent from all ten module repos across both orgs**, verified 2026-11-05. It was a real dependency in `PS.Log` and `PS.ETL` and vestigial elsewhere; both were converged under [#24](https://github.com/jjohns-dev/pwsh-module-ci/issues/24), now closed. The `$env:BH*` variable names survive as a naming fossil — 526 live sites, each repo assigning them itself — and were deliberately left in place, since renaming them changes no behaviour and [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20) may replace the files that carry them.
+- **`PlatyPS`** — **removed 2026-11-04** by [AWSAutomation#106](https://github.com/jjohns-dev/AWSAutomation/pull/106). It had been pinned at `0.14.2` in that repo's `depend.psd1` and **never invoked**: verified 2026-11-02 across all 69 text files there, with no `New-MarkdownHelp`, `New-ExternalHelp` or `Update-MarkdownHelp`; no `en-US/`, no `*-help.xml`, no markdown help; no docs task in `build.psake.ps1`; and `HelpInfoURI` commented out in the manifest. All three mentions were declarative — the pin, a line in `AGENTS.md`, and ADR-0002 — so it was installed on every CI run and did nothing.
 - **A mutation-testing tool** — none adopted. See *Under evaluation*.
 
-**`AWSAutomation`'s ADR-0002 states a premise that does not hold.** It justifies pinning `PlatyPS` on the grounds that it, like Pester and psake, *"change[s] test and analysis outcomes"*. A tool that is never called cannot change any outcome. The ADR's actual decision — float runtime dependencies, pin build tooling — is unaffected and remains correct; it is the supporting enumeration that is wrong. Worth correcting when `PlatyPS` is removed, so the ADR is not left citing a dependency that no longer exists.
+**`AWSAutomation`'s ADR-0002 stated a premise that did not hold, and has been amended.** It justified pinning `PlatyPS` on the grounds that it, like Pester and psake, *"change[s] test and analysis outcomes"*. A tool that is never called cannot change any outcome. The ADR's actual decision — float runtime dependencies, pin build tooling — was unaffected and remains correct; it was the supporting enumeration that was wrong. [#106](https://github.com/jjohns-dev/AWSAutomation/pull/106) **amended** that ADR in place rather than superseding it, correcting the Decision and deliberately leaving Context alone, since Context records the forces as they stood on 2026-10-28.
 
 **The `CommandInfo`-in-`-ForEach` problem was recorded fleet-wide as a hang, and it is not one.** Measured 2026-11-03 in `PS-MCS/PS.ETL`: on **6.2.0** a `CommandInfo` passed to `-ForEach` renders as `Management.Automation.FunctionInfo{Name='...'} help`, renaming 68 of that repo's 78 tests — so the real cost is that every affected test name changes, which breaks name-level comparison between runs. On **6.0.0** it did not hang either; it completed in 52s and wrote a **1.2 GB** result file, which is almost certainly what the original report described. Pass `.Name` and re-resolve with `Get-Command` inside the block. The fix is unchanged; the stated reason was wrong.
 
@@ -31,7 +31,7 @@ Deliberately **not** in the set:
 
 ## Pinning policy
 
-**Build tooling is pinned exactly, never to a range and never to `latest`.** Pester, psake, PSScriptAnalyzer and PlatyPS all change test and analysis outcomes, so an unpinned bump turns a green build red — or worse, a red build green — with no commit to explain it.
+**Build tooling is pinned exactly, never to a range and never to `latest`.** Pester, psake and PSScriptAnalyzer all change test and analysis outcomes, so an unpinned bump turns a green build red — or worse, a red build green — with no commit to explain it.
 
 Two mechanical consequences worth knowing:
 
@@ -40,7 +40,7 @@ Two mechanical consequences worth knowing:
 
 **Runtime dependencies are a separate question** and are not covered here. `AWSAutomation` deliberately floats its `AWS.Tools.*` modules and `ImportExcel` to `latest`, recorded as ADR-0002 in that repo. That turns on those modules being unversioned `RequiredModules` in its manifest, which no other repo has. **Do not copy it without re-deriving it.**
 
-## Current drift, measured 2026-11-02
+## Current drift, measured 2026-11-06
 
 | Repo | Pester | psake | PSScriptAnalyzer | Other |
 | ---- | ------ | ----- | ---------------- | ----- |
@@ -50,14 +50,15 @@ Two mechanical consequences worth knowing:
 | `PS.GitHub` | 6.2.0 | 5.0.4 | 1.24.0 | |
 | `PS.DCU` | 6.2.0 | 5.0.4 | 1.24.0 | |
 | `SecurityTools` | 6.2.0 | 5.0.4 | 1.24.0 | ImportExcel 7.8.10 |
-| `AWSAutomation` | 6.2.0 | **4.9.1** | 1.24.0 | PlatyPS 0.14.2 (**unused**), ImportExcel `latest` |
+| `AWSAutomation` | 6.2.0 | 5.0.4 | **1.25.0** | ImportExcel `latest` |
 
-Two things this surfaces:
+One thing this surfaces:
 
-- **Two PSScriptAnalyzer versions analyse the same code.** `Build/depend.psd1` pins 1.24.0 for the gating `Analyze` task, while the reusable `pssa-sarif.yml` hardcodes `Install-Module -RequiredVersion '1.25.0'`. In six of seven repos the build gate and the Security tab therefore run different analyzers, and can legitimately disagree about the same file. `PS.Log` at 1.25.0 is the only repo where they match — it is the consistent one, not the outlier it looks like.
-- **`AWSAutomation` is still on psake 4.9.1.** Every other repo is on 5.0.4.
+- **Two PSScriptAnalyzer versions analyse the same code.** `Build/depend.psd1` pins 1.24.0 for the gating `Analyze` task in five of seven repos, while the reusable `pssa-sarif.yml` installs 1.25.0. In those five the build gate and the Security tab run different analyzers, and can legitimately disagree about the same file. `PS.Log` and `AWSAutomation` are at 1.25.0 and are the repos where they match — the consistent ones, not the outliers they look like.
 
-**Neither is a sweep to run.** Aligning seven `depend.psd1` files by hand reproduces the exact problem #20 exists to end, and the next drift would start the day after. The fix is for the stack to be declared once and inherited; these rows are the evidence for doing that, and the list to reconcile against when it happens.
+**Pester and psake are uniform fleet-wide** at 6.2.0 and 5.0.4. `AWSAutomation` was the last repo on psake 4.9.1 and moved to 5.0.4 in [#106](https://github.com/jjohns-dev/AWSAutomation/pull/106), which also took it to PSScriptAnalyzer 1.25.0 and dropped its unused `PlatyPS` pin.
+
+**This is not a sweep to run.** Aligning seven `depend.psd1` files by hand reproduces the exact problem #20 exists to end, and the next drift would start the day after. The fix is for the stack to be declared once and inherited; these rows are the evidence for doing that, and the list to reconcile against when it happens.
 
 ## Under evaluation
 
@@ -75,7 +76,7 @@ Neither is adopted. Both are independent decisions at different layers — adopt
 Applied when considering anything new:
 
 - **Does the job need a dependency at all?** The `min-tests` floor is ~30 lines of inline PowerShell precisely because no dependency was warranted.
-- **Is it still doing the job?** A pin outlives its purpose silently. `PlatyPS` above is the worked example — pinned, installed on every run, invoked nowhere, and described in two documents as something it does not do.
+- **Is it still doing the job?** A pin outlives its purpose silently. `PlatyPS` above is the worked example — pinned, installed on every run, invoked nowhere, and described in two documents as something it did not do. It survived that way for months before anyone checked.
 - **One tool per job.** Two linters or two test runners means two sets of results to reconcile, and the PSScriptAnalyzer split above shows what that costs even when it is the *same* tool at two versions.
 - **Maintained, with evidence.** Assess the project, not the README — #19's Sampler evaluation is the worked example.
 - **Can it be pinned exactly?** Anything that cannot is a runtime dependency decision, not a build one.
