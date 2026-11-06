@@ -158,17 +158,115 @@ finally {
 #endregion ====================================================================
 
 
+#region - THE TEST STEP'S SCOPE BRANCH =========================================
+# ci.yml's Test step is the second run: block in this repo carrying real logic.
+# The branch matters because passing @{ PesterScope = '' } would override a
+# consumer's psake default with nothing -- and no CI run can tell that apart
+# from working, because a repo with no PesterScope property behaves identically
+# either way. A stub build.ps1 records how it was actually called.
+$ciDocument = ConvertFrom-Yaml -Yaml (Get-Content -Path (Join-Path -Path $workflowRoot -ChildPath 'ci.yml') -Raw)
+$testStepBody = $null
+
+foreach ($job in $ciDocument['jobs'].Values) {
+    foreach ($step in $job['steps']) {
+        if ($step['id'] -eq 'pester') {
+            $testStepBody = $step['run']
+        }
+    }
+}
+
+if ([System.String]::IsNullOrWhiteSpace($testStepBody)) {
+    Write-Error -Message 'No step with id [pester] found in [ci.yml].' -ErrorAction Stop
+}
+
+$scopeCases = @(
+    @{ Description = 'no scope supplied'; Scope = $null; ExpectProperties = $false }
+    @{ Description = 'whitespace-only scope'; Scope = '   '; ExpectProperties = $false }
+    @{ Description = 'scope supplied'; Scope = 'CrossPlatform'; ExpectProperties = $true }
+)
+
+# ContainsKey is the whole point: it separates "omitted" from "passed empty".
+$stubBuild = @(
+    'param('
+    '    [System.String] $TaskList,'
+    '    [System.Collections.Hashtable] $Properties,'
+    '    [System.Management.Automation.SwitchParameter] $ResolveDependency'
+    ')'
+    '$record = [ordered] @{'
+    '    TaskList      = $TaskList'
+    '    HasProperties = $PSBoundParameters.ContainsKey(''Properties'')'
+    '    PesterScope   = if ($Properties) { $Properties[''PesterScope''] } else { $null }'
+    '}'
+    '$record | ConvertTo-Json -Compress | Set-Content -Path ''invocation.json'' -Encoding ''utf8'''
+) -join [System.Environment]::NewLine
+
+$scopeRoot = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath ('test-step-{0}' -f [System.Guid]::NewGuid())
+
+try {
+    foreach ($case in $scopeCases) {
+        $caseRoot = Join-Path -Path $scopeRoot -ChildPath ([System.Guid]::NewGuid())
+        New-Item -Path (Join-Path -Path $caseRoot -ChildPath 'Build') -ItemType 'Directory' -Force | Out-Null
+        Set-Content -Path (Join-Path -Path $caseRoot -ChildPath 'Build/build.ps1') -Value $stubBuild -Encoding 'utf8'
+
+        $caseScript = Join-Path -Path $caseRoot -ChildPath 'Invoke-TestStep.ps1'
+        Set-Content -Path $caseScript -Value $testStepBody -Encoding 'utf8'
+
+        $env:PESTER_SCOPE = $case.Scope
+        Push-Location -Path $caseRoot
+        try {
+            & pwsh -NoProfile -File $caseScript 2>&1 | Out-Null
+        }
+        finally {
+            Pop-Location
+            $env:PESTER_SCOPE = $null
+        }
+
+        $recordPath = Join-Path -Path $caseRoot -ChildPath 'invocation.json'
+
+        if (-not (Test-Path -LiteralPath $recordPath)) {
+            $failures.Add(('scope branch, {0}: build.ps1 was never invoked' -f $case.Description))
+            Write-Output ('  FAIL  scope branch, {0} -- build.ps1 was never invoked' -f $case.Description)
+            continue
+        }
+
+        $record = Get-Content -Path $recordPath -Raw | ConvertFrom-Json
+        $matched = ($record.HasProperties -eq $case.ExpectProperties)
+
+        if ($matched -and $case.ExpectProperties) {
+            $matched = ($record.PesterScope -ceq $case.Scope)
+        }
+
+        if ($matched) {
+            $verdict = if ($case.ExpectProperties) { 'passes -Properties carrying the scope' } else { 'omits -Properties entirely' }
+            Write-Output ('  PASS  scope branch, {0} -- {1}' -f $case.Description, $verdict)
+        }
+        else {
+            $detail = 'HasProperties={0} PesterScope=[{1}]' -f $record.HasProperties, $record.PesterScope
+            $failures.Add(('scope branch, {0}: {1}' -f $case.Description, $detail))
+            Write-Output ('  FAIL  scope branch, {0} -- {1}' -f $case.Description, $detail)
+        }
+    }
+}
+finally {
+    Remove-Item -Path $scopeRoot -Recurse -Force -ErrorAction 'SilentlyContinue'
+}
+
+#endregion ====================================================================
+
+
 #region - REPORT ===============================================================
 # NON-ZERO EXIT IS WHAT FAILS THE WORKFLOW JOB
+$caseCount = $cases.Count + $scopeCases.Count
+
 if ($failures.Count -gt 0) {
     foreach ($failure in $failures) {
         Write-Output ('::error::{0}' -f $failure)
     }
-    Write-Output ('{0} of {1} case(s) disagreed with expectation.' -f $failures.Count, $cases.Count)
+    Write-Output ('{0} of {1} case(s) disagreed with expectation.' -f $failures.Count, $caseCount)
     exit 1
 }
 
-Write-Output ('All {0} cases behaved as expected.' -f $cases.Count)
+Write-Output ('All {0} cases behaved as expected.' -f $caseCount)
 
 # EXPLICIT: $LASTEXITCODE STILL HOLDS THE LAST FIXTURE'S NON-ZERO EXIT, AND
 # shell: pwsh EXITS WITH IT UNLESS THE SCRIPT SAYS OTHERWISE
