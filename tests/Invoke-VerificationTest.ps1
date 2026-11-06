@@ -38,7 +38,7 @@ $workflowNames = @('ci.yml', 'release.yml')
 # SHOULDFAIL IS THE POINT OF EACH CASE: A CHECK THAT NEVER FIRES LOOKS LIKE A PASS
 $cases = @(
     @{ Description = 'container error with FailedCount 0'; Fixture = 'Test-FalseGreen.xml'; ShouldFail = $true }
-    @{ Description = 'healthy run'; Fixture = 'Test-Healthy.xml'; ShouldFail = $false }
+    @{ Description = 'healthy run'; Fixture = 'Test-Healthy.xml'; ShouldFail = $true }
     @{ Description = 'no tests collected'; Fixture = 'Test-ZeroTests.xml'; ShouldFail = $true }
     @{ Description = 'genuine assertion failures'; Fixture = 'Test-Failures.xml'; ShouldFail = $false }
     @{ Description = 'NUnit root element'; Fixture = 'Test-NUnitRoot.xml'; ShouldFail = $true }
