@@ -158,17 +158,210 @@ finally {
 #endregion ====================================================================
 
 
+#region - THE TEST STEP'S SCOPE BRANCH =========================================
+# ci.yml's Test step is the second run: block in this repo carrying real logic.
+# The branch matters because passing @{ PesterScope = '' } would override a
+# consumer's psake default with nothing -- and no CI run can tell that apart
+# from working, because a repo with no PesterScope property behaves identically
+# either way. A stub build.ps1 records how it was actually called.
+$ciDocument = ConvertFrom-Yaml -Yaml (Get-Content -Path (Join-Path -Path $workflowRoot -ChildPath 'ci.yml') -Raw)
+$testStepBody = $null
+
+foreach ($job in $ciDocument['jobs'].Values) {
+    foreach ($step in $job['steps']) {
+        if ($step['id'] -eq 'pester') {
+            $testStepBody = $step['run']
+        }
+    }
+}
+
+if ([System.String]::IsNullOrWhiteSpace($testStepBody)) {
+    Write-Error -Message 'No step with id [pester] found in [ci.yml].' -ErrorAction Stop
+}
+
+$scopeCases = @(
+    @{ Description = 'no scope supplied'; Scope = $null; ExpectProperties = $false }
+    @{ Description = 'whitespace-only scope'; Scope = '   '; ExpectProperties = $false }
+    @{ Description = 'scope supplied'; Scope = 'CrossPlatform'; ExpectProperties = $true }
+)
+
+# ContainsKey is the whole point: it separates "omitted" from "passed empty".
+$stubBuild = @(
+    'param('
+    '    [System.String] $TaskList,'
+    '    [System.Collections.Hashtable] $Properties,'
+    '    [System.Management.Automation.SwitchParameter] $ResolveDependency'
+    ')'
+    '$record = [ordered] @{'
+    '    TaskList      = $TaskList'
+    '    HasProperties = $PSBoundParameters.ContainsKey(''Properties'')'
+    '    PesterScope   = if ($Properties) { $Properties[''PesterScope''] } else { $null }'
+    '}'
+    '$record | ConvertTo-Json -Compress | Set-Content -Path ''invocation.json'' -Encoding ''utf8'''
+) -join [System.Environment]::NewLine
+
+$scopeRoot = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath ('test-step-{0}' -f [System.Guid]::NewGuid())
+
+try {
+    foreach ($case in $scopeCases) {
+        $caseRoot = Join-Path -Path $scopeRoot -ChildPath ([System.Guid]::NewGuid())
+        New-Item -Path (Join-Path -Path $caseRoot -ChildPath 'Build') -ItemType 'Directory' -Force | Out-Null
+        Set-Content -Path (Join-Path -Path $caseRoot -ChildPath 'Build/build.ps1') -Value $stubBuild -Encoding 'utf8'
+
+        $caseScript = Join-Path -Path $caseRoot -ChildPath 'Invoke-TestStep.ps1'
+        Set-Content -Path $caseScript -Value $testStepBody -Encoding 'utf8'
+
+        $env:PESTER_SCOPE = $case.Scope
+        Push-Location -Path $caseRoot
+        try {
+            & pwsh -NoProfile -File $caseScript 2>&1 | Out-Null
+        }
+        finally {
+            Pop-Location
+            $env:PESTER_SCOPE = $null
+        }
+
+        $recordPath = Join-Path -Path $caseRoot -ChildPath 'invocation.json'
+
+        if (-not (Test-Path -LiteralPath $recordPath)) {
+            $failures.Add(('scope branch, {0}: build.ps1 was never invoked' -f $case.Description))
+            Write-Output ('  FAIL  scope branch, {0} -- build.ps1 was never invoked' -f $case.Description)
+            continue
+        }
+
+        $record = Get-Content -Path $recordPath -Raw | ConvertFrom-Json
+        $matched = ($record.HasProperties -eq $case.ExpectProperties)
+
+        if ($matched -and $case.ExpectProperties) {
+            $matched = ($record.PesterScope -ceq $case.Scope)
+        }
+
+        if ($matched) {
+            $verdict = if ($case.ExpectProperties) { 'passes -Properties carrying the scope' } else { 'omits -Properties entirely' }
+            Write-Output ('  PASS  scope branch, {0} -- {1}' -f $case.Description, $verdict)
+        }
+        else {
+            $detail = 'HasProperties={0} PesterScope=[{1}]' -f $record.HasProperties, $record.PesterScope
+            $failures.Add(('scope branch, {0}: {1}' -f $case.Description, $detail))
+            Write-Output ('  FAIL  scope branch, {0} -- {1}' -f $case.Description, $detail)
+        }
+    }
+}
+finally {
+    Remove-Item -Path $scopeRoot -Recurse -Force -ErrorAction 'SilentlyContinue'
+}
+
+#endregion ====================================================================
+
+
+#region - THE NORMALIZE STEP ===================================================
+# The third run: block in this repo carrying real logic. The single-entry case
+# matters most: PS.Log passes '["ubuntu-latest"]', and PowerShell is known to
+# unwrap one-element arrays, which would emit an object where GitHub needs a
+# JSON array and break that consumer's matrix.
+$normalizeBody = $null
+
+foreach ($job in $ciDocument['jobs'].Values) {
+    foreach ($step in $job['steps']) {
+        if ($step['id'] -eq 'norm') {
+            $normalizeBody = $step['run']
+        }
+    }
+}
+
+if ([System.String]::IsNullOrWhiteSpace($normalizeBody)) {
+    Write-Error -Message 'No step with id [norm] found in [ci.yml].' -ErrorAction Stop
+}
+
+$normalizeCases = @(
+    @{ Description = 'single OS string, the PS.Log shape'; Input = '["ubuntu-latest"]'; ExpectOs = @('ubuntu-latest') }
+    @{ Description = 'three OS strings, the default'; Input = '["ubuntu-latest", "windows-latest", "macos-latest"]'; ExpectOs = @('ubuntu-latest', 'windows-latest', 'macos-latest') }
+    @{ Description = 'objects keep their per-leg values'; Input = '[{"os":"ubuntu-latest","pesterScope":"CrossPlatform","minTests":986}]'; ExpectOs = @('ubuntu-latest'); ExpectMinTests = 986 }
+    @{ Description = 'invalid JSON'; Input = 'not json at all'; ShouldFail = $true }
+    @{ Description = 'empty array'; Input = '[]'; ShouldFail = $true }
+    @{ Description = 'object with no os key'; Input = '[{"pesterScope":"CrossPlatform"}]'; ShouldFail = $true }
+)
+
+$normalizeRoot = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath ('normalize-{0}' -f [System.Guid]::NewGuid())
+$normalizeScript = Join-Path -Path $normalizeRoot -ChildPath 'Invoke-Normalize.ps1'
+New-Item -Path $normalizeRoot -ItemType 'Directory' -Force | Out-Null
+Set-Content -Path $normalizeScript -Value $normalizeBody -Encoding 'utf8'
+
+try {
+    foreach ($case in $normalizeCases) {
+        $outputFile = Join-Path -Path $normalizeRoot -ChildPath ('{0}.txt' -f [System.Guid]::NewGuid())
+        New-Item -Path $outputFile -ItemType 'File' -Force | Out-Null
+
+        $env:OS_MATRIX = $case.Input
+        $env:GITHUB_OUTPUT = $outputFile
+        try {
+            & pwsh -NoProfile -File $normalizeScript 2>&1 | Out-Null
+            $stepFailed = ($LASTEXITCODE -ne 0)
+        }
+        finally {
+            $env:OS_MATRIX = $null
+            $env:GITHUB_OUTPUT = $null
+        }
+
+        if ($case.ShouldFail) {
+            if ($stepFailed) {
+                Write-Output ('  PASS  normalize, {0} -- rejected as expected' -f $case.Description)
+            }
+            else {
+                $failures.Add(('normalize, {0}: expected the step to fail' -f $case.Description))
+                Write-Output ('  FAIL  normalize, {0} -- expected rejection' -f $case.Description)
+            }
+            continue
+        }
+
+        $emitted = (Get-Content -Path $outputFile -Raw) -replace '^matrix=', ''
+        $emitted = $emitted.Trim()
+
+        # A one-element array that collapsed to an object is the regression this
+        # case exists to catch, so assert the shape before the contents.
+        if (-not $emitted.StartsWith('[')) {
+            $failures.Add(('normalize, {0}: emitted an object, not an array: {1}' -f $case.Description, $emitted))
+            Write-Output ('  FAIL  normalize, {0} -- not a JSON array: {1}' -f $case.Description, $emitted)
+            continue
+        }
+
+        $entries = @($emitted | ConvertFrom-Json)
+        $actualOs = @($entries | ForEach-Object { $_.os })
+        $matched = (($actualOs -join ',') -ceq ($case.ExpectOs -join ','))
+
+        if ($matched -and $case.ContainsKey('ExpectMinTests')) {
+            $matched = ([int] $entries[0].minTests -eq [int] $case.ExpectMinTests)
+        }
+
+        if ($matched) {
+            Write-Output ('  PASS  normalize, {0} -- {1} leg(s), values intact' -f $case.Description, $entries.Count)
+        }
+        else {
+            $failures.Add(('normalize, {0}: got {1}' -f $case.Description, $emitted))
+            Write-Output ('  FAIL  normalize, {0} -- got {1}' -f $case.Description, $emitted)
+        }
+    }
+}
+finally {
+    Remove-Item -Path $normalizeRoot -Recurse -Force -ErrorAction 'SilentlyContinue'
+}
+
+#endregion ====================================================================
+
+
 #region - REPORT ===============================================================
 # NON-ZERO EXIT IS WHAT FAILS THE WORKFLOW JOB
+$caseCount = $cases.Count + $scopeCases.Count + $normalizeCases.Count
+
 if ($failures.Count -gt 0) {
     foreach ($failure in $failures) {
         Write-Output ('::error::{0}' -f $failure)
     }
-    Write-Output ('{0} of {1} case(s) disagreed with expectation.' -f $failures.Count, $cases.Count)
+    Write-Output ('{0} of {1} case(s) disagreed with expectation.' -f $failures.Count, $caseCount)
     exit 1
 }
 
-Write-Output ('All {0} cases behaved as expected.' -f $cases.Count)
+Write-Output ('All {0} cases behaved as expected.' -f $caseCount)
 
 # EXPLICIT: $LASTEXITCODE STILL HOLDS THE LAST FIXTURE'S NON-ZERO EXIT, AND
 # shell: pwsh EXITS WITH IT UNLESS THE SCRIPT SAYS OTHERWISE
