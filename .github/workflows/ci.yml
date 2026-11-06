@@ -28,6 +28,7 @@ jobs:
     name: normalize matrix
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions: {} # reads an input and writes a job output; touches nothing
     outputs:
       matrix: ${{ steps.norm.outputs.matrix }}
     steps:

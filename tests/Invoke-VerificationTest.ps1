@@ -254,9 +254,104 @@ finally {
 #endregion ====================================================================
 
 
+#region - THE NORMALIZE STEP ===================================================
+# The third run: block in this repo carrying real logic. The single-entry case
+# matters most: PS.Log passes '["ubuntu-latest"]', and PowerShell is known to
+# unwrap one-element arrays, which would emit an object where GitHub needs a
+# JSON array and break that consumer's matrix.
+$normalizeBody = $null
+
+foreach ($job in $ciDocument['jobs'].Values) {
+    foreach ($step in $job['steps']) {
+        if ($step['id'] -eq 'norm') {
+            $normalizeBody = $step['run']
+        }
+    }
+}
+
+if ([System.String]::IsNullOrWhiteSpace($normalizeBody)) {
+    Write-Error -Message 'No step with id [norm] found in [ci.yml].' -ErrorAction Stop
+}
+
+$normalizeCases = @(
+    @{ Description = 'single OS string, the PS.Log shape'; Input = '["ubuntu-latest"]'; ExpectOs = @('ubuntu-latest') }
+    @{ Description = 'three OS strings, the default'; Input = '["ubuntu-latest", "windows-latest", "macos-latest"]'; ExpectOs = @('ubuntu-latest', 'windows-latest', 'macos-latest') }
+    @{ Description = 'objects keep their per-leg values'; Input = '[{"os":"ubuntu-latest","pesterScope":"CrossPlatform","minTests":986}]'; ExpectOs = @('ubuntu-latest'); ExpectMinTests = 986 }
+    @{ Description = 'invalid JSON'; Input = 'not json at all'; ShouldFail = $true }
+    @{ Description = 'empty array'; Input = '[]'; ShouldFail = $true }
+    @{ Description = 'object with no os key'; Input = '[{"pesterScope":"CrossPlatform"}]'; ShouldFail = $true }
+)
+
+$normalizeRoot = Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath ('normalize-{0}' -f [System.Guid]::NewGuid())
+$normalizeScript = Join-Path -Path $normalizeRoot -ChildPath 'Invoke-Normalize.ps1'
+New-Item -Path $normalizeRoot -ItemType 'Directory' -Force | Out-Null
+Set-Content -Path $normalizeScript -Value $normalizeBody -Encoding 'utf8'
+
+try {
+    foreach ($case in $normalizeCases) {
+        $outputFile = Join-Path -Path $normalizeRoot -ChildPath ('{0}.txt' -f [System.Guid]::NewGuid())
+        New-Item -Path $outputFile -ItemType 'File' -Force | Out-Null
+
+        $env:OS_MATRIX = $case.Input
+        $env:GITHUB_OUTPUT = $outputFile
+        try {
+            & pwsh -NoProfile -File $normalizeScript 2>&1 | Out-Null
+            $stepFailed = ($LASTEXITCODE -ne 0)
+        }
+        finally {
+            $env:OS_MATRIX = $null
+            $env:GITHUB_OUTPUT = $null
+        }
+
+        if ($case.ShouldFail) {
+            if ($stepFailed) {
+                Write-Output ('  PASS  normalize, {0} -- rejected as expected' -f $case.Description)
+            }
+            else {
+                $failures.Add(('normalize, {0}: expected the step to fail' -f $case.Description))
+                Write-Output ('  FAIL  normalize, {0} -- expected rejection' -f $case.Description)
+            }
+            continue
+        }
+
+        $emitted = (Get-Content -Path $outputFile -Raw) -replace '^matrix=', ''
+        $emitted = $emitted.Trim()
+
+        # A one-element array that collapsed to an object is the regression this
+        # case exists to catch, so assert the shape before the contents.
+        if (-not $emitted.StartsWith('[')) {
+            $failures.Add(('normalize, {0}: emitted an object, not an array: {1}' -f $case.Description, $emitted))
+            Write-Output ('  FAIL  normalize, {0} -- not a JSON array: {1}' -f $case.Description, $emitted)
+            continue
+        }
+
+        $entries = @($emitted | ConvertFrom-Json)
+        $actualOs = @($entries | ForEach-Object { $_.os })
+        $matched = (($actualOs -join ',') -ceq ($case.ExpectOs -join ','))
+
+        if ($matched -and $case.ContainsKey('ExpectMinTests')) {
+            $matched = ([int] $entries[0].minTests -eq [int] $case.ExpectMinTests)
+        }
+
+        if ($matched) {
+            Write-Output ('  PASS  normalize, {0} -- {1} leg(s), values intact' -f $case.Description, $entries.Count)
+        }
+        else {
+            $failures.Add(('normalize, {0}: got {1}' -f $case.Description, $emitted))
+            Write-Output ('  FAIL  normalize, {0} -- got {1}' -f $case.Description, $emitted)
+        }
+    }
+}
+finally {
+    Remove-Item -Path $normalizeRoot -Recurse -Force -ErrorAction 'SilentlyContinue'
+}
+
+#endregion ====================================================================
+
+
 #region - REPORT ===============================================================
 # NON-ZERO EXIT IS WHAT FAILS THE WORKFLOW JOB
-$caseCount = $cases.Count + $scopeCases.Count
+$caseCount = $cases.Count + $scopeCases.Count + $normalizeCases.Count
 
 if ($failures.Count -gt 0) {
     foreach ($failure in $failures) {
