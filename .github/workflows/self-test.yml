@@ -24,26 +24,32 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install powershell-yaml
+      - name: Install harness dependencies
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
 
           # PSResourceGet never calls Get-PackageSource, so the unregistered-PSGallery flake cannot recur (#27).
-          $moduleParams = @{
-              Name            = 'powershell-yaml'
-              Version         = '0.4.12'
-              Scope           = 'CurrentUser'
-              Repository      = 'PSGallery'
-              TrustRepository = $true
-              ErrorAction     = 'Stop'
+          # Pester is pinned because the runner image ships 5.x and the harness imports 6.2.0 exactly.
+          $modules = @(
+              @{ Name = 'powershell-yaml'; Version = '0.4.12' }
+              @{ Name = 'Pester'; Version = '6.2.0' }
+          )
+
+          foreach ($module in $modules) {
+              $moduleParams = @{
+                  Name            = $module.Name
+                  Version         = $module.Version
+                  Scope           = 'CurrentUser'
+                  Repository      = 'PSGallery'
+                  TrustRepository = $true
+                  ErrorAction     = 'Stop'
+              }
+              Install-PSResource @moduleParams
           }
 
-          Install-PSResource @moduleParams
-
-      # Extracts the "Verify Pester results" step out of ci.yml and release.yml
-      # and runs it against fixtures, asserting both that it fires on a false
-      # green and that it stays quiet on a healthy run.
-      - name: Verify the shipped step behaves in both directions
+      # Runs the Pester suites in tests/, which extract each run: block with real
+      # logic out of ci.yml and release.yml and assert it in both directions.
+      - name: Verify the shipped steps behave in both directions
         shell: pwsh
         run: ./tests/Invoke-VerificationTest.ps1

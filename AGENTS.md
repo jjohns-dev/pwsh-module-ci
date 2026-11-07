@@ -27,7 +27,7 @@ Consequences for how you work:
 | `.github/workflows/pssa-sarif.yml` | Reusable: PSScriptAnalyzer findings to the Security tab |
 | `.github/workflows/actionlint.yml` | This repo's own CI; lints the workflows above |
 | `.github/workflows/self-test.yml` | This repo's own CI; exercises the shipped verification step |
-| `tests/` | Fixtures and the harness that runs them |
+| `tests/` | Pester suites for the `run:` blocks with real logic, their fixtures, and the runner |
 | `docs/adr/` | Architecture Decision Records, Nygard format |
 | `docs/test-integrity.md` | Why a suite can be green and prove nothing: test-design decisions, vacuity traps, and the `min-tests` floor procedure. Permanent |
 | `docs/shared-ci-standards.md` | Which repo holds the reference version of each copy-pasted file. Interim; #20 removes the need for it |
@@ -88,15 +88,15 @@ A `vX.Y.Z` tag can never be moved or deleted. If one is cut on the wrong commit,
 
 `actionlint` checks workflow syntax, expression validity, and (via shellcheck) `run:` blocks — it does **not** execute anything.
 
-`tests/Invoke-VerificationTest.ps1` covers the one `run:` block with real logic. It parses `ci.yml` and `release.yml`, pulls out the `Verify Pester results` step body, asserts the two have not drifted, then runs that body against the fixtures in `tests/fixtures/`. Extracting from the YAML rather than committing a copy is deliberate: the code under test is then the code that ships, by construction.
+`tests/` holds a Pester suite for each of the three `run:` blocks with real logic, all extracted from the workflow YAML rather than copied: `VerifyPesterResults.Tests.ps1` runs the `Verify Pester results` body against the fixtures in `tests/fixtures/` and asserts that `ci.yml` and `release.yml` carry it identically; `TestStep.Tests.ps1` runs `ci.yml`'s Test step against a stub `build.ps1` to prove an empty scope omits `-Properties` rather than passing it empty; `Normalize.Tests.ps1` runs the `normalize` job's step, including the single-entry `os-matrix` that `PS.Log` depends on. `WorkflowStep.Helpers.ps1` extracts a step body by name or id and runs it in a child `pwsh`. Extracting from the YAML is deliberate: the code under test is then the code that ships, by construction.
 
-Run it with `pwsh -File tests/Invoke-VerificationTest.ps1`. It needs `powershell-yaml`, which `self-test.yml` installs at a pinned version.
+Run it with `pwsh -File tests/Invoke-VerificationTest.ps1`. It needs `powershell-yaml` 0.4.12 and Pester 6.2.0, which `self-test.yml` installs at pinned versions; a failed import stops the run with a GitHub error annotation naming the module and the reason. The job, `verify Pester result step`, is a **required check** on `main`.
 
-Every fixture asserts a **direction**. Half must make the step fail and half must leave it quiet, because a check that never fires is indistinguishable from one that passes. When you add a case, add it to whichever half is thinner.
+Every case asserts a **direction** — some must make the step fail and some must leave it quiet — because a check that never fires is indistinguishable from one that passes. When you add a case, add its opposite too.
 
 Neither gate covers a step's `if:` condition — that is orchestration, not script logic, and needs a real run on a branch with an earlier step deliberately failing.
 
-Nor do they cover the step's `env:` block. The harness sets `MIN_TESTS` itself and runs only the `run:` body, so whether `inputs.min-tests` actually reaches the step is proven only by a consumer run that sets the input.
+Nor do they cover a step's `env:` block. The suites set `MIN_TESTS`, `PESTER_SCOPE` and `OS_MATRIX` themselves and run only the `run:` body, so whether a workflow input actually reaches a step is proven only by a consumer run that sets the input.
 
 The workflow pins actionlint `1.7.12` with a SHA256 check. Match that version locally rather than installing latest.
 
