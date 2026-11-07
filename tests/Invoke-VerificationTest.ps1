@@ -65,8 +65,9 @@ $result = Invoke-Pester -Configuration $config
 
 
 #region - REPORT ===============================================================
-# AN EMPTY RUN REPORTS NO FAILURES, SO COLLECTING NOTHING MUST FAIL TOO
-if ($result.TotalCount -eq 0) {
+# AN EMPTY RUN REPORTS NO FAILURES, SO COLLECTING NOTHING MUST FAIL TOO.
+# INVOKE-PESTER RETURNS $null RATHER THAN A ZERO COUNT WHEN IT FINDS NO FILES.
+if ($null -eq $result -or $result.TotalCount -eq 0) {
     Write-Output -InputObject '::error title=No tests collected::The harness collected zero tests.'
     exit 1
 }
