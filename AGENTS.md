@@ -26,7 +26,7 @@ Consequences for how you work:
 | `.github/workflows/release.yml` | Reusable: build artifact, cut a GitHub release |
 | `.github/workflows/pssa-sarif.yml` | Reusable: PSScriptAnalyzer findings to the Security tab |
 | `.github/workflows/actionlint.yml` | This repo's own CI; lints the workflows above |
-| `.github/workflows/self-test.yml` | This repo's own CI; exercises the shipped verification step |
+| `.github/workflows/self-test.yml` | This repo's own CI; exercises the shipped `run:` blocks with real logic |
 | `tests/` | Pester suites for the `run:` blocks with real logic, their fixtures, and the runner |
 | `docs/adr/` | Architecture Decision Records, Nygard format |
 | `docs/test-integrity.md` | Why a suite can be green and prove nothing: test-design decisions, vacuity traps, and the `min-tests` floor procedure. Permanent |

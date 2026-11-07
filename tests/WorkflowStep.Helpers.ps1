@@ -3,9 +3,23 @@
 # Version:  0.1.0 | Updated: 2026-11-06
 # Author:   johnsarie27
 # ==============================================================================
-# Dot-sourced by the *.Tests.ps1 files beside it. Requires powershell-yaml to be
-# loaded already; Invoke-VerificationTest.ps1 imports it and fails loudly if it
-# cannot.
+<#
+.SYNOPSIS
+    Extracts run: blocks from the workflow YAML and runs them in isolation.
+.DESCRIPTION
+    Dot-sourced by each *.Tests.ps1 beside this file. Get-WorkflowStepBody pulls
+    one step's run: body out of a workflow file by name or id, so the suites test
+    the code that ships rather than a copy of it. Invoke-StepBody runs that body
+    in a child pwsh, from a given directory, with a given environment, and
+    returns its exit code and output.
+.NOTES
+    Requires powershell-yaml to be loaded already. Invoke-VerificationTest.ps1
+    imports it and fails loudly if it cannot.
+    Only a step's run: body is executed. Its env: block and if: condition are
+    never evaluated: callers supply the environment through -Environment, so a
+    passing test does not prove that a workflow input reaches the step. That
+    needs a consumer run that sets the input.
+#>
 
 function Get-WorkflowStepBody {
     <#
