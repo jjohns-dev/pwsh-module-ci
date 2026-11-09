@@ -1,7 +1,7 @@
 # Centralized build harness — design
 
 - **Requirements:** [requirements.md](requirements.md), approved 2026-11-09
-- **Status:** Draft — decisions in progress. Q1–Q4 decided; Q5–Q7 open. The approach, architecture, affected files and risks sections are written once the decisions are settled.
+- **Status:** Draft — decisions in progress. Q1–Q5 decided; Q6–Q7 open. The approach, architecture, affected files and risks sections are written once the decisions are settled.
 
 ## Decisions
 
@@ -207,3 +207,54 @@ Lowercase is the majority, 104 files to 37. PS.SSL and PS.DCU are entirely `.Tes
 
 - Pester cases for each scope on each OS, including mixed-case names (`.Tests.windows.ps1` and `.tests.windows.ps1`) and an unknown scope, which must fail.
 - Executed counts after migration must equal the baseline: PS.SSL 346 on Ubuntu and 347 on Windows, SecurityTools 996 and 21, and every other repo unchanged. A file picked up or missed at the wrong depth shows here. Renames do not change which tests run, so the counts also confirm no file was lost in a rename.
+
+### Q5 — Opt-in: the central harness ships as `v2` (decided 2026-11-09)
+
+#### Decision
+
+- **The central harness is released as `v2.0.0`, with a new moving `v2` tag.** `v1` never moves onto it.
+- **A consumer opts in by repointing all three callers from `@v1` to `@v2`** in its migration PR (Q3). There is no input switch and no interim exact-version pin.
+- **`v1` stays on `v1.6.x` for unmigrated consumers.** An urgent fix for them is cut as `v1.6.x` from a branch off `v1.6.1`, because `main` carries `v2`. Once the last consumer has moved, `v1` is retired: no further releases.
+- **Migration order, easiest first**, so early PRs prove the mechanism before the hard cases:
+
+  | Order | Repo | What it exercises |
+  | ----- | ---- | ----------------- |
+  | 1 | PS.GHOps, PS.GitHub | byte-identical `Build/`, no `harness.psd1`, no runtime modules |
+  | 2 | PS.Log | the baseline case |
+  | 3 | PS.DCU | dev container `postCreateCommand`, `.Tests` renames |
+  | 4 | AWSAutomation | `ExcludeRules`, 15 floating runtime modules |
+  | 5 | PS.SSL | tag exclusion, 22 renames, Windows-only selection under `All` |
+  | 6 | SecurityTools | per-leg scopes, the `ImportExcel` pin dropping |
+
+#### Why
+
+- Moving `v1` to the harness would change unmigrated consumers' outcomes. Their own `Build/` would be ignored, and without a `harness.psd1` PS.SSL would stop excluding its `Network` tests. Criterion 6 forbids that.
+- **A major makes the state visible.** `@v2` in a caller means the repo is on the central harness; `@v1` means it still vendors its own. No other record is needed.
+- It needs no closing round of repoint PRs. An exact-version pin would have required seven more one-line PRs to move back to `@v1`.
+- `v1` never moves onto the harness, so there is no single event that changes all seven repos at once.
+- The window in which unmigrated repos need fixes from a maintenance branch is the same as an exact-version pin's would have been.
+
+#### Alternatives rejected
+
+- **An input switch** (`harness: central`) on `@v1`: every workflow carries both code paths during the migration, both need tests, and removing the input afterwards is itself a `v2` under ADR-0002 unless it stays as a no-op forever.
+- **An exact-version pin** (`@v1.7.0`), then move `v1` once all seven are on it: the existing staging playbook, but it costs seven repoint PRs and ends in a fleet-wide `v1` move.
+
+#### ADR-0002 exception
+
+ADR-0002 defines "breaking" as the consumer's call no longer working. By that test this change is a minor: the inputs and job names are unchanged. It is released as a major deliberately, and **ADR-0002 is amended to say so** with a narrow rule: *a change that replaces what runs the consumer's build is a major, even when the call still works.* Recording the rule keeps ADR-0002's definition meaningful for every other change.
+
+#### Known risk: Dependabot
+
+- All seven consumers run Dependabot on `github-actions` with no ignore rules, measured 2026-11-09, and GitHub documents that it keeps references to "reusable workflows used inside workflows" up to date ([source](https://docs.github.com/en/code-security/dependabot/working-with-dependabot/keeping-your-actions-up-to-date-with-dependabot)).
+- Whether it proposes a `@v1` → `@v2` jump for a reusable workflow is not verified. It does for actions such as `actions/checkout`, so expect it.
+- Merging such a PR would put a repo on the harness with its old `Build/` still present and no `harness.psd1`. **Close those PRs**; the migration PR replaces them.
+
+#### Follow-up tasks
+
+- Amend ADR-0002 with the exception above.
+- Update AGENTS.md's *Versioning* and *Cutting a release* sections for two moving tags, `v1` and `v2`, and the retirement of `v1`.
+- When cutting `v2`, confirm that `protect-release-tags` covers it. AGENTS.md says that ruleset matches `v*` excluding `v*.*.*`, which includes `v2`; that comes from the doc, not from the API.
+
+#### Not portable to `PS-MCS`
+
+`mcssec-ops`' consumers pin `@main`, not a tag, so there is no version to repoint. That org would need an input switch, or verification before merge. Recorded for criterion 11; not solved here.
