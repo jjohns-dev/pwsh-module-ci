@@ -63,9 +63,10 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
   - Verify: `tests/Shim.Tests.ps1` covers all 14 spike cases against a local origin, plus a fetch failure (must exit non-zero, run nothing, and print the cache path) and a CRLF copy of the shim (must not report drift).
 - [x] **B11. Optional settings sample, `templates/Build/harness.psd1`.** Header states the file is optional; every key commented out, with its type, default and the repo that uses it.
   - Verify: it parses; loaded by B4 as-is, it yields the same settings as no file at all.
-- [ ] **B12. Windows in self-test.** Add a `windows-latest` leg to `self-test.yml`. *(Q1)*
+- [x] **B12. Windows in self-test.** Add a `windows-latest` leg to `self-test.yml`. *(Q1)*
   - A matrix may append the OS to the job's check name, which would rename the required check `verify Pester result step`. Not verified either way.
   - Verify: both legs green on the PR; read the check names the PR actually reports. If they differ from `verify Pester result step`, update the `protect-main` ruleset (id `22409716`) with `PUT` in the same PR, and read it back.
+  - **Outcome (PR #71):** the matrix did rename the check, to `verify Pester result step (<os>)`. The ruleset was **not** edited, because it also protects `release/v1`, whose self-test has no matrix. Instead the legs report as `verify Pester (<os>)` and a summary job keeps the required name, passing only when every leg succeeded. Seen in both directions on the PR: it failed when the Windows leg failed, and passed once both legs did.
 
 ## C. Workflows
 
