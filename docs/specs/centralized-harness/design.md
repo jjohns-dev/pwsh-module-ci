@@ -147,13 +147,13 @@ Not covered by the spike: a real clone from GitHub, a real build through the shi
 
 #### Known traps — the implementation must handle these
 
-- **A failed fetch silently runs a stale harness.** Measured in the spike: with `--force` removed, a moved `v1` was not picked up and the shim ran the old harness with exit 0, no error and no warning. The likely cause, not confirmed, is that the fetch exits non-zero and the shim never checks it. Any fetch failure, including no network, would behave the same way. The shim must check the fetch result and must carry a code comment stating this finding, so that anyone writing a new version of the shim sees it. Whether it then stops or warns and continues from the cached copy is still to be decided.
+- **A failed fetch silently runs a stale harness.** Measured in the spike: with `--force` removed, a moved `v1` was not picked up and the shim ran the old harness with exit 0, no error and no warning. The likely cause, not confirmed, is that the fetch exits non-zero and the shim never checks it. Any fetch failure, including no network, would behave the same way. The shim must check the fetch result and must carry a code comment stating this finding, so that anyone writing a new version of the shim sees it. **On failure it stops** (decided 2026-11-09): continuing from the cache would run a harness version that may not match CI, which is what the shim exists to prevent, and a warning is easily missed by an agent. The cost is that offline local builds fail; an explicit opt-in can be added if that ever matters.
 - **CRLF checkouts break a byte comparison.** With `core.autocrlf=true`, the Windows default, a Windows checkout stores the shim with CRLF, and a hash against the reference copy reports drift that is not there. Either normalise line endings before comparing, or pin the shim to LF with `.gitattributes` (`Build/build.ps1 text eol=lf`). Inferred, not measured; the Windows tests below will show which.
 - **One shared cache.** If two module repos pin different versions, the cache switches between them on each run. Acceptable for serial use; a cache per ref avoids it if it becomes a problem.
 
 #### Verification
 
-- A Pester suite in `tests/` runs the shim against a fixture module and a local origin, covering every case above in both directions. Include the fetch-failure case, which must fail or warn as decided, and never pass silently.
+- A Pester suite in `tests/` runs the shim against a fixture module and a local origin, covering every case above in both directions. Include the fetch-failure case, which must stop with a non-zero exit and run nothing.
 - `self-test.yml` runs the suites on `ubuntu-latest` **and** `windows-latest`, so Windows behaviour, including the CRLF case, is tested on every change.
 
 #### Accepted without mitigation

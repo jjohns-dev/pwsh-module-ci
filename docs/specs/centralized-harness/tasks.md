@@ -4,11 +4,11 @@
 - **Design:** [design.md](design.md), approved 2026-11-09
 - **Status:** Draft — awaiting approval
 
-Each task names its verification and the acceptance criteria (AC) it serves. Tasks are ordered so `main` stays green between them. Consumers are untouched until phase F, because they pin `@v1` and `v1` never moves (Q5).
+Each task names its verification and the acceptance criteria (AC) it serves. Tasks are ordered so `main` stays green between them. Consumers are untouched until phase F, because they pin `@v1` and `v1` never moves (Q5). Expect roughly one PR per lettered phase in this repo, adjusted as the work shows; phase F is one PR per consumer.
 
 ## A. Before anything changes on `main`
 
-- [ ] **A1. Create a `v1` maintenance branch** at `v1.6.1`'s commit (`b40b9c8`), so an urgent `v1.6.x` fix stays possible once `main` carries `v2` work. *(Q5)*
+- [ ] **A1. Create a `v1` maintenance branch** from the last tagged release, `v1.6.1` (`b40b9c8`, cut 2026-11-09), so an urgent `v1.6.x` fix stays possible once `main` carries `v2` work. `main` has gained only #69, documentation, since that tag. *(Q5)*
   - Verify: `git rev-parse 'v1.6.1^{commit}'` equals the branch tip on `origin`.
 
 ## B. Harness code in this repo, each with its tests
@@ -57,10 +57,10 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
   - Then settle PS.DCU's alternative by measurement: run `Test` then `CreateBuildArtifact` with each declaration and check whether `Artifacts/Test-*.xml` survives.
   - Verify: the artifact zip contains the staged module; the measurement and its outcome are recorded in the design. Adopt PS.DCU's form only if the measurement supports it.
 - [ ] **B10. Shim and template, `templates/Build/build.ps1`**, from the Q1 sketch. *(Q1)*
-  - Checks the fetch result and stops or warns, as decided in this task, never continuing silently.
+  - Checks the fetch result and **stops** on failure, never continuing with the cached copy. The error states that the fetch failed, includes git's own message, names the cache path, and says nothing was run.
   - Carries the fetch-failure code comment recorded in the design.
   - Handles line endings so a CRLF checkout does not read as drift.
-  - Verify: `tests/Shim.Tests.ps1` covers all 14 spike cases against a local origin, plus a fetch failure (must not pass silently) and a CRLF copy of the shim (must not report drift).
+  - Verify: `tests/Shim.Tests.ps1` covers all 14 spike cases against a local origin, plus a fetch failure (must exit non-zero, run nothing, and print the cache path) and a CRLF copy of the shim (must not report drift).
 - [ ] **B11. Optional settings sample, `templates/Build/harness.psd1`.** Header states the file is optional; every key commented out, with its type, default and the repo that uses it.
   - Verify: it parses; loaded by B4 as-is, it yields the same settings as no file at all.
 - [ ] **B12. Windows in self-test.** Add a `windows-latest` leg to `self-test.yml`. *(Q1)*
