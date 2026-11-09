@@ -4,9 +4,9 @@ Guidance for AI coding agents working in `pwsh-module-ci`.
 
 ## What this repo is
 
-Reusable GitHub Actions workflows called by six PowerShell module repos: PS.Log, PS.GHOps, PS.GitHub, PS.SSL, PS.DCU, AWSAutomation. It contains no application code and no PowerShell module — only workflow definitions, their pinned action versions, and the docs describing both.
+Reusable GitHub Actions workflows called by seven PowerShell module repos: PS.Log, PS.GHOps, PS.GitHub, PS.SSL, PS.DCU, AWSAutomation, SecurityTools. It contains no application code and no PowerShell module — only workflow definitions, their pinned action versions, and the docs describing both.
 
-SecurityTools is **not** a consumer yet. It pairs each runner with a `PesterScope` psake property and a per-leg `minTests` via `matrix.include`. As of #9 the `os-matrix` input *can* express that — it accepts an array of objects carrying `os`, `pesterScope` and `minTests` — so what remains is the adoption itself, tracked in #21. Do not add it to consumer lists until that lands.
+SecurityTools is the only consumer of the object form of `os-matrix`: each leg carries its own `pesterScope` and `minTests`. It adopted `ci.yml` in #21 (SecurityTools#169); a change to how `ci.yml` handles either key must be checked against it.
 
 ## Blast radius — read before editing a workflow
 
@@ -50,7 +50,7 @@ The three reusable workflows are `on: workflow_call` only. `actionlint.yml` and 
 
 Semver tags plus one moving tag, `v1`, tracking the latest non-breaking release. Consumers normally pin `@v1`. While staging a release that can change CI outcomes they pin the **immutable** `vX.Y.Z` instead, so the dependency is frozen while they migrate, then repoint to `@v1` once `v1` has moved. There is deliberately no moving `vX.Y` tag — a staging pin that moves underneath an in-flight migration defeats the point of staging. Leaving a consumer pinned is debt: it stops receiving the centralized action bumps this repo exists to deliver.
 
-"Breaking" means the consumer's **call** stops working, not its **build** stops passing — see ADR-0002. Removing an input no consumer passes is a minor; removing one any consumer passes, or renaming a job (which silently un-gates branch protection), is a `v2`. A change that turns a wrongly-green build red is not breaking, and is staged through an immutable `vX.Y.Z` pin instead. Verify which you have by checking the six consumer repos, and record the result in the PR.
+"Breaking" means the consumer's **call** stops working, not its **build** stops passing — see ADR-0002. Removing an input no consumer passes is a minor; removing one any consumer passes, or renaming a job (which silently un-gates branch protection), is a `v2`. A change that turns a wrongly-green build red is not breaking, and is staged through an immutable `vX.Y.Z` pin instead. Verify which you have by checking the seven consumer repos, and record the result in the PR.
 
 ### Cutting a release
 

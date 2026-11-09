@@ -13,7 +13,7 @@ No single repo is best at everything. Measured 2026-10-28.
 | `Help.Tests.ps1` overall shape | `jjohns-dev/AWSAutomation` | All four defects fixed, mandatory-value test deleted with its marker comment. The smallest correct version |
 | Link test | `PS-MCS/MCS` | No redundant outer `if` — the filtered `foreach` already iterates zero times. Its comment names what each check misses, which the later copies dropped |
 | Conditional `DynamicParam` resolution | `jjohns-dev/SecurityTools` | Only repo that has it. Dynamic parameters are invisible to static `Get-Command` metadata, so a `.PARAMETER` block documenting one looks like help for a parameter that does not exist |
-| `min-tests` floor, per-leg | `jjohns-dev/SecurityTools` | Per-leg floors plus all three no-result-file guards |
+| `min-tests` floor, per-leg | `jjohns-dev/pwsh-module-ci` `ci.yml` | Per-leg floors plus all three no-result-file guards. SecurityTools held the reference copy until it adopted `ci.yml` in #21 and deleted its own |
 | PSDepend to `Install-PSResource` loop | `jjohns-dev/AWSAutomation` | Handles exact pins **and** a `'latest'` sentinel, and logs resolved versions. `SecurityTools` has the simpler pin-only form if that is all a repo needs |
 
 When you improve one of these, update the row. That is the whole maintenance burden.
