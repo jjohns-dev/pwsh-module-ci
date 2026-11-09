@@ -1,7 +1,7 @@
 # Centralized build harness — design
 
 - **Requirements:** [requirements.md](requirements.md), approved 2026-11-09
-- **Status:** Draft — decisions in progress. Q1 decided; Q2–Q7 open. The approach, architecture, affected files and risks sections are written once the decisions are settled.
+- **Status:** Draft — decisions in progress. Q1 and Q2 decided; Q3–Q7 open. The approach, architecture, affected files and risks sections are written once the decisions are settled.
 
 ## Decisions
 
@@ -58,3 +58,57 @@ Not covered by the spike: a real clone from GitHub, a real build through the shi
   - the shim has to change often enough that keeping it identical becomes a burden;
   - fetching or caching proves unreliable for people or agents;
   - a platform problem appears that the shim cannot handle and the fallback avoids.
+
+### Q2 — Runtime dependencies: read from the manifest, float unless declared (decided 2026-11-09)
+
+#### Decision
+
+- **Names** come from the module manifest's `RequiredModules`, the list PowerShell already enforces at import. The runtime entries in each repo's `depend.psd1` are not carried forward.
+- **Versions float by default.** A module the manifest lists without a version is installed at the latest release, by calling `Install-PSResource` with no `-Version`.
+- **A specific version is supported, but only when the manifest declares it.** Pinning is a property of the module, so it lives where users' installs see it:
+
+  ```powershell
+  RequiredModules = @(
+      'AWS.Tools.Common'                                           # floats
+      @{ ModuleName = 'ImportExcel'; RequiredVersion = '7.8.10' }  # exact pin, only when declared
+  )
+  ```
+
+  | Manifest entry | Harness installs |
+  | -------------- | ---------------- |
+  | `'Name'` | latest |
+  | `@{ ModuleName; ModuleVersion }`, a minimum | latest, which satisfies the minimum |
+  | `@{ ModuleName; RequiredVersion }` | exactly that version |
+  | `@{ ModuleName; MaximumVersion }` | fails with a message naming the module, until a repo needs it |
+
+- **Every build logs each resolved version**, as `Resolved dependency: <name> <version>`. With nothing pinned, that line is the only record of what a build ran against. AWSAutomation and PS.DCU already do this; it is one of the eight stranded fixes from #20 and becomes required here.
+- **Build tools stay pinned**, centrally in the harness: Pester, psake and PSScriptAnalyzer. They change test and analysis outcomes, so a new release could turn a build red with no change in the repo. Bumping them stays deliberate; which PSScriptAnalyzer version is Q6.
+- **`Build/harness.psd1` does not carry dependencies.** It holds only settings that change what the build does and have no other home.
+
+#### Why
+
+- Floating keeps every module off stale releases, including ones carrying known bugs or vulnerabilities. SecurityTools' `ImportExcel = '7.8.10'` was the latest release when written, not a deliberate pin.
+- The manifest is what users get. A pin held only in a harness setting would make CI test against one version while users install whatever the manifest allows.
+- One list, not two. Today the names in `depend.psd1` and the manifest are kept in step by hand.
+- Omitting `-Version` is the only reliable way to get the latest: a NuGet range resolves to an arbitrary member under PSResourceGet 1.2.0 (`docs/dependency-stack.md`). This is also why `MaximumVersion` fails rather than being guessed.
+
+#### Evidence: measured 2026-11-09 against each repo's `main`
+
+| Repo | Runtime entries in `depend.psd1` | Manifest `RequiredModules` |
+| ---- | -------------------------------- | -------------------------- |
+| PS.Log, PS.GHOps, PS.GitHub, PS.SSL, PS.DCU | none | none; commented out in PS.Log, PS.SSL and PS.DCU |
+| AWSAutomation | 15, all `latest`: `ImportExcel` and 14 `AWS.Tools.*` | the same 15 names, unversioned |
+| SecurityTools | `ImportExcel = '7.8.10'` | `ImportExcel`, unversioned |
+
+The names match exactly in both repos that have any, so reading them from the manifest installs the same set. No manifest declares a version today.
+
+#### Consequences
+
+- SecurityTools' CI moves from `ImportExcel` `7.8.10` to the current release. Its executed counts are checked against the baseline like every other change (criterion 5).
+- Adding a dependency to a manifest is enough for CI and local builds to install it. Forgetting to add it to a second list is no longer possible.
+- A floated release can still break a build overnight. That is the accepted trade, and the resolved-version log is what diagnoses it.
+
+#### Verification
+
+- Pester cases for each manifest form in the table, including the `MaximumVersion` failure, a manifest with no `RequiredModules`, and one with the key commented out.
+- A case proving an unversioned entry is installed without `-Version`, and one proving the resolved-version line is emitted for every module.

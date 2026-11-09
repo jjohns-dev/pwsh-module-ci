@@ -31,7 +31,7 @@
    | `minTests`, per leg | SecurityTools | exists, via `os-matrix` |
    | Pester tag exclusion | PS.SSL | missing |
    | PSScriptAnalyzer `ExcludeRules` | AWSAutomation | missing |
-   | runtime dependencies | SecurityTools, AWSAutomation | missing — see Q2 |
+   | runtime dependencies | SecurityTools, AWSAutomation | read from each manifest's `RequiredModules` — see Q2 |
 
 4. THE harness SHALL set both the legacy `$env:BHProjectPath`, `$env:BHProjectName` and `$env:BHPSModuleManifest` and their replacements `$env:HARNESS_PROJECT_PATH`, `$env:HARNESS_MODULE_NAME` and `$env:HARNESS_MANIFEST_PATH`, and SHALL be written against the new names. Decided on #20, 2026-11-06.
 5. WHEN a consumer moves onto the harness, THE executed count for each of its legs SHALL equal the baseline recorded on #20 on 2026-11-09, with errors and failures at 0. Any difference SHALL be explained before that consumer's change merges.
@@ -57,7 +57,7 @@
   - the harness published as a PowerShell module, so local and CI run the same code (#20's second option);
   - clone this repo beside the module and pass the project path;
   - no local support; CI only.
-- **Q2 — Runtime dependencies.** `depend.psd1` mixes build tooling, which is uniform, with per-repo runtime modules: SecurityTools pins `ImportExcel` `7.8.10`; AWSAutomation floats `ImportExcel` and `AWS.Tools.*` to `latest` by its own ADR-0002. Keep a per-repo file for runtime modules only, take them as an input, or read them from each manifest's `RequiredModules`?
+- **Q2 — Runtime dependencies.** *Decided 2026-11-09: names from each manifest's `RequiredModules`, versions float unless the manifest declares one. See [design.md](design.md#q2--runtime-dependencies-read-from-the-manifest-float-unless-declared-decided-2026-11-09).* `depend.psd1` mixes build tooling, which is uniform, with per-repo runtime modules: SecurityTools pins `ImportExcel` `7.8.10`; AWSAutomation floats `ImportExcel` and `AWS.Tools.*` to `latest` by its own ADR-0002. Keep a per-repo file for runtime modules only, take them as an input, or read them from each manifest's `RequiredModules`?
 - **Q3 — Workflow scope.** `release.yml` runs `./Build/build.ps1` five times, and `pssa-sarif.yml` defaults to `./Build/PSScriptAnalyzerSettings.psd1`. Move all three workflows in one release, or `ci.yml` first?
 - **Q4 — Test selection.** PS.SSL splits Windows-only tests by filename and `$IsWindows`; SecurityTools uses an explicit `PesterScope`. The harness needs one mechanism, and whichever repo changes must keep its executed counts (criterion 5).
 - **Q5 — Opt-in.** A per-consumer input that selects the central harness, an immutable `vX.Y.Z` pin per consumer, or a `v2`? Which one ADR-0002 calls breaking decides part of this.
