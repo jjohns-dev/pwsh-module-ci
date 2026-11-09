@@ -64,17 +64,18 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
 - [ ] **B11. Optional settings sample, `templates/Build/harness.psd1`.** Header states the file is optional; every key commented out, with its type, default and the repo that uses it.
   - Verify: it parses; loaded by B4 as-is, it yields the same settings as no file at all.
 - [ ] **B12. Windows in self-test.** Add a `windows-latest` leg to `self-test.yml`. *(Q1)*
-  - Verify: both legs green on the PR; the job name `verify Pester result step` is unchanged, or the `protect-main` ruleset (id `22409716`) is updated in the same PR and read back.
+  - A matrix may append the OS to the job's check name, which would rename the required check `verify Pester result step`. Not verified either way.
+  - Verify: both legs green on the PR; read the check names the PR actually reports. If they differ from `verify Pester result step`, update the `protect-main` ruleset (id `22409716`) with `PUT` in the same PR, and read it back.
 
 ## C. Workflows
 
 - [ ] **C1. `ci.yml`** checks out the caller as now, checks out this repo at `job.workflow_sha` into `.harness/`, and runs `.harness/Build/build.ps1 -ProjectPath $GITHUB_WORKSPACE` for each task. Job names unchanged. *(AC1)*
-- [ ] **C2. `release.yml`**: the same harness steps, plus a `dry-run` input (boolean, default `false`) that skips the publishing step only. *(Q3)*
-- [ ] **C3. `pssa-sarif.yml`**: uses the harness's settings plus the repo's `PSScriptAnalyzerExcludeRules`; the `psscriptanalyzer-settings-path` input is removed. *(Q3)*
+- [ ] **C2. `release.yml`**: the same harness steps, plus a `dry-run` input (boolean, default `false`). Only the publishing step (`action-gh-release`) is gated on it; build, test, the `Verify Pester results` step and the artifact upload all still run. *(Q3)*
+- [ ] **C3. `pssa-sarif.yml`**: checks out the harness at `job.workflow_sha`, as C1 does, and analyses with the harness's settings plus the repo's `PSScriptAnalyzerExcludeRules`; the `psscriptanalyzer-settings-path` input is removed. *(Q3)*
 - [ ] **C4. Tests for the changed `run:` blocks**, extracted from the YAML like today's suites. The `Verify Pester results` drift check between `ci.yml` and `release.yml` still passes.
   - Verify for C1–C4: `actionlint` and self-test green.
-- [ ] **C5. End-to-end proof before any tag.** From a branch of this repo, point a throwaway caller branch in PS.GHOps at the branch's workflows, as the 2026-11-05 spike did.
-  - Verify: all three workflows green; executed counts equal the baseline (95 on each of three legs); a dry-run release produces an artifact matching PS.GHOps' last real release, file for file. Tear down the throwaway branch and PR afterwards.
+- [ ] **C5. End-to-end proof before any tag.** From a branch of this repo, point throwaway caller branches at the branch's workflows, as the 2026-11-05 spike did, in three repos: PS.GHOps (the first migration), and PS.SSL and SecurityTools (the hardest cases: tag exclusion, Windows-only selection, per-leg scopes). Each throwaway branch carries what its migration PR would: the shim, any `harness.psd1`, and renames.
+  - Verify: all three workflows green in each repo; executed counts equal the baseline (PS.GHOps 95 on each of three legs; PS.SSL 346 and 347; SecurityTools 996 and 21); the harness commit SHA printed by B2 equals the workflow's commit; a dry-run release in PS.GHOps produces an artifact matching its last real release, file for file. Tear down the throwaway branches and PRs afterwards.
 
 ## D. Records and docs
 
@@ -134,7 +135,7 @@ If any repo's `main` has moved since the baseline, re-measure that repo before i
 ## G. Close-out
 
 - [ ] **G1. Retire `v1`**: record in AGENTS.md that no further `v1` releases will be made; leave the tag and maintenance branch in place.
-- [ ] **G2. Every consumer shim byte-identical** to `templates/Build/build.ps1` after line-ending normalisation. *(AC7)*
+- [ ] **G2. Every consumer shim byte-identical** to `templates/Build/build.ps1`, using the line-ending handling B10 chose. *(AC7)*
   - Verify: a scripted comparison across all seven repos' `main`.
 - [ ] **G3. Close #20** with the evidence: the counts per repo, the dry-run comparisons, and the release tags.
 - [ ] **G4. Tick item 7 in `ROLLOUT.md`** and update the phase table.
