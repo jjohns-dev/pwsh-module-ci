@@ -1,7 +1,117 @@
 # Centralized build harness — design
 
 - **Requirements:** [requirements.md](requirements.md), approved 2026-11-09
-- **Status:** Draft — all seven decisions made (Q1–Q7). The approach, architecture, affected files and risks sections are next.
+- **Status:** Draft — complete, awaiting approval. The seven open questions from the requirements are decided below under *Decisions*; the sections before it are the design that results.
+
+## Approach
+
+- `v2.0.0` of this repo carries the build harness under `Build/`: one converged copy of the four files the consumers vendor today, with the corrections #20 found stranded in one or two repos.
+- The three reusable workflows check out the caller's repo, as now, and this repo at `job.workflow_sha` into `.harness/`, then run `.harness/Build/build.ps1 -ProjectPath $GITHUB_WORKSPACE`. Harness and workflow cannot drift apart: they are the same commit.
+- Each consumer keeps an identical `Build/build.ps1` shim for local runs (Q1), an optional `Build/harness.psd1` for genuine per-repo settings, and its callers pointed at `@v2` (Q5).
+- Everything a repo needs to say about itself lives in one of three places: its manifest (runtime modules, Q2), `harness.psd1` (build behaviour that must reach local runs), or its caller YAML (the CI matrix).
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph consumer["Consumer repo"]
+        caller["ci.yml / release.yml / pssa-sarif.yml<br/>uses: ...@v2"]
+        shim["Build/build.ps1<br/>(identical shim)"]
+        settings["Build/harness.psd1<br/>(optional)"]
+        manifest["Module.psd1<br/>RequiredModules"]
+    end
+    subgraph ci["CI run"]
+        wf["reusable workflow @v2"]
+        co1["checkout caller"]
+        co2["checkout harness<br/>@ job.workflow_sha → .harness/"]
+    end
+    subgraph local["Local run"]
+        dev["developer or agent"]
+        cache["per-user cache clone<br/>at the ref read from ci.yml"]
+    end
+    harness["harness Build/build.ps1<br/>-ProjectPath &lt;module&gt;"]
+    out["Staging/ and Artifacts/<br/>in the module's folder"]
+
+    caller --> wf --> co1 & co2 --> harness
+    dev --> shim --> cache --> harness
+    harness -. reads .-> settings & manifest
+    harness --> out
+```
+
+### Interfaces
+
+| Interface | Shape |
+| --------- | ----- |
+| Harness entry point | `Build/build.ps1 -ProjectPath <path> [-TaskList <string[]>] [-Properties <hashtable>] [-ResolveDependency]`; the same parameters as today plus `-ProjectPath` |
+| Task names | the nine existing tasks, unchanged, so the commands in consumers' AGENTS.md keep working |
+| Environment variables | both `$env:BH*` and `$env:HARNESS_*` (criterion 4) |
+| `Build/harness.psd1` | `PSScriptAnalyzerExcludeRules` (string array), `PesterExcludeTag` (string array), `PesterStrictMode` (boolean). An unknown key fails the build, so a typo cannot silently disable a setting |
+| `ci.yml` inputs | unchanged: `os-matrix`, `min-tests` |
+| `release.yml` inputs | `artifact-name`, unchanged; new `dry-run` (boolean, default `false`) |
+| `pssa-sarif.yml` inputs | `psscriptanalyzer-settings-path` removed; the harness's settings are used instead (Q3) |
+| Job names | unchanged: `normalize matrix`, `validate (<os>)`, `release`, `PSScriptAnalyzer` |
+
+**Required checks do not change.** Every consumer's caller job keys are `validate`, `release` and `analyze` in all seven repos (measured 2026-11-09), and the reusable workflows' job names stay the same, so repointing `@v1` to `@v2` keeps every check name, and no ruleset needs editing.
+
+## Affected files
+
+### This repo
+
+| Path | Change |
+| ---- | ------ |
+| `Build/build.ps1` | new: harness entry point, taking `-ProjectPath` |
+| `Build/build.psake.ps1` | new: the converged tasks, with the stranded fixes, strict mode (Q7) and the single test-selection rule (Q4) |
+| `Build/depend.psd1` | new: build tools only, pinned (Q2, Q6) |
+| `Build/PSScriptAnalyzerSettings.psd1` | new: the shared settings, with no per-repo excludes |
+| `templates/Build/build.ps1` | new: the reference copy of the consumer shim, which the drift check compares against |
+| `.github/workflows/ci.yml`, `release.yml`, `pssa-sarif.yml` | harness checkout and invocation; `release.yml` gains `dry-run`; `pssa-sarif.yml` uses the harness settings |
+| `.github/workflows/self-test.yml` | adds a `windows-latest` leg |
+| `tests/` | new suites for the harness (dependencies, selection, strict mode, `harness.psd1` validation) and the shim |
+| `docs/adr/0006-*` | to Accepted, citing the spikes; its "workflow inputs only" decision amended for the shim and `harness.psd1` |
+| `docs/adr/0002-*` | amended with the major-version exception (Q5) |
+| `docs/dependency-stack.md` | build tools now pinned centrally; runtime modules from the manifest |
+| `docs/test-integrity.md` | the three durable rules #20 asks to extract before it closes |
+| `docs/shared-ci-standards.md` | deleted; its own header says to delete it when #20 lands |
+| `README.md`, `AGENTS.md` | `v2` usage, `harness.psd1`, two major tags (`v1` and `v2`), layout |
+
+### Each consumer, in its migration PR
+
+- Replace `Build/build.ps1` with the shim; delete `build.psake.ps1`, `depend.psd1` and `PSScriptAnalyzerSettings.psd1`.
+- Add `Build/harness.psd1` where needed: AWSAutomation (`ExcludeRules`), PS.SSL (`PesterExcludeTag`), PS.DCU (`PesterStrictMode`).
+- Repoint all three callers to `@v2`, and drop any `psscriptanalyzer-settings-path` input.
+- Rename test files to lowercase: PS.SSL 22, PS.DCU 3 (Q4).
+- Remove the runtime entries from `depend.psd1` along with the file; the manifest already lists them (Q2).
+- PS.DCU's dev container keeps its `postCreateCommand`, which calls the shim. Whether its image (`mcr.microsoft.com/powershell:latest`) includes `git` is **not verified**, and is checked in that PR.
+- Close any Dependabot `@v1` → `@v2` PR.
+
+## Alternatives considered
+
+The per-question alternatives are under each decision. At the level of the whole approach:
+
+- **Sampler (#19).** Deferred, not rejected. ADR-0006 records what Sampler's defaults lack and the per-repo layout change it would require.
+- **Publish the harness as a PowerShell module** (#20's second option). Rejected: it adds a publishing pipeline and Gallery versioning, and it separates the harness version from the workflow version, losing the `job.workflow_sha` guarantee.
+- **Keep a canonical copy here and sync it to consumers with automated PRs** (#20's first option). Rejected: it automates the N copies and N PRs rather than removing them.
+
+## Risks and tradeoffs
+
+Reviewed against the six Well-Architected pillars.
+
+- **Reliability: blast radius grows.** A bad harness commit reaches every migrated consumer through the moving `v2` tag. That is today's `v1` risk, over more code. *Mitigations:* the required self-test on Linux and Windows; immutable `v2.x.y` tags, so a consumer can pin while a fix lands; the migration order, easiest repos first. *Accepted.*
+- **Operational Excellence: failures move away from the repo being built.** A failing build is no longer explained by files in that repo, which ADR-0006 already records. *Mitigations:* the harness prints its own commit SHA and every resolved module version at the start of a run; its error messages name the harness path.
+- **Operational Excellence: two major lines during the migration.** Fixes for unmigrated repos come from a `v1` maintenance branch until the last repo moves. *Mitigation:* run the seven migrations back to back.
+- **Security: floating runtime modules.** A compromised or broken Gallery release reaches the next build. This is the deliberate trade for staying off stale and vulnerable releases (Q2), and the resolved-version log is the record. The shim runs harness code fetched from this repo at a moving tag, which is the same trust consumers already give `@v1` in CI. No new tokens or secrets are introduced; the harness checkout uses the default `GITHUB_TOKEN` against public repos.
+- **Security, in process: Dependabot `@v2` PRs** in unmigrated repos would half-migrate them if merged. *Mitigation:* close them (Q5).
+- **Performance Efficiency:** one extra checkout per job. Not measured; expected to be small next to dependency installs.
+- **Cost Optimization:** the added Windows self-test leg. Negligible; Actions minutes are free on public repos.
+- **Sustainability:** not applicable; no change to infrastructure footprint.
+- **Platform:** GitHub Enterprise Server stays excluded while this stands, since `job.workflow_*` is unavailable there (ADR-0006).
+
+## ADR check
+
+- **ADR-0006 moves to Accepted**, citing the self-checkout spike (run [42090065876](https://github.com/jjohns-dev/PS.Log/actions/runs/42090065876)) and the 2026-11-09 shim spike, and amends its Decision: per-repo variation lives in `harness.psd1` and the manifest, not only in workflow inputs, because settings that change the build must also reach local runs.
+- **ADR-0002 is amended** with the major-version exception (Q5).
+- **A new ADR-0007: runtime modules float from the manifest; build tools are pinned centrally.** This is a fleet-wide dependency policy that outlives this spec, and it generalises a rule AWSAutomation records only for itself (its own ADR-0002).
+- **Feature-local, not ADRs:** strict mode (Q7), the lowercase test-file convention (Q4; recorded in AGENTS.md conventions), and the shim's internals.
 
 ## Decisions
 
@@ -304,7 +414,7 @@ ADR-0002 defines "breaking" as the consumer's call no longer working. By that te
 
 #### Correction to #20
 
-#20's classification observed that PS.DCU is the only repo running strict mode *and* the only one that fixed the dead `$analysisResult` gate, and inferred, labelled as unproven, that the first explained the second. **The measurement disproves it.** PS.DCU sets strict mode in `build.ps1`, which does not reach the psake task where that gate lives; the same expression still evaluates `True` and the build passes. How PS.DCU's fix was found is unknown.
+The classification on #20 observed that PS.DCU is the only repo running strict mode *and* the only one that fixed the dead `$analysisResult` gate, and inferred, labelled as unproven, that the first explained the second. **The measurement disproves it.** PS.DCU sets strict mode in `build.ps1`, which does not reach the psake task where that gate lives; the same expression still evaluates `True` and the build passes. How PS.DCU's fix was found is unknown.
 
 #### Why
 
