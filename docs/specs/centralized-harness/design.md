@@ -256,6 +256,7 @@ The dry run exists because the release path is almost never exercised. `release.
 - A consumer's migration PR touches three caller files and deletes up to three `Build/` files. It is larger than a one-workflow change, but it leaves the repo in one consistent state, never half-migrated.
 - `pssa-sarif.yml` needs the harness checkout, as `ci.yml` and `release.yml` do.
 - The Security tab still analyses the whole repo, while the build gate analyses `Staging/`. That difference is pre-existing and out of scope; this decision only stops the *rules* from differing too.
+- **PS.DCU's `CreateBuildArtifact` dependency was measured and rejected** (task B9, 2026-11-09). Declaring `-depends 'Init', 'CombineFunctionsAndStage'` pulls in `Setup`, which deletes `Artifacts/`; run after `Test`, as `release.yml` does, it destroyed the Pester result file. The harness keeps `-depends 'Init'`, and `tests/HarnessTasks.Tests.ps1` fails if the result file does not survive.
 
 #### Verification
 

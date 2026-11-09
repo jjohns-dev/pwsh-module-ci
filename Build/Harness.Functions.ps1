@@ -251,6 +251,39 @@ function Install-HarnessDependency {
     }
 }
 
+function Test-HarnessShim {
+    <#
+    .SYNOPSIS
+        Returns whether a consumer's Build/build.ps1 matches the reference shim.
+    .DESCRIPTION
+        The shim must be identical in every consumer, so any difference is drift. Line
+        endings are normalised first: with core.autocrlf=true, the Windows default, a
+        checkout stores the shim with CRLF and a raw byte comparison would report drift
+        that is not there. Returns $true when the consumer has no shim to compare.
+    .PARAMETER ShimPath
+        Path to the consumer's Build/build.ps1.
+    .PARAMETER ReferencePath
+        Path to the harness's templates/Build/build.ps1.
+    #>
+    [CmdletBinding()]
+    [OutputType([System.Boolean])]
+    param (
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [System.String] $ShimPath,
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [System.String] $ReferencePath
+    )
+
+    if (-not (Test-Path -LiteralPath $ShimPath -PathType 'Leaf')) {
+        return $true
+    }
+    $shim = (Get-Content -LiteralPath $ShimPath -Raw) -replace "`r`n", "`n"
+    $reference = (Get-Content -LiteralPath $ReferencePath -Raw) -replace "`r`n", "`n"
+    $shim -ceq $reference
+}
+
 function Get-HarnessCommit {
     <#
     .SYNOPSIS

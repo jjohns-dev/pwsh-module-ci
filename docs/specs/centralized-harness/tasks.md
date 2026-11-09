@@ -42,26 +42,26 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
   - Verify: an absent file gives defaults; each key is applied; an unknown key fails and names the key; a wrong type fails.
 - [x] **B5. Measure where strict mode must go for psake**, at the top of `build.psake.ps1` or in each task, before writing the tasks. *(Q7)*
   - Verify: a scratch measurement in which the chosen placement makes the `$analysisResult` expression throw in a task body, and the other placement, or none, lets it pass. Record the result in the design's Q7 section.
-- [ ] **B6. `build.psake.ps1`: `Init`, `Setup`, `CombineFunctionsAndStage`, `ImportStagingModule`, `Cleanup`, `Default`.** The nine task names are unchanged. Staging copies `Public`, `Private`, `README.md` and the module's `.psd1` and `.psm1`, and fails on a missing or empty required path (PS.SSL's fix). The dead `$PSVersion` assignment is not carried. Strict mode is placed per B5. *(AC8)*
+- [x] **B6. `build.psake.ps1`: `Init`, `Setup`, `CombineFunctionsAndStage`, `ImportStagingModule`, `Cleanup`, `Default`.** The nine task names are unchanged. Staging copies `Public`, `Private`, `README.md` and the module's `.psd1` and `.psm1`, and fails on a missing or empty required path (PS.SSL's fix). The dead `$PSVersion` assignment is not carried. Strict mode is placed per B5. *(AC8)*
   - Verify: staging a fixture module produces exactly that file set; a missing `Public/` and an empty `Public/` each fail; `Documentation/` in the fixture is not staged.
-- [ ] **B7. `Analyze` task.** Shared settings plus `PSScriptAnalyzerExcludeRules`; gate on Errors; the `default` branch uses `$Results`, not the undefined `$analysisResult`. *(AC8)*
+- [x] **B7. `Analyze` task.** Shared settings plus `PSScriptAnalyzerExcludeRules`; gate on Errors; the `default` branch uses `$Results`, not the undefined `$analysisResult`. *(AC8)*
   - Verify: a fixture with an Error finding fails; a Warning finding passes; an excluded rule is not reported; with the threshold set to `Any`, a Warning **fails**, which is the dead gate fixed.
-- [ ] **B8. `Test` task.** *(Q4, Q7, AC8)*
+- [x] **B8. `Test` task.** *(Q4, Q7, AC8)*
   - The selection rule: `All` (the default), `CrossPlatform` or `WindowsOnly`, resolved inside the task, matching `.tests.windows.ps1` case-insensitively at `Tests/*/`.
   - `Run.Path` coerced to `String[]`.
   - `PesterExcludeTag` applied.
   - Strict mode turned off around `Invoke-Pester` unless `PesterStrictMode` is set.
   - JUnit output and the result gate, as today.
   - Verify: each scope on the current OS with mixed-case fixture names; an unknown scope fails; a fixture with exactly one test file runs, which is the `Run.Path` trap; a tagged test is excluded; a fixture test reading an undefined variable passes by default and fails with `PesterStrictMode = $true`.
-- [ ] **B9. `CreateBuildArtifact` task**, declared `-depends 'Init'` as in six repos. *(AC8)*
+- [x] **B9. `CreateBuildArtifact` task**, declared `-depends 'Init'` as in six repos. *(AC8)*
   - Then settle PS.DCU's alternative by measurement: run `Test` then `CreateBuildArtifact` with each declaration and check whether `Artifacts/Test-*.xml` survives.
   - Verify: the artifact zip contains the staged module; the measurement and its outcome are recorded in the design. Adopt PS.DCU's form only if the measurement supports it.
-- [ ] **B10. Shim and template, `templates/Build/build.ps1`**, from the Q1 sketch. *(Q1)*
+- [x] **B10. Shim and template, `templates/Build/build.ps1`**, from the Q1 sketch. *(Q1)*
   - Checks the fetch result and **stops** on failure, never continuing with the cached copy. The error states that the fetch failed, includes git's own message, names the cache path, and says nothing was run.
   - Carries the fetch-failure code comment recorded in the design.
   - Handles line endings so a CRLF checkout does not read as drift.
   - Verify: `tests/Shim.Tests.ps1` covers all 14 spike cases against a local origin, plus a fetch failure (must exit non-zero, run nothing, and print the cache path) and a CRLF copy of the shim (must not report drift).
-- [ ] **B11. Optional settings sample, `templates/Build/harness.psd1`.** Header states the file is optional; every key commented out, with its type, default and the repo that uses it.
+- [x] **B11. Optional settings sample, `templates/Build/harness.psd1`.** Header states the file is optional; every key commented out, with its type, default and the repo that uses it.
   - Verify: it parses; loaded by B4 as-is, it yields the same settings as no file at all.
 - [ ] **B12. Windows in self-test.** Add a `windows-latest` leg to `self-test.yml`. *(Q1)*
   - A matrix may append the OS to the job's check name, which would rename the required check `verify Pester result step`. Not verified either way.

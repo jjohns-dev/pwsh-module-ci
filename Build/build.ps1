@@ -74,6 +74,15 @@ $project = Resolve-HarnessProject -ProjectPath $ProjectPath
 Set-HarnessEnvironment -Project $project
 Write-Output -InputObject ('Project: {0} [{1}]{2}' -f $project.ModuleName, $project.ProjectPath, $nl)
 
+# A DRIFTED SHIM STILL WORKS, SO WARN RATHER THAN FAIL; THE REFERENCE IS THIS HARNESS'S OWN TEMPLATE
+$shimParams = @{
+    ShimPath      = Join-Path -Path $project.ProjectPath -ChildPath 'Build' -AdditionalChildPath 'build.ps1'
+    ReferencePath = Join-Path -Path $harnessRoot -ChildPath 'templates' -AdditionalChildPath 'Build', 'build.ps1'
+}
+if (-not (Test-HarnessShim @shimParams)) {
+    Write-Warning -Message ('[{0}] differs from the reference shim in pwsh-module-ci templates/Build/build.ps1. Replace it with that copy.' -f $shimParams.ShimPath)
+}
+
 #endregion =====================================================================
 
 
@@ -88,9 +97,28 @@ else {
     Write-Output -InputObject ('Skipping dependency resolution.{0}' -f $nl)
 }
 
-# IMPORTED HERE, NOT DECLARED WITH #Requires: THE PINNED VERSION MAY ONLY EXIST AFTER -ResolveDependency
-$psakeVersion = (Import-PowerShellDataFile -LiteralPath $dependPath)['psake']
-Import-Module -Name 'psake' -RequiredVersion $psakeVersion -Force
+# IMPORTED AT THE PINNED VERSIONS, NOT DECLARED WITH #Requires: THEY MAY ONLY EXIST AFTER -ResolveDependency,
+# AND AUTOLOADING WOULD OTHERWISE PICK WHATEVER VERSION IS NEWEST ON THE MACHINE
+$buildTools = Import-PowerShellDataFile -LiteralPath $dependPath
+foreach ($name in $buildTools.Keys) {
+    $importParams = @{
+        Name            = $name
+        RequiredVersion = $buildTools[$name]
+        Force           = $true
+        ErrorAction     = 'Stop'
+    }
+    try {
+        Import-Module @importParams
+    }
+    catch {
+        $message = 'Cannot import build tool [{0}] version [{1}]. Run with -ResolveDependency to install it. {2}' -f $name, $buildTools[$name], $PSItem.Exception.Message
+        Write-Error -Message $message -ErrorAction 'Stop'
+    }
+}
+$loaded = foreach ($name in ($buildTools.Keys | Sort-Object)) {
+    '{0} {1}' -f $name, @(Get-Module -Name $name)[0].Version
+}
+Write-Output -InputObject ('Build tools: {0}{1}' -f ($loaded -join ', '), $nl)
 
 #endregion =====================================================================
 

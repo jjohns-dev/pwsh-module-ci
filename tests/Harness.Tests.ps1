@@ -117,6 +117,15 @@ Describe -Name 'Get-HarnessSetting' -Fixture {
         $root = Initialize-SettingFixture -Body $Body
         { Get-HarnessSetting -ProjectPath $root } | Should -Throw -ExpectedMessage $Expected
     }
+    It -Name 'gives exactly the defaults for the optional template copied as-is' -Test {
+        $root = Initialize-SettingFixture -Body $null
+        $template = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath 'templates' -AdditionalChildPath 'Build', 'harness.psd1'
+        Copy-Item -Path $template -Destination (Join-Path -Path $root -ChildPath 'Build' -AdditionalChildPath 'harness.psd1')
+        $settings = Get-HarnessSetting -ProjectPath $root
+        $settings.PSScriptAnalyzerExcludeRules | Should -HaveCount 0
+        $settings.PesterExcludeTag | Should -HaveCount 0
+        $settings.PesterStrictMode | Should -BeFalse
+    }
 }
 
 Describe -Name 'Get-HarnessDependency' -Fixture {
