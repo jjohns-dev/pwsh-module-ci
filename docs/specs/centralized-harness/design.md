@@ -1,7 +1,7 @@
 # Centralized build harness — design
 
 - **Requirements:** [requirements.md](requirements.md), approved 2026-11-09
-- **Status:** Draft — complete, awaiting approval. The seven open questions from the requirements are decided below under *Decisions*; the sections before it are the design that results.
+- **Status:** Approved — 2026-11-09. The seven open questions from the requirements are decided below under *Decisions*; the sections before it are the design that results.
 
 ## Approach
 
