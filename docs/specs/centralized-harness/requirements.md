@@ -52,7 +52,7 @@
 
 ## Open questions
 
-- **Q1 — Local builds.** Once `Build/` leaves a consumer, how does a developer run `build.ps1 -TaskList Test` locally? Neither #20 nor ADR-0006 addresses it. Candidates:
+- **Q1 — Local builds.** *Decided 2026-11-09: a per-repo shim. See [design.md](design.md#q1--local-builds-a-per-repo-shim-decided-2026-11-09).* Once `Build/` leaves a consumer, how does a developer run `build.ps1 -TaskList Test` locally? Neither #20 nor ADR-0006 addresses it. Candidates:
   - a thin per-repo `Build/build.ps1` that fetches the harness at a pinned version;
   - the harness published as a PowerShell module, so local and CI run the same code (#20's second option);
   - clone this repo beside the module and pass the project path;
