@@ -8,7 +8,7 @@ Each task names its verification and the acceptance criteria (AC) it serves. Tas
 
 ## A. Before anything changes on `main`
 
-- [ ] **A1. Create a `v1` maintenance branch** from the last tagged release, `v1.6.1` (`b40b9c8`, cut 2026-11-09), so an urgent `v1.6.x` fix stays possible once `main` carries `v2` work. `main` has gained only #69, documentation, since that tag. *(Q5)*
+- [x] **A1. Create a `v1` maintenance branch** from the last tagged release, `v1.6.1` (`b40b9c8`, cut 2026-11-09), so an urgent `v1.6.x` fix stays possible once `main` carries `v2` work. `main` has gained only #69, documentation, since that tag. *(Q5)*
   - Verify: `git rev-parse 'v1.6.1^{commit}'` equals the branch tip on `origin`.
 
 ## B. Harness code in this repo, each with its tests
@@ -28,19 +28,19 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
 | Resolved-dependency log | B3 |
 | `Set-StrictMode` | B5, B6 |
 
-- [ ] **B1. Shared analyzer settings and pinned build tools.** `Build/PSScriptAnalyzerSettings.psd1` with no `ExcludeRules`; `Build/depend.psd1` with Pester `6.2.0`, psake `5.0.4` and PSScriptAnalyzer `1.25.0` only. *(Q2, Q6)*
+- [x] **B1. Shared analyzer settings and pinned build tools.** `Build/PSScriptAnalyzerSettings.psd1` with no `ExcludeRules`; `Build/depend.psd1` with Pester `6.2.0`, psake `5.0.4` and PSScriptAnalyzer `1.25.0` only. *(Q2, Q6)*
   - Verify: both parse with `Import-PowerShellDataFile`; a test asserts `depend.psd1` holds exactly those three entries.
-- [ ] **B2. Harness entry point, `Build/build.ps1`.** *(AC2, AC4)*
+- [x] **B2. Harness entry point, `Build/build.ps1`.** *(AC2, AC4)*
   - Takes `-ProjectPath`, plus today's `-TaskList`, `-Parameters`, `-Properties` and `-ResolveDependency`.
   - Finds the manifest at the project root and fails unless there is exactly one, replacing the array trap #20 found.
   - Sets both `$env:BH*` and `$env:HARNESS_*`.
   - Prints its own commit SHA at the start of every run.
   - Verify: tests for a missing or invalid `-ProjectPath`, zero and two root manifests (both must fail), all six environment variables set and equal pairwise, and the SHA line present.
-- [ ] **B3. Dependency resolution.** Build tools from `depend.psd1`; runtime modules from the manifest's `RequiredModules`, following the Q2 table; one `Resolved dependency: <name> <version>` line per module. *(Q2)*
+- [x] **B3. Dependency resolution.** Build tools from `depend.psd1`; runtime modules from the manifest's `RequiredModules`, following the Q2 table; one `Resolved dependency: <name> <version>` line per module. *(Q2)*
   - Verify: a case for each manifest form, including `MaximumVersion`, which must fail and name the module; no `RequiredModules`; the key commented out; an unversioned entry installed with no `-Version`; one resolved-version line per module. Installation is mocked, so the suite needs no network.
-- [ ] **B4. `harness.psd1` loader.** Reads `<ProjectPath>/Build/harness.psd1` when present; accepts only `PSScriptAnalyzerExcludeRules`, `PesterExcludeTag` and `PesterStrictMode`. *(design: Interfaces)*
+- [x] **B4. `harness.psd1` loader.** Reads `<ProjectPath>/Build/harness.psd1` when present; accepts only `PSScriptAnalyzerExcludeRules`, `PesterExcludeTag` and `PesterStrictMode`. *(design: Interfaces)*
   - Verify: an absent file gives defaults; each key is applied; an unknown key fails and names the key; a wrong type fails.
-- [ ] **B5. Measure where strict mode must go for psake**, at the top of `build.psake.ps1` or in each task, before writing the tasks. *(Q7)*
+- [x] **B5. Measure where strict mode must go for psake**, at the top of `build.psake.ps1` or in each task, before writing the tasks. *(Q7)*
   - Verify: a scratch measurement in which the chosen placement makes the `$analysisResult` expression throw in a task body, and the other placement, or none, lets it pass. Record the result in the design's Q7 section.
 - [ ] **B6. `build.psake.ps1`: `Init`, `Setup`, `CombineFunctionsAndStage`, `ImportStagingModule`, `Cleanup`, `Default`.** The nine task names are unchanged. Staging copies `Public`, `Private`, `README.md` and the module's `.psd1` and `.psm1`, and fails on a missing or empty required path (PS.SSL's fix). The dead `$PSVersion` assignment is not carried. Strict mode is placed per B5. *(AC8)*
   - Verify: staging a fixture module produces exactly that file set; a missing `Public/` and an empty `Public/` each fail; `Documentation/` in the fixture is not staged.

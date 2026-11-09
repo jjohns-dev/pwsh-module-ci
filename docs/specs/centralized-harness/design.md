@@ -399,7 +399,7 @@ ADR-0002 defines "breaking" as the consumer's call no longer working. By that te
 
 #### Decision
 
-- **The harness's own code runs under `Set-StrictMode -Version Latest`.** It is set where psake executes task bodies, at the top of `build.psake.ps1` or inside each task; which of the two is decided by measurement during implementation. Setting it in `build.ps1` does not work (below).
+- **The harness's own code runs under `Set-StrictMode -Version Latest`**, set at the **top of `build.psake.ps1`** (measured under B5, below). Setting it in `build.ps1` does not work.
 - **Consumer tests run without strict mode by default.** The `Test` task turns strict mode off explicitly around `Invoke-Pester`, so the harness's setting never reaches a consumer's tests.
 - **A repo can opt in to strict tests** with `PesterStrictMode = $true` in `Build/harness.psd1`. PS.DCU sets it, keeping what it has today. Other repos adopt it one at a time, after confirming their tests pass under it.
 
@@ -412,6 +412,19 @@ ADR-0002 defines "breaking" as the consumer's call no longer working. By that te
 
 - Strict mode set in `build.ps1` does not reach psake task bodies.
 - It does reach the consumer's Pester tests.
+
+#### Placement, measured 2026-11-09 for task B5 (psake 5.0.4)
+
+The dead-gate expression `($analysisResult.Count -eq 0)` in a task body, with strict mode set in each candidate place:
+
+| Strict mode set | Task body | `build_success` |
+| --------------- | --------- | --------------- |
+| nowhere (control) | ran to completion | `True` |
+| top of `build.psake.ps1` | strict error, task stopped | `False` |
+| inside the task | strict error | `False` |
+| in `Properties` | strict error | `False` |
+
+All three placements work. The top of the file is chosen because one line covers every task. It also reaches `Invoke-Pester` inside the `Test` task, which is why that task turns strict mode off unless `PesterStrictMode` is set.
 
 #### Correction to #20
 
