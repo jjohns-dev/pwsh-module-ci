@@ -1,7 +1,7 @@
 # Centralized build harness — design
 
 - **Requirements:** [requirements.md](requirements.md), approved 2026-11-09
-- **Status:** Draft — decisions in progress. Q1–Q5 decided; Q6–Q7 open. The approach, architecture, affected files and risks sections are written once the decisions are settled.
+- **Status:** Draft — decisions in progress. Q1–Q6 decided; Q7 open. The approach, architecture, affected files and risks sections are written once the decisions are settled.
 
 ## Decisions
 
@@ -258,3 +258,28 @@ ADR-0002 defines "breaking" as the consumer's call no longer working. By that te
 #### Not portable to `PS-MCS`
 
 `mcssec-ops`' consumers pin `@main`, not a tag, so there is no version to repoint. That org would need an input switch, or verification before merge. Recorded for criterion 11; not solved here.
+
+### Q6 — Build-tool versions: PSScriptAnalyzer 1.25.0, adopted in each migration PR (decided 2026-11-09)
+
+#### Decision
+
+- **The harness pins** Pester `6.2.0`, psake `5.0.4` and PSScriptAnalyzer `1.25.0`, each the latest release on the PowerShell Gallery on 2026-11-09.
+- **The five repos on PSScriptAnalyzer `1.24.0` move to `1.25.0` in their own migration PR**, not in a separate round first. Nothing in those repos needs editing for it: the migration deletes their `depend.psd1`, and the harness's pin takes over.
+
+#### Why
+
+| Tool | Latest on the Gallery | Fleet before migration |
+| ---- | --------------------- | ---------------------- |
+| Pester | 6.2.0 | 6.2.0 everywhere |
+| psake | 5.0.4 | 5.0.4 everywhere |
+| PSScriptAnalyzer | 1.25.0 | 1.25.0 in PS.Log and AWSAutomation; 1.24.0 in the other five |
+
+- **The risk was measured on #20 on 2026-11-05.** PSScriptAnalyzer 1.25.0 was run against all seven repos' `Public/` and `Private/` with no rules excluded: zero Error-severity findings, and every gate fails only on Errors. The three rules new in 1.25.0 produced no findings at any severity. Caveat: that run analysed the source folders, not `Staging/`.
+- **`pssa-sarif.yml` already uses 1.25.0** for all seven, so today the Security tab and five build gates run different analyzer versions. This closes that gap.
+- Converging first would take five PRs to edit files the migration then deletes.
+- A failure would be contained. If 1.25.0 fails a repo's `Analyze`, it shows in that repo's migration PR and blocks only that PR.
+
+#### Consequences
+
+- A migration PR changes the harness and, for five repos, the analyzer version at once. If `Analyze` fails, run 1.24.0 and 1.25.0 side by side on that repo's `Staging/` to tell which change caused it.
+- Later bumps are one change in this repo, released deliberately like any other harness change; the baseline counts guard test behaviour. Dependabot cannot see Gallery pins, so nothing bumps them automatically.
