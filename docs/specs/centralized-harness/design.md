@@ -1,7 +1,7 @@
 # Centralized build harness — design
 
 - **Requirements:** [requirements.md](requirements.md), approved 2026-11-09
-- **Status:** Draft — decisions in progress. Q1 and Q2 decided; Q3–Q7 open. The approach, architecture, affected files and risks sections are written once the decisions are settled.
+- **Status:** Draft — decisions in progress. Q1–Q3 decided; Q4–Q7 open. The approach, architecture, affected files and risks sections are written once the decisions are settled.
 
 ## Decisions
 
@@ -112,3 +112,40 @@ The names match exactly in both repos that have any, so reading them from the ma
 
 - Pester cases for each manifest form in the table, including the `MaximumVersion` failure, a manifest with no `RequiredModules`, and one with the key commented out.
 - A case proving an unversioned entry is installed without `-Version`, and one proving the resolved-version line is emitted for every module.
+
+### Q3 — Workflow scope: all three move together (decided 2026-11-09)
+
+#### Decision
+
+- **One harness release covers `ci.yml`, `release.yml` and `pssa-sarif.yml`**, behind the opt-in chosen under Q5. Work in this repo can land in steps, but nothing reaches a consumer until all three are ready.
+- **Each consumer switches all three callers in one PR**, and in the same PR deletes `Build/` except the shim and any `Build/harness.psd1`.
+- **`pssa-sarif.yml` uses the harness's analyzer settings**, the central settings file plus the repo's `ExcludeRules` from `harness.psd1`, so the Security tab and the build gate apply the same rules.
+- **`release.yml` gains a dry-run mode** that builds and uploads the artifact but skips publishing the release. Each consumer's migration PR exercises it, and compares the artifact's contents with its last real release, before merging.
+
+#### Why
+
+What each workflow takes from the consumer's `Build/` today, read from the workflow files on 2026-11-09:
+
+| Workflow | Uses |
+| -------- | ---- |
+| `ci.yml` | `./Build/build.ps1` for `Init`, `CombineFunctionsAndStage`, `Analyze`, `Test` |
+| `release.yml` | the same four, plus `CreateBuildArtifact` |
+| `pssa-sarif.yml` | `./Build/PSScriptAnalyzerSettings.psd1`, the default of its settings-path input |
+
+Moving `ci.yml` alone does not work for any consumer:
+
+- Once a consumer adopts the shim, its `Build/build.ps1` *is* the shim, so an unmigrated `release.yml` would run the shim in CI. That breaks Q1's guarantee that CI never runs the shim, and the shim would fetch the harness version pinned in `ci.yml` rather than in `release.yml`, which can differ while a consumer is staged on an immutable pin.
+- `build.psake.ps1`, `depend.psd1` and the settings file could not be deleted while `release.yml` still used them.
+- `pssa-sarif.yml` would fail once the settings file was deleted.
+
+The dry run exists because the release path is almost never exercised. `release.yml` runs only on a consumer's version-tag push, which is why the `action-gh-release` bump in `v1.6.1` is still unconfirmed. Without it, a harness change to `CreateBuildArtifact`, including the `PS.DCU` dependency question in criterion 8, would first run on someone's real release.
+
+#### Consequences
+
+- A consumer's migration PR touches three caller files and deletes up to three `Build/` files. It is larger than a one-workflow change, but it leaves the repo in one consistent state, never half-migrated.
+- `pssa-sarif.yml` needs the harness checkout, as `ci.yml` and `release.yml` do.
+- The Security tab still analyses the whole repo, while the build gate analyses `Staging/`. That difference is pre-existing and out of scope; this decision only stops the *rules* from differing too.
+
+#### Verification
+
+- Each consumer's migration PR shows all three workflows green on the harness, plus a dry-run release whose artifact matches its last real release, file for file.
