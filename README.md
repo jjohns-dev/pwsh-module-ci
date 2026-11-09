@@ -1,10 +1,9 @@
 # pwsh-module-ci
 
 Reusable GitHub Actions workflows shared by [johnsarie27](https://github.com/johnsarie27)'s
-PowerShell module repos (PS.Log, PS.GHOps, PS.GitHub, PS.SSL, PS.DCU, AWSAutomation).
-SecurityTools is not a consumer *yet*: it pairs each runner with a `PesterScope` psake
-property and its own per-leg floor, which `os-matrix` now expresses through its object
-form, so what remains is adopting it. Each module
+PowerShell module repos (PS.Log, PS.GHOps, PS.GitHub, PS.SSL, PS.DCU, AWSAutomation,
+SecurityTools). SecurityTools pairs each runner with a `PesterScope` psake property and its
+own per-leg floor through the object form of `os-matrix`. Each module
 repo's own `Build/build.ps1` (psake) already does the real
 work — `Init`, `CombineFunctionsAndStage`, `Analyze`, `Test`, `CreateBuildArtifact` — these
 workflows just standardize how that gets invoked in CI, and centralize the third-party
@@ -157,7 +156,7 @@ and silently never fires.
 Consumers must therefore configure Pester with `TestResult.OutputFormat = 'JUnitXml'`.
 `NUnitXml` is not supported — the verification step fails with an explicit message naming
 the root element it found, and `dorny/test-reporter`'s `java-junit` reporter cannot parse
-NUnit-format XML either. All six consumers already emit `JUnitXml`.
+NUnit-format XML either. All seven consumers already emit `JUnitXml`.
 
 The verification step is the gate; the `dorny/test-reporter` step is display only and keeps
 `fail-on-error: false` / `fail-on-empty: false`.
