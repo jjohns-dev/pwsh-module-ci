@@ -94,6 +94,8 @@ AfterAll {
     foreach ($k in $savedEnvironment.Keys) {
         [System.Environment]::SetEnvironmentVariable($k, $savedEnvironment[$k])
     }
+    # GIT WRITES OBJECT FILES READ-ONLY, WHICH PESTER'S OWN TestDrive CLEANUP CANNOT DELETE ON WINDOWS
+    Remove-Item -Path $origin, $source, $cache -Recurse -Force -ErrorAction 'SilentlyContinue'
 }
 
 Describe -Name 'Shim template' -Fixture {
