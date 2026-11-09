@@ -1,7 +1,7 @@
 # Centralized build harness — design
 
 - **Requirements:** [requirements.md](requirements.md), approved 2026-11-09
-- **Status:** Draft — decisions in progress. Q1–Q6 decided; Q7 open. The approach, architecture, affected files and risks sections are written once the decisions are settled.
+- **Status:** Draft — all seven decisions made (Q1–Q7). The approach, architecture, affected files and risks sections are next.
 
 ## Decisions
 
@@ -283,3 +283,37 @@ ADR-0002 defines "breaking" as the consumer's call no longer working. By that te
 
 - A migration PR changes the harness and, for five repos, the analyzer version at once. If `Analyze` fails, run 1.24.0 and 1.25.0 side by side on that repo's `Staging/` to tell which change caused it.
 - Later bumps are one change in this repo, released deliberately like any other harness change; the baseline counts guard test behaviour. Dependabot cannot see Gallery pins, so nothing bumps them automatically.
+
+### Q7 — Strict mode: strict harness code, lenient tests by default, opt-in per repo (decided 2026-11-09)
+
+#### Decision
+
+- **The harness's own code runs under `Set-StrictMode -Version Latest`.** It is set where psake executes task bodies, at the top of `build.psake.ps1` or inside each task; which of the two is decided by measurement during implementation. Setting it in `build.ps1` does not work (below).
+- **Consumer tests run without strict mode by default.** The `Test` task turns strict mode off explicitly around `Invoke-Pester`, so the harness's setting never reaches a consumer's tests.
+- **A repo can opt in to strict tests** with `PesterStrictMode = $true` in `Build/harness.psd1`. PS.DCU sets it, keeping what it has today. Other repos adopt it one at a time, after confirming their tests pass under it.
+
+#### Evidence: measured 2026-11-09, psake 5.0.4 and Pester 6.2.0, each run in a fresh `pwsh`
+
+| `Set-StrictMode -Version Latest` | psake task body reading an undefined variable | Pester test reading an undefined variable or a missing property |
+| -------------------------------- | --------------------------------------------- | --------------------------------------------------------------- |
+| not set | passes silently, build succeeds | both pass |
+| set in the calling script, as PS.DCU's `build.ps1` does | **still passes silently**, build succeeds | **both fail** |
+
+- Strict mode set in `build.ps1` does not reach psake task bodies.
+- It does reach the consumer's Pester tests.
+
+#### Correction to #20
+
+#20's classification observed that PS.DCU is the only repo running strict mode *and* the only one that fixed the dead `$analysisResult` gate, and inferred, labelled as unproven, that the first explained the second. **The measurement disproves it.** PS.DCU sets strict mode in `build.ps1`, which does not reach the psake task where that gate lives; the same expression still evaluates `True` and the build passes. How PS.DCU's fix was found is unknown.
+
+#### Why
+
+- Strict harness code is what catches the defect class #20 found, such as the dead analysis gate. The harness is this repo's code, so its failures are ours to fix.
+- If the harness's strict mode reached `Invoke-Pester`, all seven repos' tests would turn strict at once, and tests that pass today could fail. That would break criterion 5's unchanged counts.
+- PS.DCU's 85 tests pass under strict mode today. Dropping it would lose that protection, so the opt-in keeps it, and gives the rest of the fleet a path to strict tests one repo at a time.
+
+#### Verification
+
+- A Pester case proving the harness's strict mode catches the `$analysisResult` pattern in a task body, and the reverse: the same task without strict mode passes silently.
+- A case proving strict mode does not reach a consumer test by default, and a case proving `PesterStrictMode = $true` turns it on.
+- PS.DCU's executed count stays at 85 after migration.
