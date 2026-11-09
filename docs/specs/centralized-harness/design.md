@@ -42,10 +42,10 @@ flowchart LR
 
 | Interface | Shape |
 | --------- | ----- |
-| Harness entry point | `Build/build.ps1 -ProjectPath <path> [-TaskList <string[]>] [-Properties <hashtable>] [-ResolveDependency]`; the same parameters as today plus `-ProjectPath` |
+| Harness entry point | `Build/build.ps1 -ProjectPath <path> [-TaskList <string[]>] [-Parameters <hashtable>] [-Properties <hashtable>] [-ResolveDependency]`; the same parameters as today plus `-ProjectPath` |
 | Task names | the nine existing tasks, unchanged, so the commands in consumers' AGENTS.md keep working |
 | Environment variables | both `$env:BH*` and `$env:HARNESS_*` (criterion 4) |
-| `Build/harness.psd1` | `PSScriptAnalyzerExcludeRules` (string array), `PesterExcludeTag` (string array), `PesterStrictMode` (boolean). An unknown key fails the build, so a typo cannot silently disable a setting |
+| `Build/harness.psd1` | **optional.** `PSScriptAnalyzerExcludeRules` (string array), `PesterExcludeTag` (string array), `PesterStrictMode` (boolean). A repo with no genuine difference has no file. An unknown key fails the build, so a typo cannot silently disable a setting |
 | `ci.yml` inputs | unchanged: `os-matrix`, `min-tests` |
 | `release.yml` inputs | `artifact-name`, unchanged; new `dry-run` (boolean, default `false`) |
 | `pssa-sarif.yml` inputs | `psscriptanalyzer-settings-path` removed; the harness's settings are used instead (Q3) |
@@ -60,10 +60,11 @@ flowchart LR
 | Path | Change |
 | ---- | ------ |
 | `Build/build.ps1` | new: harness entry point, taking `-ProjectPath` |
-| `Build/build.psake.ps1` | new: the converged tasks, with the stranded fixes, strict mode (Q7) and the single test-selection rule (Q4) |
+| `Build/build.psake.ps1` | new: the converged tasks, with the stranded fixes, strict mode (Q7) and the single test-selection rule (Q4). Staging copies `Public`, `Private`, `README.md` and the module's `.psd1` and `.psm1`, the set common to all seven; PS.Log's extra `Documentation` path is not carried, because #20 found it stale PlatyPS output that nothing regenerates |
 | `Build/depend.psd1` | new: build tools only, pinned (Q2, Q6) |
-| `Build/PSScriptAnalyzerSettings.psd1` | new: the shared settings, with no per-repo excludes |
+| `Build/PSScriptAnalyzerSettings.psd1` | new: the shared settings, with **no** `ExcludeRules`. The five excludes carried across the seven repos today (`PSAvoidGlobalVars`, `PSAvoidUsingConvertToSecureStringWithPlainText`, `PSUseShouldProcessForStateChangingFunctions`, and AWSAutomation's two, which move to its `harness.psd1`) are not carried into the shared file: #20 measured on 2026-11-05 that the first three suppress nothing in any repo |
 | `templates/Build/build.ps1` | new: the reference copy of the consumer shim, which the drift check compares against |
+| `templates/Build/harness.psd1` | new: an annotated **optional** sample. Its header states that the file is optional and that a repo needing none of its settings should not have one; every key is commented out, with its type, default and the repo that uses it |
 | `.github/workflows/ci.yml`, `release.yml`, `pssa-sarif.yml` | harness checkout and invocation; `release.yml` gains `dry-run`; `pssa-sarif.yml` uses the harness settings |
 | `.github/workflows/self-test.yml` | adds a `windows-latest` leg |
 | `tests/` | new suites for the harness (dependencies, selection, strict mode, `harness.psd1` validation) and the shim |
@@ -77,8 +78,8 @@ flowchart LR
 ### Each consumer, in its migration PR
 
 - Replace `Build/build.ps1` with the shim; delete `build.psake.ps1`, `depend.psd1` and `PSScriptAnalyzerSettings.psd1`.
-- Add `Build/harness.psd1` where needed: AWSAutomation (`ExcludeRules`), PS.SSL (`PesterExcludeTag`), PS.DCU (`PesterStrictMode`).
-- Repoint all three callers to `@v2`, and drop any `psscriptanalyzer-settings-path` input.
+- Add `Build/harness.psd1` only where needed, starting from the template: AWSAutomation (`PSScriptAnalyzerExcludeRules`), PS.SSL (`PesterExcludeTag`), PS.DCU (`PesterStrictMode`). The other four have none.
+- Repoint all three callers to `@v2`, and drop any `psscriptanalyzer-settings-path` input. The `release.yml` caller also gains a `pull_request` trigger, passing `dry-run: ${{ github.event_name == 'pull_request' }}`, so the migration PR runs the release path from its own branch without publishing. (`workflow_dispatch` cannot do this: GitHub only dispatches a workflow that is already on the default branch.)
 - Rename test files to lowercase: PS.SSL 22, PS.DCU 3 (Q4).
 - Remove the runtime entries from `depend.psd1` along with the file; the manifest already lists them (Q2).
 - PS.DCU's dev container keeps its `postCreateCommand`, which calls the shim. Whether its image (`mcr.microsoft.com/powershell:latest`) includes `git` is **not verified**, and is checked in that PR.
@@ -123,7 +124,7 @@ Reviewed against the six Well-Architected pillars.
 - The shim reads the version from the repo's own caller, the `jjohns-dev/pwsh-module-ci/.github/workflows/ci.yml@<ref>` line in `.github/workflows/ci.yml`. Local runs therefore use the same harness version as CI, with no second pin to maintain.
 - It keeps a clone of this repo in a per-user cache, fetches with `--tags --force`, checks out `<ref>`, and calls the harness's `Build/build.ps1 -ProjectPath <module root> @args`.
 - It declares no parameters. Everything is forwarded with `@args`, so a new harness task or parameter never changes the shim.
-- **CI never runs the shim.** `ci.yml` checks out the harness itself (`job.workflow_sha`), so a broken shim can break a local run but cannot affect a CI result.
+- **CI never runs the shim.** The reusable workflows check out the harness themselves (`job.workflow_sha`), so a broken shim can break a local run but cannot affect a CI result.
 - Genuine per-repo settings live beside the shim in an optional `Build/harness.psd1`; what goes in it is decided under Q2 onward.
 
 #### Why
@@ -230,7 +231,7 @@ The names match exactly in both repos that have any, so reading them from the ma
 - **One harness release covers `ci.yml`, `release.yml` and `pssa-sarif.yml`**, behind the opt-in chosen under Q5. Work in this repo can land in steps, but nothing reaches a consumer until all three are ready.
 - **Each consumer switches all three callers in one PR**, and in the same PR deletes `Build/` except the shim and any `Build/harness.psd1`.
 - **`pssa-sarif.yml` uses the harness's analyzer settings**, the central settings file plus the repo's `ExcludeRules` from `harness.psd1`, so the Security tab and the build gate apply the same rules.
-- **`release.yml` gains a dry-run mode** that builds and uploads the artifact but skips publishing the release. Each consumer's migration PR exercises it, and compares the artifact's contents with its last real release, before merging.
+- **`release.yml` gains a dry-run mode** that builds and uploads the artifact but skips publishing the release. Each consumer's release caller gains a `pull_request` trigger that passes `dry-run: true` on pull requests, so the migration PR runs the release path from its own branch and compares the artifact's contents with the repo's last real release before merging. It keeps running on every later PR, so the release path stops being exercised only at release time. A `workflow_dispatch` trigger was considered and rejected: GitHub only dispatches a workflow that is already on the default branch, so it could not run from the migration PR ([source](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow)).
 
 #### Why
 
@@ -244,7 +245,7 @@ What each workflow takes from the consumer's `Build/` today, read from the workf
 
 Moving `ci.yml` alone does not work for any consumer:
 
-- Once a consumer adopts the shim, its `Build/build.ps1` *is* the shim, so an unmigrated `release.yml` would run the shim in CI. That breaks Q1's guarantee that CI never runs the shim, and the shim would fetch the harness version pinned in `ci.yml` rather than in `release.yml`, which can differ while a consumer is staged on an immutable pin.
+- Once a consumer adopts the shim, its `Build/build.ps1` *is* the shim, so an unmigrated `release.yml` would run the shim in CI. That breaks Q1's guarantee that CI never runs the shim, and the shim would fetch the harness version named in `ci.yml` rather than in `release.yml`, which differ whenever the callers are not repointed together.
 - `build.psake.ps1`, `depend.psd1` and the settings file could not be deleted while `release.yml` still used them.
 - `pssa-sarif.yml` would fail once the settings file was deleted.
 
@@ -258,7 +259,7 @@ The dry run exists because the release path is almost never exercised. `release.
 
 #### Verification
 
-- Each consumer's migration PR shows all three workflows green on the harness, plus a dry-run release whose artifact matches its last real release, file for file.
+- Each consumer's migration PR shows all three workflows green on the harness, plus a dry-run release whose artifact matches its last real release file for file, except for differences the design causes on purpose and the PR names. Known so far: PS.Log's artifact no longer contains `Documentation/`.
 
 ### Q4 — Test selection: one rule, default `All` (decided 2026-11-09)
 

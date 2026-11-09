@@ -17,7 +17,7 @@
 - As the maintainer, I want each repo's genuine differences declared as named inputs with a recorded reason, so that intent is distinguishable from drift.
 - As the maintainer, I want each consumer to move onto the central harness on its own schedule, so that a mistake reaches one repo rather than the fleet.
 - As the maintainer, I want proof that moving a repo changes no test outcome, so that the migration cannot hide a regression.
-- As a module developer, I want to build and test a module on my own machine, so that I am not dependent on CI to find out whether a change works. *(How depends on Q1.)*
+- As a module developer, I want to build and test a module on my own machine, so that I am not dependent on CI to find out whether a change works. *(Met by the shim, Q1.)*
 
 ## Acceptance criteria
 
@@ -36,7 +36,7 @@
 4. THE harness SHALL set both the legacy `$env:BHProjectPath`, `$env:BHProjectName` and `$env:BHPSModuleManifest` and their replacements `$env:HARNESS_PROJECT_PATH`, `$env:HARNESS_MODULE_NAME` and `$env:HARNESS_MANIFEST_PATH`, and SHALL be written against the new names. Decided on #20, 2026-11-06.
 5. WHEN a consumer moves onto the harness, THE executed count for each of its legs SHALL equal the baseline recorded on #20 on 2026-11-09, with errors and failures at 0. Any difference SHALL be explained before that consumer's change merges.
 6. WHEN this repo releases the harness, THE SYSTEM SHALL NOT change any consumer's CI outcome until that consumer opts in. *(Mechanism: Q5.)*
-7. WHEN every consumer has moved, NO consumer SHALL keep a copy of a file the harness provides. *(Which files remain per-repo depends on Q1 and Q2.)*
+7. WHEN every consumer has moved, NO consumer SHALL keep a copy of a file the harness provides. *(Per Q1 and Q2, the only per-repo files that remain are the identical shim and an optional `Build/harness.psd1`.)*
 8. THE harness SHALL include the eight stranded corrections from #20, except `PS.DCU`'s `CreateBuildArtifact` dependency, which SHALL be decided by measurement on a real release run rather than adopted because one repo has it.
 9. THE harness's logic SHALL be covered by Pester suites in `tests/`, run by the required `verify Pester result step` check. Each new behaviour SHALL be shown to fail when broken as well as pass when correct.
 10. WHEN the design is approved, ADR-0006 SHALL move to Accepted and cite the self-checkout spike, run [42090065876](https://github.com/jjohns-dev/PS.Log/actions/runs/42090065876).
