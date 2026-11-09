@@ -1,7 +1,7 @@
 # Centralized build harness — design
 
 - **Requirements:** [requirements.md](requirements.md), approved 2026-11-09
-- **Status:** Draft — decisions in progress. Q1–Q3 decided; Q4–Q7 open. The approach, architecture, affected files and risks sections are written once the decisions are settled.
+- **Status:** Draft — decisions in progress. Q1–Q4 decided; Q5–Q7 open. The approach, architecture, affected files and risks sections are written once the decisions are settled.
 
 ## Decisions
 
@@ -149,3 +149,61 @@ The dry run exists because the release path is almost never exercised. `release.
 #### Verification
 
 - Each consumer's migration PR shows all three workflows green on the harness, plus a dry-run release whose artifact matches its last real release, file for file.
+
+### Q4 — Test selection: one rule, default `All` (decided 2026-11-09)
+
+#### Decision
+
+- **The harness adopts SecurityTools' three scopes**, resolved inside the `Test` task rather than in `Properties`, so a `-Properties` override takes effect:
+
+  | Scope | Selects |
+  | ----- | ------- |
+  | `All`, the default | every cross-platform test file, plus Windows-only files when running on Windows |
+  | `CrossPlatform` | cross-platform files only |
+  | `WindowsOnly` | Windows-only files only |
+
+- **A Windows-only file is one whose name ends `.tests.windows.ps1`.** Matching ignores case: the harness lists `.ps1` files and tests each name with `-match`, rather than relying on a wildcard pattern whose case handling on Linux is unverified.
+- **The search depth stays at `Tests/*/`**, one folder below `Tests/`, as PS.SSL and SecurityTools use today, so the harness picks up exactly the files those repos run now. The other five repos' patterns were not read for this decision; the baseline counts show any difference.
+- **The scope reaches the harness the way it does today:** per leg through `os-matrix` in CI, and `-Properties @{ PesterScope = ... }` locally. No `harness.psd1` entry is needed for selection.
+- **Pester tag exclusion goes in `Build/harness.psd1`** as `PesterExcludeTag`. PS.SSL is the only repo that needs it (`'Network'`), and it has to apply to local runs as well as CI.
+- **Test files are named in lowercase, `*.tests.ps1` and `*.tests.windows.ps1`, fleet-wide.** Each repo renames during its own migration PR. The harness ignores case either way, so this is a consistency rule, not a functional one.
+
+#### Why
+
+Measured 2026-11-09 against each repo's `main`:
+
+| Repo | Cross-platform files | Windows-only files | How it selects today |
+| ---- | -------------------- | ------------------ | -------------------- |
+| PS.SSL | 21 | 1, `Loader.Tests.windows.ps1` | in `Properties`: cross-platform always, plus Windows-only `if ($IsWindows)` |
+| SecurityTools | 65 | 9, `*.tests.windows.ps1` | in the `Test` task: `$PesterScope`, default `All` |
+| PS.Log, PS.GHOps, PS.GitHub, PS.DCU, AWSAutomation | 3–11 each | 0 | every file |
+
+- PS.SSL's own comment says its Windows tests "follow the SecurityTools pattern", and SecurityTools' `All` selects exactly what PS.SSL selects on each OS. One rule therefore reproduces both, with no setting in PS.SSL.
+- For the five repos with no Windows-only files, `All` is every test file, as today.
+- SecurityTools already passes `CrossPlatform` and `WindowsOnly` per leg since #21, so nothing changes for it.
+- Resolving the scope inside the `Test` task follows SecurityTools' documented reason: in `Properties` a `-Properties` override would not take effect.
+
+File-name casing, measured the same day, counting both suffixes:
+
+| Repo | `.Tests` | `.tests` |
+| ---- | -------- | -------- |
+| PS.GHOps | 0 | 11 |
+| PS.GitHub | 0 | 8 |
+| SecurityTools | 3 | 71 |
+| AWSAutomation | 3 | 8 |
+| PS.Log | 3 | 6 |
+| PS.SSL | 22 | 0 |
+| PS.DCU | 3 | 0 |
+
+Lowercase is the majority, 104 files to 37. PS.SSL and PS.DCU are entirely `.Tests`, so renaming only PS.SSL's Windows file would have left PS.SSL internally inconsistent. The `3` in PS.Log, AWSAutomation and SecurityTools is probably the `Tests/Common/` files, which #53 centralises; not confirmed by name.
+
+#### Consequences
+
+- PS.SSL renames all 22 test files, including `Loader.Tests.windows.ps1` → `Loader.tests.windows.ps1`, and PS.DCU its 3, each in its migration PR. Files that land in `Tests/Common/` follow whatever #53 ships.
+- **Use `git mv` for each rename, and confirm with `git status` that git records it as a rename.** On a case-insensitive file system, the macOS default, a rename that only changes case can fail to register otherwise. Believed handled by modern git; not verified.
+- PS.SSL's selection moves from `Properties` into the `Test` task, so a `-Properties @{ PesterScope = ... }` override starts working there too.
+
+#### Verification
+
+- Pester cases for each scope on each OS, including mixed-case names (`.Tests.windows.ps1` and `.tests.windows.ps1`) and an unknown scope, which must fail.
+- Executed counts after migration must equal the baseline: PS.SSL 346 on Ubuntu and 347 on Windows, SecurityTools 996 and 21, and every other repo unchanged. A file picked up or missed at the wrong depth shows here. Renames do not change which tests run, so the counts also confirm no file was lost in a rename.

@@ -2,7 +2,7 @@
 
 - **Tracking:** [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20)
 - **Decision record:** [ADR-0006](../../adr/0006-host-the-build-harness-in-this-repo.md), currently Proposed
-- **Status:** Draft — 2026-11-09
+- **Status:** Approved — 2026-11-09
 
 ## Problem
 
@@ -29,8 +29,8 @@
    | ----- | --------- | ------ |
    | `pesterScope`, per leg | SecurityTools | exists, via `os-matrix` |
    | `minTests`, per leg | SecurityTools | exists, via `os-matrix` |
-   | Pester tag exclusion | PS.SSL | missing |
-   | PSScriptAnalyzer `ExcludeRules` | AWSAutomation | missing |
+   | Pester tag exclusion | PS.SSL | `Build/harness.psd1` — see Q4 |
+   | PSScriptAnalyzer `ExcludeRules` | AWSAutomation | `Build/harness.psd1` — see Q3 |
    | runtime dependencies | SecurityTools, AWSAutomation | read from each manifest's `RequiredModules` — see Q2 |
 
 4. THE harness SHALL set both the legacy `$env:BHProjectPath`, `$env:BHProjectName` and `$env:BHPSModuleManifest` and their replacements `$env:HARNESS_PROJECT_PATH`, `$env:HARNESS_MODULE_NAME` and `$env:HARNESS_MANIFEST_PATH`, and SHALL be written against the new names. Decided on #20, 2026-11-06.
@@ -59,7 +59,7 @@
   - no local support; CI only.
 - **Q2 — Runtime dependencies.** *Decided 2026-11-09: names from each manifest's `RequiredModules`, versions float unless the manifest declares one. See [design.md](design.md#q2--runtime-dependencies-read-from-the-manifest-float-unless-declared-decided-2026-11-09).* `depend.psd1` mixes build tooling, which is uniform, with per-repo runtime modules: SecurityTools pins `ImportExcel` `7.8.10`; AWSAutomation floats `ImportExcel` and `AWS.Tools.*` to `latest` by its own ADR-0002. Keep a per-repo file for runtime modules only, take them as an input, or read them from each manifest's `RequiredModules`?
 - **Q3 — Workflow scope.** *Decided 2026-11-09: all three move together, per consumer in one PR, with a release dry run. See [design.md](design.md#q3--workflow-scope-all-three-move-together-decided-2026-11-09).* `release.yml` runs `./Build/build.ps1` five times, and `pssa-sarif.yml` defaults to `./Build/PSScriptAnalyzerSettings.psd1`. Move all three workflows in one release, or `ci.yml` first?
-- **Q4 — Test selection.** PS.SSL splits Windows-only tests by filename and `$IsWindows`; SecurityTools uses an explicit `PesterScope`. The harness needs one mechanism, and whichever repo changes must keep its executed counts (criterion 5).
+- **Q4 — Test selection.** *Decided 2026-11-09: SecurityTools' scopes with default `All`, tag exclusion in `harness.psd1`, lowercase test file names. See [design.md](design.md#q4--test-selection-one-rule-default-all-decided-2026-11-09).* PS.SSL splits Windows-only tests by filename and `$IsWindows`; SecurityTools uses an explicit `PesterScope`. The harness needs one mechanism, and whichever repo changes must keep its executed counts (criterion 5).
 - **Q5 — Opt-in.** A per-consumer input that selects the central harness, an immutable `vX.Y.Z` pin per consumer, or a `v2`? Which one ADR-0002 calls breaking decides part of this.
 - **Q6 — Tool versions.** A central `depend.psd1` pins one PSScriptAnalyzer. Five repos are on `1.24.0` and two on `1.25.0`, so most consumers change analyzer version as a side effect. Accept that inside this work or converge first?
 - **Q7 — Strict mode.** `PS.DCU` alone runs `Set-StrictMode -Version Latest`, and it is also the repo that fixed the dead analysis gate, which passes silently without strict mode and throws under it. Adopt it in the harness, accepting that it may fail other repos' builds on first run?
