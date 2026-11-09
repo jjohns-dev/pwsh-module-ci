@@ -2,7 +2,7 @@
 
 - **Requirements:** [requirements.md](requirements.md), approved 2026-11-09
 - **Design:** [design.md](design.md), approved 2026-11-09
-- **Status:** Draft — awaiting approval
+- **Status:** Approved — 2026-11-09
 
 Each task names its verification and the acceptance criteria (AC) it serves. Tasks are ordered so `main` stays green between them. Consumers are untouched until phase F, because they pin `@v1` and `v1` never moves (Q5). Expect roughly one PR per lettered phase in this repo, adjusted as the work shows; phase F is one PR per consumer.
 
