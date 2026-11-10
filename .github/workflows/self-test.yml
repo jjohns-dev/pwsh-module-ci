@@ -15,10 +15,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify-step:
-    name: verify Pester result step
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+  verify-step-os:
+    name: verify Pester (${{ matrix.os }})
+    strategy:
+      # false keeps the other OS running when one fails, so a platform-specific failure is visible on its own.
+      fail-fast: false
+      matrix:
+        # Windows covers the shim's CRLF handling and the harness's Windows-only test selection.
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     permissions:
       contents: read # for actions/checkout to fetch code
     steps:
@@ -30,11 +36,12 @@ jobs:
           $ErrorActionPreference = 'Stop'
 
           # PSResourceGet never calls Get-PackageSource, so the unregistered-PSGallery flake cannot recur (#27).
-          # Pester is pinned because the runner image ships 5.x and the harness imports 6.2.0 exactly.
-          $modules = @(
-              @{ Name = 'powershell-yaml'; Version = '0.4.12' }
-              @{ Name = 'Pester'; Version = '6.2.0' }
-          )
+          # Build tools come from Build/depend.psd1, so the suites run the exact versions the harness pins.
+          $modules = @(@{ Name = 'powershell-yaml'; Version = '0.4.12' })
+          $buildTools = Import-PowerShellDataFile -Path './Build/depend.psd1'
+          foreach ($name in $buildTools.Keys) {
+              $modules += @{ Name = $name; Version = $buildTools[$name] }
+          }
 
           foreach ($module in $modules) {
               $moduleParams = @{
@@ -53,3 +60,27 @@ jobs:
       - name: Verify the shipped steps behave in both directions
         shell: pwsh
         run: ./tests/Invoke-VerificationTest.ps1
+
+  # The required check. A matrix appends the OS to a job's check name, so this job keeps
+  # the name the protect-main ruleset requires on main and release/* alike, and passes
+  # only when every OS leg succeeded: always() makes it run, and so fail, when a leg did not.
+  verify-step:
+    name: verify Pester result step
+    needs: verify-step-os
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {} # reads only the needs context; touches nothing
+    steps:
+      - name: Require every OS leg to have succeeded
+        shell: pwsh
+        env:
+          LEGS_RESULT: ${{ needs.verify-step-os.result }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Write-Host ('OS legs result: {0}' -f $env:LEGS_RESULT)
+          if ($env:LEGS_RESULT -ne 'success') {
+              Write-Host ('::error::One or more OS legs did not succeed (result: {0}).' -f $env:LEGS_RESULT)
+              exit 1
+          }
+          exit 0

@@ -256,6 +256,7 @@ The dry run exists because the release path is almost never exercised. `release.
 - A consumer's migration PR touches three caller files and deletes up to three `Build/` files. It is larger than a one-workflow change, but it leaves the repo in one consistent state, never half-migrated.
 - `pssa-sarif.yml` needs the harness checkout, as `ci.yml` and `release.yml` do.
 - The Security tab still analyses the whole repo, while the build gate analyses `Staging/`. That difference is pre-existing and out of scope; this decision only stops the *rules* from differing too.
+- **PS.DCU's `CreateBuildArtifact` dependency was measured and rejected** (task B9, 2026-11-09). Declaring `-depends 'Init', 'CombineFunctionsAndStage'` pulls in `Setup`, which deletes `Artifacts/`; run after `Test`, as `release.yml` does, it destroyed the Pester result file. The harness keeps `-depends 'Init'`, and `tests/HarnessTasks.Tests.ps1` fails if the result file does not survive.
 
 #### Verification
 
@@ -399,7 +400,7 @@ ADR-0002 defines "breaking" as the consumer's call no longer working. By that te
 
 #### Decision
 
-- **The harness's own code runs under `Set-StrictMode -Version Latest`.** It is set where psake executes task bodies, at the top of `build.psake.ps1` or inside each task; which of the two is decided by measurement during implementation. Setting it in `build.ps1` does not work (below).
+- **The harness's own code runs under `Set-StrictMode -Version Latest`**, set at the **top of `build.psake.ps1`** (measured under B5, below). Setting it in `build.ps1` does not work.
 - **Consumer tests run without strict mode by default.** The `Test` task turns strict mode off explicitly around `Invoke-Pester`, so the harness's setting never reaches a consumer's tests.
 - **A repo can opt in to strict tests** with `PesterStrictMode = $true` in `Build/harness.psd1`. PS.DCU sets it, keeping what it has today. Other repos adopt it one at a time, after confirming their tests pass under it.
 
@@ -412,6 +413,19 @@ ADR-0002 defines "breaking" as the consumer's call no longer working. By that te
 
 - Strict mode set in `build.ps1` does not reach psake task bodies.
 - It does reach the consumer's Pester tests.
+
+#### Placement, measured 2026-11-09 for task B5 (psake 5.0.4)
+
+The dead-gate expression `($analysisResult.Count -eq 0)` in a task body, with strict mode set in each candidate place:
+
+| Strict mode set | Task body | `build_success` |
+| --------------- | --------- | --------------- |
+| nowhere (control) | ran to completion | `True` |
+| top of `build.psake.ps1` | strict error, task stopped | `False` |
+| inside the task | strict error | `False` |
+| in `Properties` | strict error | `False` |
+
+All three placements work. The top of the file is chosen because one line covers every task. It also reaches `Invoke-Pester` inside the `Test` task, which is why that task turns strict mode off unless `PesterStrictMode` is set.
 
 #### Correction to #20
 

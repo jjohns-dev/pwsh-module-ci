@@ -8,7 +8,7 @@ Each task names its verification and the acceptance criteria (AC) it serves. Tas
 
 ## A. Before anything changes on `main`
 
-- [ ] **A1. Create a `v1` maintenance branch** from the last tagged release, `v1.6.1` (`b40b9c8`, cut 2026-11-09), so an urgent `v1.6.x` fix stays possible once `main` carries `v2` work. `main` has gained only #69, documentation, since that tag. *(Q5)*
+- [x] **A1. Create a `v1` maintenance branch** from the last tagged release, `v1.6.1` (`b40b9c8`, cut 2026-11-09), so an urgent `v1.6.x` fix stays possible once `main` carries `v2` work. `main` has gained only #69, documentation, since that tag. *(Q5)*
   - Verify: `git rev-parse 'v1.6.1^{commit}'` equals the branch tip on `origin`.
 
 ## B. Harness code in this repo, each with its tests
@@ -28,44 +28,45 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
 | Resolved-dependency log | B3 |
 | `Set-StrictMode` | B5, B6 |
 
-- [ ] **B1. Shared analyzer settings and pinned build tools.** `Build/PSScriptAnalyzerSettings.psd1` with no `ExcludeRules`; `Build/depend.psd1` with Pester `6.2.0`, psake `5.0.4` and PSScriptAnalyzer `1.25.0` only. *(Q2, Q6)*
+- [x] **B1. Shared analyzer settings and pinned build tools.** `Build/PSScriptAnalyzerSettings.psd1` with no `ExcludeRules`; `Build/depend.psd1` with Pester `6.2.0`, psake `5.0.4` and PSScriptAnalyzer `1.25.0` only. *(Q2, Q6)*
   - Verify: both parse with `Import-PowerShellDataFile`; a test asserts `depend.psd1` holds exactly those three entries.
-- [ ] **B2. Harness entry point, `Build/build.ps1`.** *(AC2, AC4)*
+- [x] **B2. Harness entry point, `Build/build.ps1`.** *(AC2, AC4)*
   - Takes `-ProjectPath`, plus today's `-TaskList`, `-Parameters`, `-Properties` and `-ResolveDependency`.
   - Finds the manifest at the project root and fails unless there is exactly one, replacing the array trap #20 found.
   - Sets both `$env:BH*` and `$env:HARNESS_*`.
   - Prints its own commit SHA at the start of every run.
   - Verify: tests for a missing or invalid `-ProjectPath`, zero and two root manifests (both must fail), all six environment variables set and equal pairwise, and the SHA line present.
-- [ ] **B3. Dependency resolution.** Build tools from `depend.psd1`; runtime modules from the manifest's `RequiredModules`, following the Q2 table; one `Resolved dependency: <name> <version>` line per module. *(Q2)*
+- [x] **B3. Dependency resolution.** Build tools from `depend.psd1`; runtime modules from the manifest's `RequiredModules`, following the Q2 table; one `Resolved dependency: <name> <version>` line per module. *(Q2)*
   - Verify: a case for each manifest form, including `MaximumVersion`, which must fail and name the module; no `RequiredModules`; the key commented out; an unversioned entry installed with no `-Version`; one resolved-version line per module. Installation is mocked, so the suite needs no network.
-- [ ] **B4. `harness.psd1` loader.** Reads `<ProjectPath>/Build/harness.psd1` when present; accepts only `PSScriptAnalyzerExcludeRules`, `PesterExcludeTag` and `PesterStrictMode`. *(design: Interfaces)*
+- [x] **B4. `harness.psd1` loader.** Reads `<ProjectPath>/Build/harness.psd1` when present; accepts only `PSScriptAnalyzerExcludeRules`, `PesterExcludeTag` and `PesterStrictMode`. *(design: Interfaces)*
   - Verify: an absent file gives defaults; each key is applied; an unknown key fails and names the key; a wrong type fails.
-- [ ] **B5. Measure where strict mode must go for psake**, at the top of `build.psake.ps1` or in each task, before writing the tasks. *(Q7)*
+- [x] **B5. Measure where strict mode must go for psake**, at the top of `build.psake.ps1` or in each task, before writing the tasks. *(Q7)*
   - Verify: a scratch measurement in which the chosen placement makes the `$analysisResult` expression throw in a task body, and the other placement, or none, lets it pass. Record the result in the design's Q7 section.
-- [ ] **B6. `build.psake.ps1`: `Init`, `Setup`, `CombineFunctionsAndStage`, `ImportStagingModule`, `Cleanup`, `Default`.** The nine task names are unchanged. Staging copies `Public`, `Private`, `README.md` and the module's `.psd1` and `.psm1`, and fails on a missing or empty required path (PS.SSL's fix). The dead `$PSVersion` assignment is not carried. Strict mode is placed per B5. *(AC8)*
+- [x] **B6. `build.psake.ps1`: `Init`, `Setup`, `CombineFunctionsAndStage`, `ImportStagingModule`, `Cleanup`, `Default`.** The nine task names are unchanged. Staging copies `Public`, `Private`, `README.md` and the module's `.psd1` and `.psm1`, and fails on a missing or empty required path (PS.SSL's fix). The dead `$PSVersion` assignment is not carried. Strict mode is placed per B5. *(AC8)*
   - Verify: staging a fixture module produces exactly that file set; a missing `Public/` and an empty `Public/` each fail; `Documentation/` in the fixture is not staged.
-- [ ] **B7. `Analyze` task.** Shared settings plus `PSScriptAnalyzerExcludeRules`; gate on Errors; the `default` branch uses `$Results`, not the undefined `$analysisResult`. *(AC8)*
+- [x] **B7. `Analyze` task.** Shared settings plus `PSScriptAnalyzerExcludeRules`; gate on Errors; the `default` branch uses `$Results`, not the undefined `$analysisResult`. *(AC8)*
   - Verify: a fixture with an Error finding fails; a Warning finding passes; an excluded rule is not reported; with the threshold set to `Any`, a Warning **fails**, which is the dead gate fixed.
-- [ ] **B8. `Test` task.** *(Q4, Q7, AC8)*
+- [x] **B8. `Test` task.** *(Q4, Q7, AC8)*
   - The selection rule: `All` (the default), `CrossPlatform` or `WindowsOnly`, resolved inside the task, matching `.tests.windows.ps1` case-insensitively at `Tests/*/`.
   - `Run.Path` coerced to `String[]`.
   - `PesterExcludeTag` applied.
   - Strict mode turned off around `Invoke-Pester` unless `PesterStrictMode` is set.
   - JUnit output and the result gate, as today.
   - Verify: each scope on the current OS with mixed-case fixture names; an unknown scope fails; a fixture with exactly one test file runs, which is the `Run.Path` trap; a tagged test is excluded; a fixture test reading an undefined variable passes by default and fails with `PesterStrictMode = $true`.
-- [ ] **B9. `CreateBuildArtifact` task**, declared `-depends 'Init'` as in six repos. *(AC8)*
+- [x] **B9. `CreateBuildArtifact` task**, declared `-depends 'Init'` as in six repos. *(AC8)*
   - Then settle PS.DCU's alternative by measurement: run `Test` then `CreateBuildArtifact` with each declaration and check whether `Artifacts/Test-*.xml` survives.
   - Verify: the artifact zip contains the staged module; the measurement and its outcome are recorded in the design. Adopt PS.DCU's form only if the measurement supports it.
-- [ ] **B10. Shim and template, `templates/Build/build.ps1`**, from the Q1 sketch. *(Q1)*
+- [x] **B10. Shim and template, `templates/Build/build.ps1`**, from the Q1 sketch. *(Q1)*
   - Checks the fetch result and **stops** on failure, never continuing with the cached copy. The error states that the fetch failed, includes git's own message, names the cache path, and says nothing was run.
   - Carries the fetch-failure code comment recorded in the design.
   - Handles line endings so a CRLF checkout does not read as drift.
   - Verify: `tests/Shim.Tests.ps1` covers all 14 spike cases against a local origin, plus a fetch failure (must exit non-zero, run nothing, and print the cache path) and a CRLF copy of the shim (must not report drift).
-- [ ] **B11. Optional settings sample, `templates/Build/harness.psd1`.** Header states the file is optional; every key commented out, with its type, default and the repo that uses it.
+- [x] **B11. Optional settings sample, `templates/Build/harness.psd1`.** Header states the file is optional; every key commented out, with its type, default and the repo that uses it.
   - Verify: it parses; loaded by B4 as-is, it yields the same settings as no file at all.
-- [ ] **B12. Windows in self-test.** Add a `windows-latest` leg to `self-test.yml`. *(Q1)*
+- [x] **B12. Windows in self-test.** Add a `windows-latest` leg to `self-test.yml`. *(Q1)*
   - A matrix may append the OS to the job's check name, which would rename the required check `verify Pester result step`. Not verified either way.
   - Verify: both legs green on the PR; read the check names the PR actually reports. If they differ from `verify Pester result step`, update the `protect-main` ruleset (id `22409716`) with `PUT` in the same PR, and read it back.
+  - **Outcome (PR #71):** the matrix did rename the check, to `verify Pester result step (<os>)`. The ruleset was **not** edited, because it also protects `release/v1`, whose self-test has no matrix. Instead the legs report as `verify Pester (<os>)` and a summary job keeps the required name, passing only when every leg succeeded. Seen in both directions on the PR: it failed when the Windows leg failed, and passed once both legs did.
 
 ## C. Workflows
 
@@ -85,7 +86,11 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
 - [ ] **D4. `docs/test-integrity.md`**: add the three durable rules #20 asks to extract (`Run.Path` and a scalar `FileInfo`; an `Assert` on an undefined variable passes silently; a non-terminating `Write-Error` does fail a psake task).
 - [ ] **D5. `docs/dependency-stack.md`**: build tools pinned centrally; runtime modules from the manifest.
 - [ ] **D6. Delete `docs/shared-ci-standards.md`**, as its own header instructs.
-- [ ] **D7. `README.md` and `AGENTS.md`**: `v2` usage, `harness.psd1`, the shim, layout, two major tags, the lowercase test-file convention, and how to cut and move `v2`.
+- [ ] **D7. `README.md` and `AGENTS.md`**: `v2` usage, `harness.psd1`, the shim, layout, two major tags, the lowercase test-file convention, and how to cut and move `v2`. Also add these to AGENTS.md's *Gotchas*, each found during phase B (PR #71):
+  - **A job matrix renames its required check.** Adding `strategy.matrix` turns `verify Pester result step` into `verify Pester result step (<os>)`, so a ruleset requiring the plain name never sees it report. `self-test.yml` keeps the name with a summary job over the legs, rather than editing `protect-main`, which also covers `release/*`.
+  - **On Windows, git fixture repos in `TestDrive:` break Pester's cleanup.** git writes object files read-only, so the container fails after every test passed. Remove them with `Remove-Item -Force` in `AfterAll`.
+  - **A parameter typed `[System.Management.Automation.PSCustomObject]` rejects `[PSCustomObject] @{}`.** The value's runtime type is `PSObject`, so type such parameters `[System.Management.Automation.PSObject]`.
+  - **Never send a second command to a terminal running a long job.** It interrupted a mutation run part-way; check every mutated file is restored before trusting the tree.
 - [ ] **D8. Record the mechanism for `PS-MCS`** in ADR-0006's Consequences: what `mcssec-ops` would adopt unchanged, and that its `@main`-pinned consumers need an input switch or verification before merge, since there is no tag to repoint. *(AC11)*
   - Verify for D1–D8: markdownlint clean; every link resolves; ADRs follow the bullet style and dated Status line.
 
