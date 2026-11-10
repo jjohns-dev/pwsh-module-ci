@@ -2,7 +2,7 @@
 
 The designed set of build and test dependencies for the module repos, and why each one is in it.
 
-**This is the single place the stack is defined.** Repos should inherit it rather than each declaring their own — that is the point of [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20). Until #20 lands, every repo carries its own `Build/depend.psd1` and the fleet drifts; the drift recorded below is a symptom of that, not a list of repos to go and fix by hand.
+**This is the single place the stack is defined.** Since `v2.0.0` the build tools are declared once, in this repo's [`Build/depend.psd1`](../Build/depend.psd1), and every consumer on `@v2` inherits them through the harness ([#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20), [ADR-0008](adr/0008-runtime-modules-float-build-tools-pinned.md)). A consumer still on `@v1` carries its own `Build/depend.psd1` until its migration PR deletes it; the drift recorded below is the state before those migrations.
 
 Unlike `shared-ci-standards.md`, this file is **not** interim. It outlives #20, because the question "what do we depend on and why" does not go away once the files stop being copy-pasted.
 
@@ -38,9 +38,11 @@ Two mechanical consequences worth knowing:
 - **A bare version string in `Install-PSResource -Version` is an exact pin**, not a minimum. This is the opposite of the NuGet default and has been confirmed three times in this fleet: `-Version '5.0.0'` returns exactly `5.0.0`, while `'[5.0.0,)'` returns 28 results.
 - **A NuGet range does not resolve to its newest member.** Under PSResourceGet 1.2.0, `Find-PSResource` returns range results in a non-semantic order and the installer takes the first. `[5.0.0,6.0.0)` gave `AWS.Tools.Common` 5.0.300 when 5.0.324 existed. Omitting `-Version` is the only reliable way to get latest — so "pin exactly, or do not constrain at all" is the only honest choice.
 
-**Runtime dependencies are a separate question** and are not covered here. `AWSAutomation` deliberately floats its `AWS.Tools.*` modules and `ImportExcel` to `latest`, recorded as ADR-0002 in that repo. That turns on those modules being unversioned `RequiredModules` in its manifest, which no other repo has. **Do not copy it without re-deriving it.**
+**Runtime dependencies float from the manifest, fleet-wide** ([ADR-0008](adr/0008-runtime-modules-float-build-tools-pinned.md)). The harness reads a consumer's runtime modules from its manifest's `RequiredModules`, installs each at its latest release by omitting `-Version`, honours an exact version only when the manifest declares `RequiredVersion`, and fails on `MaximumVersion`. Every build logs `Resolved dependency: <name> <version>`, which is the only record of what it ran against. This generalises the rule `AWSAutomation` recorded for itself as its ADR-0002.
 
-## Current drift, measured 2026-11-06
+## Drift before the harness, measured 2026-11-06
+
+Kept as the record of why the stack moved into the harness. Each repo leaves this table in its migration PR, when its `depend.psd1` is deleted and it inherits the pins above.
 
 | Repo | Pester | psake | PSScriptAnalyzer | Other |
 | ---- | ------ | ----- | ---------------- | ----- |
@@ -58,7 +60,7 @@ One thing this surfaces:
 
 **Pester and psake are uniform fleet-wide** at 6.2.0 and 5.0.4. `AWSAutomation` was the last repo on psake 4.9.1 and moved to 5.0.4 in [#106](https://github.com/jjohns-dev/AWSAutomation/pull/106), which also took it to PSScriptAnalyzer 1.25.0 and dropped its unused `PlatyPS` pin.
 
-**This is not a sweep to run.** Aligning seven `depend.psd1` files by hand reproduces the exact problem #20 exists to end, and the next drift would start the day after. The fix is for the stack to be declared once and inherited; these rows are the evidence for doing that, and the list to reconcile against when it happens.
+**This is not a sweep to run.** Aligning seven `depend.psd1` files by hand reproduces the exact problem #20 exists to end. Each migration PR resolves its row by deleting that file; the harness's pins then apply, including PSScriptAnalyzer 1.25.0 for the five repos still on 1.24.0.
 
 ## Under evaluation
 
