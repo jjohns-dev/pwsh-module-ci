@@ -80,6 +80,7 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
   - Verify: all three workflows green in each repo; executed counts equal the baseline (PS.GHOps 95 on each of three legs; PS.SSL 346 and 347; SecurityTools 996 and 21); the harness commit SHA printed by B2 equals the workflow's commit; a dry-run release in PS.GHOps produces an artifact matching its last real release, file for file.
   - The draft PRs are **kept**, not torn down: each becomes that repo's F-task PR, since it already holds the shim, the deletions and the release caller's dry-run changes.
   - **PS.GHOps outcome ([PS.GHOps#23](https://github.com/jjohns-dev/PS.GHOps/pull/23), harness `a3e5f5c`):** all three workflows green; 95 executed on each leg, 0 errors and failures; harness commit printed in CI and through the local shim; required check names unchanged; publishing skipped, no release or tag created. The dry-run zip matches `v0.5.0` except the URL repointing committed since (`9e8d725`); entry order inside the zip differs. The macOS leg needed a re-run for lack of a hosted runner, not because of the harness.
+  - **PS.SSL outcome ([PS.SSL#79](https://github.com/jjohns-dev/PS.SSL/pull/79), harness `a3e5f5c`):** all three workflows green; executed 346 ubuntu and 347 windows, 0 errors and failures; the 14 `Network` tests excluded by tag on both legs (`NotRun`, no suite in the JUnit); harness commit printed everywhere; required check names unchanged; publishing skipped, no release or tag created; the dry-run zip holds `PS.SSL/` with the manifest, root module, README, `Public` and `Private`. Before the change, the whole-repo analyzer scan found that one dropped exclusion still suppressed two test-fixture findings; they are now suppressed inline (see design). Runs were delayed by a GitHub incident on 2026-11-10 and fired on their own after it.
 
 ## D. Records and docs
 
@@ -95,7 +96,8 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
   - `Build/harness.psd1`: its three keys, and that an unknown key fails the build;
   - the module layout the harness expects: `Public/` required, `Private/` optional, where tests live, the lowercase test-file convention, and how `PesterScope` selects files;
   - dependency resolution: `RequiredModules` float, `RequiredVersion` pins, `MaximumVersion` fails, each logged as `Resolved dependency:`;
-  - the task names and properties a consumer can pass.
+  - the task names and properties a consumer can pass;
+  - running tests the repo excludes by tag: the harness always applies `PesterExcludeTag` and has no override, so run them with Pester directly, e.g. PS.SSL's `Invoke-Pester -Path ./Tests -TagFilter 'Network' -Output Detailed` from the repo root (its test files import `$env:BHPSModuleManifest` when set, else the source manifest at the repo root).
   - Verify: no content lost in the move (`git diff -w` of the moved sections against `README.md` at the base); every in-page anchor that moved still resolves; `AGENTS.md`'s layout row for `README.md` points at the guide.
 - [ ] **D7b. `AGENTS.md`** (maintainers): layout, two major tags, and how to cut and move `v2`. Also add these to AGENTS.md's *Gotchas*, each found during phase B (PR #71) or phase C (PR #72):
   - **A job matrix renames its required check.** Adding `strategy.matrix` turns `verify Pester result step` into `verify Pester result step (<os>)`, so a ruleset requiring the plain name never sees it report. `self-test.yml` keeps the name with a summary job over the legs, rather than editing `protect-main`, which also covers `release/*`.
@@ -138,7 +140,7 @@ Verification for every repo, read from the run artifacts, not log text:
 | F3 | PS.Log | artifact drops `Documentation/` | 91 |
 | F4 | PS.DCU | `PesterStrictMode = $true`; 3 renames; confirm the dev container image has `git` | 85 |
 | F5 | AWSAutomation | `PSScriptAnalyzerExcludeRules` (2 rules); 15 runtime modules now from the manifest | 444 |
-| F6 | PS.SSL | `PesterExcludeTag = 'Network'`; 22 renames; inline `SuppressMessageAttribute` for `PSAvoidUsingConvertToSecureStringWithPlainText` in the `ConvertTo-PEM` and `Export-PFX` tests (fixture passwords) | 346 ubuntu, 347 windows |
+| F6 | PS.SSL | start from #79; `PesterExcludeTag = 'Network'`; 22 renames; inline `SuppressMessageAttribute` for `PSAvoidUsingConvertToSecureStringWithPlainText` in the `ConvertTo-PEM` and `Export-PFX` tests (fixture passwords); `AGENTS.md` lines 14, 15, 20, 28, 51 and 59 describe the old build, and its *run `Network`-tagged tests* note should give the `Invoke-Pester -TagFilter 'Network'` command; compare the PR's analyzer warnings (6 in pssa-sarif, 1 in Analyze at C5) against `main`'s Security tab and name any that are new | 346 ubuntu, 347 windows |
 | F7 | SecurityTools | `ImportExcel` moves off `7.8.10`; per-leg scopes unchanged | 996 ubuntu, 21 windows |
 
 - [ ] F1. PS.GHOps
