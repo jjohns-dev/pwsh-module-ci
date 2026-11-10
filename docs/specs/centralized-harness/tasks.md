@@ -70,11 +70,12 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
 
 ## C. Workflows
 
-- [ ] **C1. `ci.yml`** checks out the caller as now, checks out this repo at `job.workflow_sha` into `.harness/`, and runs `.harness/Build/build.ps1 -ProjectPath $GITHUB_WORKSPACE` for each task. Job names unchanged. *(AC1)*
-- [ ] **C2. `release.yml`**: the same harness steps, plus a `dry-run` input (boolean, default `false`). Only the publishing step (`action-gh-release`) is gated on it; build, test, the `Verify Pester results` step and the artifact upload all still run. *(Q3)*
-- [ ] **C3. `pssa-sarif.yml`**: checks out the harness at `job.workflow_sha`, as C1 does, and analyses with the harness's settings plus the repo's `PSScriptAnalyzerExcludeRules`; the `psscriptanalyzer-settings-path` input is removed. *(Q3)*
-- [ ] **C4. Tests for the changed `run:` blocks**, extracted from the YAML like today's suites. The `Verify Pester results` drift check between `ci.yml` and `release.yml` still passes.
+- [x] **C1. `ci.yml`** checks out the caller as now, checks out this repo at `job.workflow_sha` into `.harness/`, and runs `.harness/Build/build.ps1 -ProjectPath $GITHUB_WORKSPACE` for each task. Job names unchanged. *(AC1)*
+- [x] **C2. `release.yml`**: the same harness steps, plus a `dry-run` input (boolean, default `false`). Only the publishing step (`action-gh-release`) is gated on it; build, test, the `Verify Pester results` step and the artifact upload all still run. *(Q3)*
+- [x] **C3. `pssa-sarif.yml`**: checks out the harness at `job.workflow_sha`, as C1 does, and analyses with the harness's settings plus the repo's `PSScriptAnalyzerExcludeRules`; the `psscriptanalyzer-settings-path` input is removed. *(Q3)*
+- [x] **C4. Tests for the changed `run:` blocks**, extracted from the YAML like today's suites. The `Verify Pester results` drift check between `ci.yml` and `release.yml` still passes.
   - Verify for C1–C4: `actionlint` and self-test green.
+  - **Outcome:** `PSScriptAnalyzer -Recurse` descends into dot-folders, so analysing the checkout root would have reported the harness's own code in each consumer's Security tab. `Invoke-HarnessAnalysis` analyses each top-level item except `.harness` and `.git` instead, and the `Analyze` task and `pssa-sarif.yml` share `Get-HarnessAnalyzerSetting`. `pssa-sarif.yml` reads the PSScriptAnalyzer version from `depend.psd1` rather than repeating it. New `tests/Workflows.Tests.ps1` checks the three workflows' structure; ten mutants, one per guarded property, were each caught.
 - [ ] **C5. End-to-end proof before any tag.** From a branch of this repo, point throwaway caller branches at the branch's workflows, as the 2026-11-05 spike did, in three repos: PS.GHOps (the first migration), and PS.SSL and SecurityTools (the hardest cases: tag exclusion, Windows-only selection, per-leg scopes). Each throwaway branch carries what its migration PR would: the shim, any `harness.psd1`, and renames.
   - Verify: all three workflows green in each repo; executed counts equal the baseline (PS.GHOps 95 on each of three legs; PS.SSL 346 and 347; SecurityTools 996 and 21); the harness commit SHA printed by B2 equals the workflow's commit; a dry-run release in PS.GHOps produces an artifact matching its last real release, file for file. Tear down the throwaway branches and PRs afterwards.
 

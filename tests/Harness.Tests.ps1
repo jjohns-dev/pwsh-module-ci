@@ -203,6 +203,48 @@ Describe -Name 'Install-HarnessDependency' -Fixture {
     }
 }
 
+Describe -Name 'Get-HarnessAnalyzerSetting and Invoke-HarnessAnalysis' -Fixture {
+    BeforeAll {
+        . (Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath 'Build' -AdditionalChildPath 'Harness.Functions.ps1')
+        $pssaVersion = (Import-PowerShellDataFile -LiteralPath (Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath 'Build' -AdditionalChildPath 'depend.psd1'))['PSScriptAnalyzer']
+        Import-Module -Name 'PSScriptAnalyzer' -RequiredVersion $pssaVersion -Force -ErrorAction 'Stop'
+        # THE SAME ALIAS FINDING IN EACH FOLDER, SO A WRONGLY INCLUDED OR EXCLUDED FOLDER CHANGES THE COUNT
+        function Initialize-AnalysisFixture ([System.String] $HarnessBody) {
+            $root = Join-Path -Path $TestDrive -ChildPath ([System.Guid]::NewGuid())
+            foreach ($folder in 'Public', '.github', (Join-Path -Path '.harness' -ChildPath 'Build')) {
+                $dir = Join-Path -Path $root -ChildPath $folder
+                New-Item -Path $dir -ItemType 'Directory' -Force | Out-Null
+                Set-Content -Path (Join-Path -Path $dir -ChildPath 'Get-Fixture.ps1') -Value 'function Get-Fixture { gci }'
+            }
+            if ($HarnessBody) {
+                New-Item -Path (Join-Path -Path $root -ChildPath 'Build') -ItemType 'Directory' | Out-Null
+                Set-Content -Path (Join-Path -Path $root -ChildPath 'Build' -AdditionalChildPath 'harness.psd1') -Value ('@{{ {0} }}' -f $HarnessBody)
+            }
+            $root
+        }
+    }
+    It -Name 'returns the shared settings unchanged when the repo excludes nothing' -Test {
+        $settings = Get-HarnessAnalyzerSetting -ProjectPath (Initialize-AnalysisFixture -HarnessBody $null)
+        $settings['Severity'] | Should -Be @('Error', 'Warning')
+        $settings.ContainsKey('ExcludeRules') | Should -BeFalse
+    }
+    It -Name 'adds the repo''s exclusions to the shared settings' -Test {
+        $settings = Get-HarnessAnalyzerSetting -ProjectPath (Initialize-AnalysisFixture -HarnessBody 'PSScriptAnalyzerExcludeRules = ''RuleA''')
+        $settings['Severity'] | Should -Be @('Error', 'Warning')
+        $settings['ExcludeRules'] | Should -Be @('RuleA')
+    }
+    It -Name 'reports dot-folders such as .github but never the harness checkout' -Test {
+        $findings = @(Invoke-HarnessAnalysis -ProjectPath (Initialize-AnalysisFixture -HarnessBody $null))
+        $findings.RuleName | Should -Be @('PSAvoidUsingCmdletAliases', 'PSAvoidUsingCmdletAliases')
+        $findings.Where({ $_.ScriptPath -match '[\\/]\.harness[\\/]' }) | Should -HaveCount 0
+        $findings.Where({ $_.ScriptPath -match '[\\/]\.github[\\/]' }) | Should -HaveCount 1
+    }
+    It -Name 'applies the repo''s exclusions' -Test {
+        $root = Initialize-AnalysisFixture -HarnessBody 'PSScriptAnalyzerExcludeRules = ''PSAvoidUsingCmdletAliases'''
+        @(Invoke-HarnessAnalysis -ProjectPath $root) | Should -HaveCount 0
+    }
+}
+
 Describe -Name 'build.ps1 entry point' -Fixture {
     BeforeAll {
         $buildScript = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath 'Build' -AdditionalChildPath 'build.ps1'

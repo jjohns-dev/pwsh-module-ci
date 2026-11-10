@@ -70,14 +70,23 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - shell: pwsh # install dependencies (Pester, psake, PSScriptAnalyzer)
-        run: ./Build/build.ps1 -ResolveDependency -TaskList 'Init'
+      # The harness at this workflow's own commit, so the two cannot drift apart.
+      - name: Check out the build harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .harness
+          persist-credentials: false
+
+      - shell: pwsh # install dependencies (Pester, psake, PSScriptAnalyzer, the module's RequiredModules)
+        run: ./.harness/Build/build.ps1 -ProjectPath $env:GITHUB_WORKSPACE -ResolveDependency -TaskList 'Init'
 
       - shell: pwsh # stage module (copy sources into Staging/)
-        run: ./Build/build.ps1 -TaskList 'CombineFunctionsAndStage'
+        run: ./.harness/Build/build.ps1 -ProjectPath $env:GITHUB_WORKSPACE -TaskList 'CombineFunctionsAndStage'
 
       - shell: pwsh # psscriptanalyzer
-        run: ./Build/build.ps1 -TaskList 'Analyze'
+        run: ./.harness/Build/build.ps1 -ProjectPath $env:GITHUB_WORKSPACE -TaskList 'Analyze'
 
       - shell: pwsh # pester
         id: pester
@@ -87,14 +96,13 @@ jobs:
           PESTER_SCOPE: ${{ matrix.pesterScope }}
         run: |
           $ErrorActionPreference = 'Stop'
+          $harnessParams = @{ ProjectPath = $env:GITHUB_WORKSPACE; TaskList = 'Test' }
           # An absent matrix key is '', not null. Passing @{ PesterScope = '' }
-          # would override the psake default with nothing; omit it instead.
-          if ([string]::IsNullOrWhiteSpace($env:PESTER_SCOPE)) {
-              ./Build/build.ps1 -TaskList 'Test'
+          # would override the harness default with nothing; omit it instead.
+          if (-not [string]::IsNullOrWhiteSpace($env:PESTER_SCOPE)) {
+              $harnessParams['Properties'] = @{ PesterScope = $env:PESTER_SCOPE }
           }
-          else {
-              ./Build/build.ps1 -TaskList 'Test' -Properties @{ PesterScope = $env:PESTER_SCOPE }
-          }
+          ./.harness/Build/build.ps1 @harnessParams
 
       - name: Verify Pester results
         shell: pwsh
