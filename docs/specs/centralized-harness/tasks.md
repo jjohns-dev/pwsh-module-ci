@@ -76,8 +76,10 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
 - [x] **C4. Tests for the changed `run:` blocks**, extracted from the YAML like today's suites. The `Verify Pester results` drift check between `ci.yml` and `release.yml` still passes.
   - Verify for C1–C4: `actionlint` and self-test green.
   - **Outcome:** `PSScriptAnalyzer -Recurse` descends into dot-folders, so analysing the checkout root would have reported the harness's own code in each consumer's Security tab. `Invoke-HarnessAnalysis` analyses each top-level item except `.harness` and `.git` instead, and the `Analyze` task and `pssa-sarif.yml` share `Get-HarnessAnalyzerSetting`. `pssa-sarif.yml` reads the PSScriptAnalyzer version from `depend.psd1` rather than repeating it. New `tests/Workflows.Tests.ps1` checks the three workflows' structure; ten mutants, one per guarded property, were each caught.
-- [ ] **C5. End-to-end proof before any tag.** From a branch of this repo, point throwaway caller branches at the branch's workflows, as the 2026-11-05 spike did, in three repos: PS.GHOps (the first migration), and PS.SSL and SecurityTools (the hardest cases: tag exclusion, Windows-only selection, per-leg scopes). Each throwaway branch carries what its migration PR would: the shim, any `harness.psd1`, and renames.
-  - Verify: all three workflows green in each repo; executed counts equal the baseline (PS.GHOps 95 on each of three legs; PS.SSL 346 and 347; SecurityTools 996 and 21); the harness commit SHA printed by B2 equals the workflow's commit; a dry-run release in PS.GHOps produces an artifact matching its last real release, file for file. Tear down the throwaway branches and PRs afterwards.
+- [ ] **C5. End-to-end proof before any tag.** From a branch of this repo, point caller branches at the branch's workflows, pinned by full commit SHA, as the 2026-11-05 spike did, in three repos: PS.GHOps (the first migration), and PS.SSL and SecurityTools (the hardest cases: tag exclusion, Windows-only selection, per-leg scopes). Each branch carries what its migration PR would: the shim, any `harness.psd1`, and renames.
+  - Verify: all three workflows green in each repo; executed counts equal the baseline (PS.GHOps 95 on each of three legs; PS.SSL 346 and 347; SecurityTools 996 and 21); the harness commit SHA printed by B2 equals the workflow's commit; a dry-run release in PS.GHOps produces an artifact matching its last real release, file for file.
+  - The draft PRs are **kept**, not torn down: each becomes that repo's F-task PR, since it already holds the shim, the deletions and the release caller's dry-run changes.
+  - **PS.GHOps outcome ([PS.GHOps#23](https://github.com/jjohns-dev/PS.GHOps/pull/23), harness `a3e5f5c`):** all three workflows green; 95 executed on each leg, 0 errors and failures; harness commit printed in CI and through the local shim; required check names unchanged; publishing skipped, no release or tag created. The dry-run zip matches `v0.5.0` except the URL repointing committed since (`9e8d725`); entry order inside the zip differs. The macOS leg needed a re-run for lack of a hosted runner, not because of the harness.
 
 ## D. Records and docs
 
@@ -116,9 +118,10 @@ Each PR follows the same checklist:
 
 - Shim in place of `Build/build.ps1`; delete `build.psake.ps1`, `depend.psd1` and `PSScriptAnalyzerSettings.psd1`.
 - `Build/harness.psd1` only where listed below.
-- All three callers on `@v2`; the release caller gains its `pull_request` dry-run trigger.
+- Where C5 left a draft PR, start from it: rebase on the repo's `main`, then repoint its SHA pins to `@v2` as the last commit.
+- All three callers on `@v2`; the release caller gains its `pull_request` dry-run trigger, `dry-run: ${{ github.event_name == 'pull_request' }}`, and an `artifact-name` that is valid on a PR (`github.ref_name` is `<n>/merge` there, and artifact names cannot contain `/`).
 - Test files renamed to lowercase with `git mv`, confirmed as renames in `git status`.
-- AGENTS.md, CONTRIBUTING.md and any test-file comments checked for references to the deleted files.
+- AGENTS.md, CONTRIBUTING.md, ADRs and test-file comments checked for references to the deleted files **and** for prose describing the old psake build; point them at the consumer guide (D7a).
 - Close any Dependabot `@v1` → `@v2` PR.
 
 Verification for every repo, read from the run artifacts, not log text:
@@ -130,7 +133,7 @@ Verification for every repo, read from the run artifacts, not log text:
 
 | Task | Repo | Repo-specific | Baseline executed |
 | ---- | ---- | ------------- | ----------------- |
-| F1 | PS.GHOps | — | 95 × 3 legs |
+| F1 | PS.GHOps | start from #23; psake prose in `AGENTS.md:45`, `CONTRIBUTING.md:93-94`, ADR-0001 line 18, `Module.tests.ps1:7` | 95 × 3 legs |
 | F2 | PS.GitHub | — | 112 × 3 legs |
 | F3 | PS.Log | artifact drops `Documentation/` | 91 |
 | F4 | PS.DCU | `PesterStrictMode = $true`; 3 renames; confirm the dev container image has `git` | 85 |
