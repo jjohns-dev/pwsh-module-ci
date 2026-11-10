@@ -87,11 +87,21 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
 - [ ] **D4. `docs/test-integrity.md`**: add the three durable rules #20 asks to extract (`Run.Path` and a scalar `FileInfo`; an `Assert` on an undefined variable passes silently; a non-terminating `Write-Error` does fail a psake task).
 - [ ] **D5. `docs/dependency-stack.md`**: build tools pinned centrally; runtime modules from the manifest.
 - [ ] **D6. Delete `docs/shared-ci-standards.md`**, as its own header instructs.
-- [ ] **D7. `README.md` and `AGENTS.md`**: `v2` usage, `harness.psd1`, the shim, layout, two major tags, the lowercase test-file convention, and how to cut and move `v2`. Also add these to AGENTS.md's *Gotchas*, each found during phase B (PR #71):
+- [ ] **D7a. Consumer guide, `docs/consumer-guide.md`.** Move the consumer-facing material out of `README.md` (Usage, Runner matrix, Pester result verification, Minimum test count) into its own document, and leave `README.md` as an overview with a link to it. Update the moved content for `v2`, and add what a consumer needs to adopt the harness:
+  - the three caller workflows on `@v2`, including the release caller's `pull_request` trigger with `dry-run`, and that `psscriptanalyzer-settings-path` is gone;
+  - the shim: what it does, where it caches the harness, running from a clone instead, and the drift warning;
+  - `Build/harness.psd1`: its three keys, and that an unknown key fails the build;
+  - the module layout the harness expects: `Public/` required, `Private/` optional, where tests live, the lowercase test-file convention, and how `PesterScope` selects files;
+  - dependency resolution: `RequiredModules` float, `RequiredVersion` pins, `MaximumVersion` fails, each logged as `Resolved dependency:`;
+  - the task names and properties a consumer can pass.
+  - Verify: no content lost in the move (`git diff -w` of the moved sections against `README.md` at the base); every in-page anchor that moved still resolves; `AGENTS.md`'s layout row for `README.md` points at the guide.
+- [ ] **D7b. `AGENTS.md`** (maintainers): layout, two major tags, and how to cut and move `v2`. Also add these to AGENTS.md's *Gotchas*, each found during phase B (PR #71) or phase C (PR #72):
   - **A job matrix renames its required check.** Adding `strategy.matrix` turns `verify Pester result step` into `verify Pester result step (<os>)`, so a ruleset requiring the plain name never sees it report. `self-test.yml` keeps the name with a summary job over the legs, rather than editing `protect-main`, which also covers `release/*`.
   - **On Windows, git fixture repos in `TestDrive:` break Pester's cleanup.** git writes object files read-only, so the container fails after every test passed. Remove them with `Remove-Item -Force` in `AfterAll`.
   - **A parameter typed `[System.Management.Automation.PSCustomObject]` rejects `[PSCustomObject] @{}`.** The value's runtime type is `PSObject`, so type such parameters `[System.Management.Automation.PSObject]`.
   - **Never send a second command to a terminal running a long job.** It interrupted a mutation run part-way; check every mutated file is restored before trusting the tree.
+  - **`Invoke-ScriptAnalyzer -Recurse` descends into dot-folders**, so analysing a checkout root also reports `.harness/`. `Invoke-HarnessAnalysis` analyses each top-level item except `.harness` and `.git` instead.
+  - **actionlint 1.7.12 rejects `job.workflow_repository` and `job.workflow_sha`**, though GitHub documents both. `.github/actionlint.yaml` ignores exactly those two names; remove it once a release includes [rhysd/actionlint#707](https://github.com/rhysd/actionlint/pull/707).
 - [ ] **D8. Record the mechanism for `PS-MCS`** in ADR-0006's Consequences: what `mcssec-ops` would adopt unchanged, and that its `@main`-pinned consumers need an input switch or verification before merge, since there is no tag to repoint. *(AC11)*
   - Verify for D1–D8: markdownlint clean; every link resolves; ADRs follow the bullet style and dated Status line.
 
