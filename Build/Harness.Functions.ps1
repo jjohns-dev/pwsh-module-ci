@@ -279,9 +279,10 @@ function Test-HarnessShim {
     if (-not (Test-Path -LiteralPath $ShimPath -PathType 'Leaf')) {
         return $true
     }
-    $shim = (Get-Content -LiteralPath $ShimPath -Raw) -replace "`r`n", "`n"
-    $reference = (Get-Content -LiteralPath $ReferencePath -Raw) -replace "`r`n", "`n"
-    $shim -ceq $reference
+    $normalised = foreach ($path in $ShimPath, $ReferencePath) {
+        (Get-Content -LiteralPath $path -Raw) -replace "`r`n", "`n"
+    }
+    $normalised[0] -ceq $normalised[1]
 }
 
 function Get-HarnessCommit {

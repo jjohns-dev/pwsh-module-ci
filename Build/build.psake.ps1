@@ -16,15 +16,14 @@
     psake 5.0.4). The Test task turns it off around Invoke-Pester unless the consumer
     opts in with PesterStrictMode.
 #>
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '', Justification = 'psake shares Properties variables with every task; PSScriptAnalyzer cannot follow that scope.')]
-param ()
 
 Set-StrictMode -Version Latest
 . (Join-Path -Path $PSScriptRoot -ChildPath 'Harness.Functions.ps1')
 
 
 #region - PROPERTIES ===========================================================
-# PSAKE EXPOSES THESE TO EVERY TASK; -Properties OVERRIDES THEM
+# PSAKE EXPOSES THESE TO EVERY TASK; -Properties OVERRIDES THEM. Set-Variable, AS IN PS.SSL, FOR THOSE ONLY
+# THE TASKS READ: PSScriptAnalyzer CANNOT SEE A TASK READ A PROPERTY, SO IT FLAGS A PLAIN ASSIGNMENT AS UNUSED
 Properties {
     $ProjectRoot = $env:HARNESS_PROJECT_PATH
     $ModuleName = $env:HARNESS_MODULE_NAME
@@ -32,21 +31,21 @@ Properties {
         Write-Error -Message 'HARNESS_PROJECT_PATH and HARNESS_MODULE_NAME are not set. Run the harness through Build/build.ps1.' -ErrorAction 'Stop'
     }
 
-    $HarnessSettings = Get-HarnessSetting -ProjectPath $ProjectRoot
-    $lines = '----------------------------------------------------------------------'
-    $TestFile = 'Test-Unit_{0}.xml' -f (Get-Date -UFormat '%Y%m%d-%H%M%S')
+    Set-Variable -Name 'HarnessSettings' -Value (Get-HarnessSetting -ProjectPath $ProjectRoot)
+    Set-Variable -Name 'lines' -Value '----------------------------------------------------------------------'
+    Set-Variable -Name 'TestFile' -Value ('Test-Unit_{0}.xml' -f (Get-Date -UFormat '%Y%m%d-%H%M%S'))
 
     # ALL, CROSSPLATFORM OR WINDOWSONLY; RESOLVED IN THE TEST TASK SO AN OVERRIDE TAKES EFFECT
-    $PesterScope = 'All'
+    Set-Variable -Name 'PesterScope' -Value 'All'
 
     [ValidateSet('Error', 'Warning', 'Any', 'None')]
     $ScriptAnalysisFailBuildOnSeverityLevel = 'Error'
-    $ScriptAnalyzerSettingsPath = Join-Path -Path $PSScriptRoot -ChildPath 'PSScriptAnalyzerSettings.psd1'
+    Set-Variable -Name 'ScriptAnalyzerSettingsPath' -Value (Join-Path -Path $PSScriptRoot -ChildPath 'PSScriptAnalyzerSettings.psd1')
 
-    $ArtifactFolder = Join-Path -Path $ProjectRoot -ChildPath 'Artifacts'
+    Set-Variable -Name 'ArtifactFolder' -Value (Join-Path -Path $ProjectRoot -ChildPath 'Artifacts')
     $StagingFolder = Join-Path -Path $ProjectRoot -ChildPath 'Staging'
     $StagingModulePath = Join-Path -Path $StagingFolder -ChildPath $ModuleName
-    $StagingModuleManifestPath = Join-Path -Path $StagingModulePath -ChildPath ('{0}.psd1' -f $ModuleName)
+    Set-Variable -Name 'StagingModuleManifestPath' -Value (Join-Path -Path $StagingModulePath -ChildPath ('{0}.psd1' -f $ModuleName))
 }
 
 #endregion =====================================================================
