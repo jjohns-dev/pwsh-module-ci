@@ -94,6 +94,7 @@ The per-question alternatives are under each decision. At the level of the whole
 - **[PSModule/Process-PSModule](https://github.com/PSModule/Process-PSModule)** (added 2026-11-10). A complete reusable GitHub Actions pipeline that builds, tests, versions, documents and publishes to the PowerShell Gallery. Not adopted: it brings its own conventions for versioning, documentation and publishing, where these repos keep their layout and `release.yml` publishes GitHub releases, not Gallery packages. Whether its required repo structure fits these repos was not checked.
 - **Publish the harness as a PowerShell module** (#20's second option). Rejected: it adds a publishing pipeline and Gallery versioning, and it separates the harness version from the workflow version, losing the `job.workflow_sha` guarantee.
 - **Keep a canonical copy here and sync it to consumers with automated PRs** (#20's first option). Rejected: it automates the N copies and N PRs rather than removing them.
+- **Carry the `harness.psd1` settings in the module manifest** (considered 2026-11-10). Rejected. A top-level key makes `Test-ModuleManifest` and `Import-Module` fail ("manifest contains one or more members that are not valid"), measured on PowerShell 7.6.9. Under `PrivateData` the settings load, but they would ship in every release and appear in `(Get-Module).PrivateData`, and a build-only change would alter the shipped manifest. `RequiredModules` stays in the manifest because users' installs read it; these three settings mean nothing outside the build.
 
 ## Risks and tradeoffs
 

@@ -52,6 +52,12 @@ Do not relitigate these. Each was decided once, with evidence.
 - **`-ceq` proves character-identity after parsing, not byte-identity on disk.** It is the right operator for comparing a copied `run:` block, because PowerShell's bare `-eq` is case-insensitive on strings and would call `$ErrorActionPreference` and `$erroractionpreference` equal — a comparison that cannot fail on a real class of drift. But YAML normalises line endings inside a block scalar, so a CRLF file and an LF file parse to the **same string**, and `-ceq` is true for both. Measured 2026-11-03.
   **Check the file's encoding as a separate claim.** That gap is why [SecurityTools#161](https://github.com/jjohns-dev/SecurityTools/issues/161) existed at all rather than being covered by a `-ceq` result. Same defect class as everything above: a comparison that cannot report the difference you are asking about.
 
+- **Pester's `Run.Path` throws on a scalar `FileInfo` and accepts an array.** A glob that matches exactly one file returns a single `FileInfo`, not an array, so a build that worked with two test files breaks when a repo has one. Verified on Pester 6.2.0 in [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20). The harness passes `[System.String[]]` of full paths for this reason.
+
+- **An `Assert` on an undefined variable passes silently.** psake does not run task bodies under `Set-StrictMode` on its own, so a misspelt variable evaluates to `$null` and the condition can come out `True`. Six of seven repos carried exactly that in `Analyze`'s `default` branch, `$analysisResult` for `$Results`: measured on psake 5.0.4 in #20, the `Assert` passed and the build succeeded. The harness sets `Set-StrictMode -Version Latest` at the top of `build.psake.ps1`, which does reach task bodies (measured 2026-11-09); a strict-mode setting in `build.ps1` does not.
+
+- **A non-terminating `Write-Error` does fail a psake task.** Measured in #20: `$psake.build_success` was `False` with and without `-ErrorAction Stop`. A gate written with a bare `Write-Error` is not un-gated, so do not "fix" one by adding `-ErrorAction Stop` everywhere on that assumption.
+
 ## Deriving a `min-tests` floor
 
 - **Fix first, measure second, set the floor third.** A floor derived before the fix records the defective count as the baseline, and can never trip on a regression back to it.
