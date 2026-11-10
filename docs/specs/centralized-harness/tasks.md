@@ -112,8 +112,9 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
 
 ## E. Release
 
-- [ ] **E1. Cut `v2.0.0`** as an annotated tag on the commit C5 proved, and create the moving `v2` tag on it.
+- [ ] **E1. Cut `v2.0.0`** as an annotated tag on #72's squash-merge commit on `main`, and create the moving `v2` tag on it. C5 proved `a3e5f5c`, which a squash merge does not put on `main`, so first confirm `git diff a3e5f5c <merge> -- .github Build templates tests` is empty: the tagged code is then exactly the code C5 ran.
   - Verify: `git ls-remote origin 'refs/tags/v2^{}'` shows that commit; confirm via the API that `protect-release-tags` now covers `v2` (AGENTS.md says its pattern does; unverified until now).
+  - Carried nit from the #72 review, deliberately not fixed before the tag: `pssa-sarif.yml` reads `depend.psd1` with `Import-PowerShellDataFile -Path` where the rest of the code uses `-LiteralPath`. Harmless for that fixed path; fix in the next change.
 
 ## F. Migrations, in order, one PR per repo
 
