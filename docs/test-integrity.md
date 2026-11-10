@@ -2,7 +2,7 @@
 
 Why a test suite can be green and prove nothing, and the rules that follow from it. Covers the Pester suites in the PowerShell module repos, the shared `Help.Tests.ps1` template, and the `min-tests` floor that guards them.
 
-**This file is not interim.** [`shared-ci-standards.md`](shared-ci-standards.md) deletes itself when [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20) lands, because *"which repo holds the best copy of X"* stops being a question once those files are inherited rather than copy-pasted. Nothing here depends on that. These are decisions about how tests are written and measured, and they outlive any amount of de-duplication — the same reasoning that carved out [`dependency-stack.md`](dependency-stack.md).
+**This file is not interim.** These are decisions about how tests are written and measured, and they outlive any amount of de-duplication — the same reasoning that carved out [`dependency-stack.md`](dependency-stack.md). They were moved here on 2026-11-04 from `shared-ci-standards.md`, which [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20) deleted; that file's map of which repo holds the reference copy of each test piece is preserved on [#53](https://github.com/jjohns-dev/pwsh-module-ci/issues/53#issuecomment-6780926659).
 
 ## The defect class
 

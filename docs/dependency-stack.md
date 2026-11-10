@@ -4,7 +4,7 @@ The designed set of build and test dependencies for the module repos, and why ea
 
 **This is the single place the stack is defined.** Since `v2.0.0` the build tools are declared once, in this repo's [`Build/depend.psd1`](../Build/depend.psd1), and every consumer on `@v2` inherits them through the harness ([#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20), [ADR-0008](adr/0008-runtime-modules-float-build-tools-pinned.md)). A consumer still on `@v1` carries its own `Build/depend.psd1` until its migration PR deletes it; the drift recorded below is the state before those migrations.
 
-Unlike `shared-ci-standards.md`, this file is **not** interim. It outlives #20, because the question "what do we depend on and why" does not go away once the files stop being copy-pasted.
+This file is **not** interim. It outlives #20, because the question "what do we depend on and why" does not go away once the files stop being copy-pasted.
 
 ## The stack
 

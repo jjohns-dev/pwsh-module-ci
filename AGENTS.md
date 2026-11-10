@@ -30,7 +30,6 @@ Consequences for how you work:
 | `tests/` | Pester suites for the `run:` blocks with real logic, their fixtures, and the runner |
 | `docs/adr/` | Architecture Decision Records, Nygard format |
 | `docs/test-integrity.md` | Why a suite can be green and prove nothing: test-design decisions, vacuity traps, and the `min-tests` floor procedure. Permanent |
-| `docs/shared-ci-standards.md` | Which repo holds the reference version of each copy-pasted file. Interim; #20 removes the need for it |
 | `README.md` | Consumer-facing usage and inputs |
 | `ROLLOUT.md` | Index and running order for the in-flight cross-repo batch. Temporary; it disclaims its own authority — where it and an issue disagree, the issue wins. Deleted in its own PR when the batch ends |
 

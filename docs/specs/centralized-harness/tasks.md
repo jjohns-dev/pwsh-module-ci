@@ -90,7 +90,8 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
 - [x] **D3. New ADR-0008** (numbered 0007 before D2 took that number): runtime modules float from the manifest, build tools pinned centrally.
 - [x] **D4. `docs/test-integrity.md`**: add the three durable rules #20 asks to extract (`Run.Path` and a scalar `FileInfo`; an `Assert` on an undefined variable passes silently; a non-terminating `Write-Error` does fail a psake task).
 - [x] **D5. `docs/dependency-stack.md`**: build tools pinned centrally; runtime modules from the manifest.
-- [ ] **D6. Delete `docs/shared-ci-standards.md`**, as its own header instructs.
+- [x] **D6. Delete `docs/shared-ci-standards.md`**, as its own header instructs.
+  - **Outcome:** two of its five reference rows were obsolete; the three about help-suite pieces, which #20 does not carry, were [preserved on #53](https://github.com/jjohns-dev/pwsh-module-ci/issues/53#issuecomment-6780926659) before deletion.
 - [ ] **D7a. Consumer guide, `docs/consumer-guide.md`.** Move the consumer-facing material out of `README.md` (Usage, Runner matrix, Pester result verification, Minimum test count) into its own document, and leave `README.md` as an overview with a link to it. Update the moved content for `v2`, and add what a consumer needs to adopt the harness:
   - the three caller workflows on `@v2`, including the release caller's `pull_request` trigger with `dry-run`, and that `psscriptanalyzer-settings-path` is gone;
   - the shim: what it does, where it caches the harness, running from a clone instead, and the drift warning;
