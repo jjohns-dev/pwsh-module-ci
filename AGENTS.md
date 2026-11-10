@@ -30,7 +30,8 @@ Consequences for how you work:
 | `tests/` | Pester suites for the `run:` blocks with real logic, their fixtures, and the runner |
 | `docs/adr/` | Architecture Decision Records, Nygard format |
 | `docs/test-integrity.md` | Why a suite can be green and prove nothing: test-design decisions, vacuity traps, and the `min-tests` floor procedure. Permanent |
-| `README.md` | Consumer-facing usage and inputs |
+| `README.md` | Overview, workflows and versioning; links the consumer guide |
+| `docs/consumer-guide.md` | Consumer-facing usage: callers, inputs, the harness's repo layout, `harness.psd1`, dependencies, local runs, migrating from `v1` |
 | `ROLLOUT.md` | Index and running order for the in-flight cross-repo batch. Temporary; it disclaims its own authority — where it and an issue disagree, the issue wins. Deleted in its own PR when the batch ends |
 
 The three reusable workflows are `on: workflow_call` only. `actionlint.yml` and `self-test.yml` are the only workflows that run on this repo's own pushes and PRs.
