@@ -3,12 +3,6 @@ run-name: pssa-sarif
 
 on:
   workflow_call:
-    inputs:
-      psscriptanalyzer-settings-path:
-        description: 'Path to the PSScriptAnalyzer settings file'
-        required: false
-        type: string
-        default: './Build/PSScriptAnalyzerSettings.psd1'
 
 permissions:
   contents: read
@@ -20,10 +14,18 @@ jobs:
       security-events: write   # for github/codeql-action/upload-sarif
     name: PSScriptAnalyzer
     runs-on: ubuntu-latest
-    env:
-      PSSA_SETTINGS_PATH: ${{ inputs.psscriptanalyzer-settings-path }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The harness supplies the shared analyzer settings and the PSScriptAnalyzer pin,
+      # so the Security tab and the build gate apply the same rules at the same version.
+      - name: Check out the build harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .harness
+          persist-credentials: false
 
       - name: Run PSScriptAnalyzer
         shell: pwsh
@@ -38,23 +40,16 @@ jobs:
             ErrorAction     = 'Stop'
           }
 
-          Install-PSResource -Name 'PSScriptAnalyzer' -Version '1.25.0' @moduleParams
+          $pssaVersion = (Import-PowerShellDataFile -Path './.harness/Build/depend.psd1')['PSScriptAnalyzer']
+          Install-PSResource -Name 'PSScriptAnalyzer' -Version $pssaVersion @moduleParams
           Install-PSResource -Name 'ConvertToSARIF' @moduleParams
 
-          Import-Module -Name 'PSScriptAnalyzer' -RequiredVersion '1.25.0' -Force -ErrorAction Stop
+          Import-Module -Name 'PSScriptAnalyzer' -RequiredVersion $pssaVersion -Force -ErrorAction Stop
           Import-Module -Name 'ConvertToSARIF' -Force -ErrorAction Stop
 
-          $analyzerParams = @{
-            Path     = './'
-            Recurse  = $true
-            Settings = $env:PSSA_SETTINGS_PATH
-          }
-
-          $sarifParams = @{
-            FilePath = 'results.sarif'
-          }
-
-          Invoke-ScriptAnalyzer @analyzerParams | ConvertTo-SARIF @sarifParams
+          # Skips .harness/: -Recurse on the checkout root would report the harness's own code too.
+          . ./.harness/Build/Harness.Functions.ps1
+          Invoke-HarnessAnalysis -ProjectPath $env:GITHUB_WORKSPACE | ConvertTo-SARIF -FilePath 'results.sarif'
 
       - name: Upload SARIF results file
         uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3

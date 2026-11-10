@@ -251,6 +251,62 @@ function Install-HarnessDependency {
     }
 }
 
+function Get-HarnessAnalyzerSetting {
+    <#
+    .SYNOPSIS
+        Returns the PSScriptAnalyzer settings for a consumer: the shared file plus that repo's exclusions.
+    .DESCRIPTION
+        Used by the Analyze task and by pssa-sarif.yml, so the build gate and the Security tab
+        apply the same rules. A repo's PSScriptAnalyzerExcludeRules never reaches another repo.
+    .PARAMETER ProjectPath
+        Root of the consumer module's checkout.
+    .OUTPUTS
+        System.Collections.Hashtable, accepted by Invoke-ScriptAnalyzer -Settings.
+    #>
+    [CmdletBinding()]
+    [OutputType([System.Collections.Hashtable])]
+    param (
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [System.String] $ProjectPath
+    )
+
+    $settings = Import-PowerShellDataFile -LiteralPath (Join-Path -Path $PSScriptRoot -ChildPath 'PSScriptAnalyzerSettings.psd1')
+    $exclude = (Get-HarnessSetting -ProjectPath $ProjectPath).PSScriptAnalyzerExcludeRules
+    if ($exclude.Count -gt 0) {
+        $settings['ExcludeRules'] = $exclude
+    }
+    $settings
+}
+
+function Invoke-HarnessAnalysis {
+    <#
+    .SYNOPSIS
+        Analyses a consumer's whole checkout, as the Security tab reports it, without the harness checkout.
+    .DESCRIPTION
+        Invoke-ScriptAnalyzer -Recurse descends into dot-folders, so analysing the checkout root
+        would also report the harness checked out at .harness/ (measured 2026-11-10). Each
+        top-level item is analysed separately instead, skipping .harness and .git.
+    .PARAMETER ProjectPath
+        Root of the consumer module's checkout.
+    .OUTPUTS
+        Microsoft.Windows.PowerShell.ScriptAnalyzer.Generic.DiagnosticRecord
+    #>
+    [CmdletBinding()]
+    [OutputType([System.Object])]
+    param (
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [System.String] $ProjectPath
+    )
+
+    $settings = Get-HarnessAnalyzerSetting -ProjectPath $ProjectPath
+    $items = @(Get-ChildItem -LiteralPath $ProjectPath -Force).Where({ $_.Name -notin '.harness', '.git' })
+    foreach ($item in $items) {
+        Invoke-ScriptAnalyzer -Path $item.FullName -Recurse -Settings $settings
+    }
+}
+
 function Test-HarnessShim {
     <#
     .SYNOPSIS

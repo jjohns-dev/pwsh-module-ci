@@ -18,11 +18,13 @@ Describe -Name 'Test step scope branch' -Fixture {
         # A STUB build.ps1 RECORDS HOW IT WAS CALLED, AND ContainsKey MAKES THAT DISTINCTION.
         $stubBuild = @(
             'param('
+            '    [System.String] $ProjectPath,'
             '    [System.String] $TaskList,'
             '    [System.Collections.Hashtable] $Properties,'
             '    [System.Management.Automation.SwitchParameter] $ResolveDependency'
             ')'
             '$record = [ordered] @{'
+            '    ProjectPath   = $ProjectPath'
             '    TaskList      = $TaskList'
             '    HasProperties = $PSBoundParameters.ContainsKey(''Properties'')'
             '    PesterScope   = if ($Properties) { $Properties[''PesterScope''] } else { $null }'
@@ -32,18 +34,20 @@ Describe -Name 'Test step scope branch' -Fixture {
     }
     It -Name '<Verdict> for <Description>' -ForEach $cases -Test {
         $caseRoot = Join-Path -Path $TestDrive -ChildPath ([System.Guid]::NewGuid())
-        $buildRoot = Join-Path -Path $caseRoot -ChildPath 'Build'
+        # THE STEP RUNS THE HARNESS CHECKED OUT AT .harness/, AGAINST THE CALLER'S WORKSPACE
+        $buildRoot = Join-Path -Path $caseRoot -ChildPath '.harness' -AdditionalChildPath 'Build'
         New-Item -Path $buildRoot -ItemType 'Directory' -Force | Out-Null
         Set-Content -Path (Join-Path -Path $buildRoot -ChildPath 'build.ps1') -Value $stubBuild -Encoding 'utf8'
         $stepParams = @{
             Body             = $body
             WorkingDirectory = $caseRoot
-            Environment      = @{ PESTER_SCOPE = $Scope }
+            Environment      = @{ PESTER_SCOPE = $Scope; GITHUB_WORKSPACE = $caseRoot }
         }
         $result = Invoke-StepBody @stepParams
         $recordPath = Join-Path -Path $caseRoot -ChildPath 'invocation.json'
         $recordPath | Should -Exist -Because ('build.ps1 must have been invoked. Step output: {0}' -f $result.Output)
         $record = Get-Content -Path $recordPath -Raw | ConvertFrom-Json
+        $record.ProjectPath | Should -BeExactly $caseRoot
         $record.TaskList | Should -BeExactly 'Test'
         $record.HasProperties | Should -Be $ExpectProperties
         if ($ExpectProperties) {

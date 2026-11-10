@@ -70,13 +70,18 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
 
 ## C. Workflows
 
-- [ ] **C1. `ci.yml`** checks out the caller as now, checks out this repo at `job.workflow_sha` into `.harness/`, and runs `.harness/Build/build.ps1 -ProjectPath $GITHUB_WORKSPACE` for each task. Job names unchanged. *(AC1)*
-- [ ] **C2. `release.yml`**: the same harness steps, plus a `dry-run` input (boolean, default `false`). Only the publishing step (`action-gh-release`) is gated on it; build, test, the `Verify Pester results` step and the artifact upload all still run. *(Q3)*
-- [ ] **C3. `pssa-sarif.yml`**: checks out the harness at `job.workflow_sha`, as C1 does, and analyses with the harness's settings plus the repo's `PSScriptAnalyzerExcludeRules`; the `psscriptanalyzer-settings-path` input is removed. *(Q3)*
-- [ ] **C4. Tests for the changed `run:` blocks**, extracted from the YAML like today's suites. The `Verify Pester results` drift check between `ci.yml` and `release.yml` still passes.
+- [x] **C1. `ci.yml`** checks out the caller as now, checks out this repo at `job.workflow_sha` into `.harness/`, and runs `.harness/Build/build.ps1 -ProjectPath $GITHUB_WORKSPACE` for each task. Job names unchanged. *(AC1)*
+- [x] **C2. `release.yml`**: the same harness steps, plus a `dry-run` input (boolean, default `false`). Only the publishing step (`action-gh-release`) is gated on it; build, test, the `Verify Pester results` step and the artifact upload all still run. *(Q3)*
+- [x] **C3. `pssa-sarif.yml`**: checks out the harness at `job.workflow_sha`, as C1 does, and analyses with the harness's settings plus the repo's `PSScriptAnalyzerExcludeRules`; the `psscriptanalyzer-settings-path` input is removed. *(Q3)*
+- [x] **C4. Tests for the changed `run:` blocks**, extracted from the YAML like today's suites. The `Verify Pester results` drift check between `ci.yml` and `release.yml` still passes.
   - Verify for C1–C4: `actionlint` and self-test green.
-- [ ] **C5. End-to-end proof before any tag.** From a branch of this repo, point throwaway caller branches at the branch's workflows, as the 2026-11-05 spike did, in three repos: PS.GHOps (the first migration), and PS.SSL and SecurityTools (the hardest cases: tag exclusion, Windows-only selection, per-leg scopes). Each throwaway branch carries what its migration PR would: the shim, any `harness.psd1`, and renames.
-  - Verify: all three workflows green in each repo; executed counts equal the baseline (PS.GHOps 95 on each of three legs; PS.SSL 346 and 347; SecurityTools 996 and 21); the harness commit SHA printed by B2 equals the workflow's commit; a dry-run release in PS.GHOps produces an artifact matching its last real release, file for file. Tear down the throwaway branches and PRs afterwards.
+  - **Outcome:** `PSScriptAnalyzer -Recurse` descends into dot-folders, so analysing the checkout root would have reported the harness's own code in each consumer's Security tab. `Invoke-HarnessAnalysis` analyses each top-level item except `.harness` and `.git` instead, and the `Analyze` task and `pssa-sarif.yml` share `Get-HarnessAnalyzerSetting`. `pssa-sarif.yml` reads the PSScriptAnalyzer version from `depend.psd1` rather than repeating it. New `tests/Workflows.Tests.ps1` checks the three workflows' structure; ten mutants, one per guarded property, were each caught.
+- [x] **C5. End-to-end proof before any tag.** From a branch of this repo, point caller branches at the branch's workflows, pinned by full commit SHA, as the 2026-11-05 spike did, in three repos: PS.GHOps (the first migration), and PS.SSL and SecurityTools (the hardest cases: tag exclusion, Windows-only selection, per-leg scopes). Each branch carries what its migration PR would: the shim, any `harness.psd1`, and renames.
+  - Verify: all three workflows green in each repo; executed counts equal the baseline (PS.GHOps 95 on each of three legs; PS.SSL 346 and 347; SecurityTools 996 and 21); the harness commit SHA printed by B2 equals the workflow's commit; a dry-run release in PS.GHOps produces an artifact matching its last real release, file for file.
+  - The draft PRs are **kept**, not torn down: each becomes that repo's F-task PR, since it already holds the shim, the deletions and the release caller's dry-run changes.
+  - **PS.GHOps outcome ([PS.GHOps#23](https://github.com/jjohns-dev/PS.GHOps/pull/23), harness `a3e5f5c`):** all three workflows green; 95 executed on each leg, 0 errors and failures; harness commit printed in CI and through the local shim; required check names unchanged; publishing skipped, no release or tag created. The dry-run zip matches `v0.5.0` except the URL repointing committed since (`9e8d725`); entry order inside the zip differs. The macOS leg needed a re-run for lack of a hosted runner, not because of the harness.
+  - **PS.SSL outcome ([PS.SSL#79](https://github.com/jjohns-dev/PS.SSL/pull/79), harness `a3e5f5c`):** all three workflows green; executed 346 ubuntu and 347 windows, 0 errors and failures; the 14 `Network` tests excluded by tag on both legs (`NotRun`, no suite in the JUnit); harness commit printed everywhere; required check names unchanged; publishing skipped, no release or tag created; the dry-run zip holds `PS.SSL/` with the manifest, root module, README, `Public` and `Private`. Before the change, the whole-repo analyzer scan found that one dropped exclusion still suppressed two test-fixture findings; they are now suppressed inline (see design). Runs were delayed by a GitHub incident on 2026-11-10 and fired on their own after it.
+  - **SecurityTools outcome ([SecurityTools#170](https://github.com/jjohns-dev/SecurityTools/pull/170), harness `a3e5f5c`):** all three workflows green; executed 996 ubuntu and 21 windows against floors 986 and 20, 0 errors and failures; ubuntu selected only the 65 `*.tests.ps1`, windows only the 9 `*.tests.windows.ps1`; harness commit printed everywhere; `ImportExcel` resolved from the manifest to 7.8.10, which is also its latest Gallery version, so floating changed nothing yet; required check names unchanged; pssa-sarif 0 results and dropping `PSAvoidGlobalVars` surfaced nothing; publishing skipped, no release or tag created; the dry-run zip holds `SecurityTools/` with the manifest, root module, README, `Public` and `Private`.
 
 ## D. Records and docs
 
@@ -86,18 +91,30 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
 - [ ] **D4. `docs/test-integrity.md`**: add the three durable rules #20 asks to extract (`Run.Path` and a scalar `FileInfo`; an `Assert` on an undefined variable passes silently; a non-terminating `Write-Error` does fail a psake task).
 - [ ] **D5. `docs/dependency-stack.md`**: build tools pinned centrally; runtime modules from the manifest.
 - [ ] **D6. Delete `docs/shared-ci-standards.md`**, as its own header instructs.
-- [ ] **D7. `README.md` and `AGENTS.md`**: `v2` usage, `harness.psd1`, the shim, layout, two major tags, the lowercase test-file convention, and how to cut and move `v2`. Also add these to AGENTS.md's *Gotchas*, each found during phase B (PR #71):
+- [ ] **D7a. Consumer guide, `docs/consumer-guide.md`.** Move the consumer-facing material out of `README.md` (Usage, Runner matrix, Pester result verification, Minimum test count) into its own document, and leave `README.md` as an overview with a link to it. Update the moved content for `v2`, and add what a consumer needs to adopt the harness:
+  - the three caller workflows on `@v2`, including the release caller's `pull_request` trigger with `dry-run`, and that `psscriptanalyzer-settings-path` is gone;
+  - the shim: what it does, where it caches the harness, running from a clone instead, and the drift warning;
+  - `Build/harness.psd1`: its three keys, and that an unknown key fails the build;
+  - the module layout the harness expects: `Public/` required, `Private/` optional, where tests live, the lowercase test-file convention, and how `PesterScope` selects files;
+  - dependency resolution: `RequiredModules` float, `RequiredVersion` pins, `MaximumVersion` fails, each logged as `Resolved dependency:`;
+  - the task names and properties a consumer can pass;
+  - running tests the repo excludes by tag: the harness always applies `PesterExcludeTag` and has no override, so run them with Pester directly, e.g. PS.SSL's `Invoke-Pester -Path ./Tests -TagFilter 'Network' -Output Detailed` from the repo root (its test files import `$env:BHPSModuleManifest` when set, else the source manifest at the repo root).
+  - Verify: no content lost in the move (`git diff -w` of the moved sections against `README.md` at the base); every in-page anchor that moved still resolves; `AGENTS.md`'s layout row for `README.md` points at the guide.
+- [ ] **D7b. `AGENTS.md`** (maintainers): layout, two major tags, and how to cut and move `v2`. Also add these to AGENTS.md's *Gotchas*, each found during phase B (PR #71) or phase C (PR #72):
   - **A job matrix renames its required check.** Adding `strategy.matrix` turns `verify Pester result step` into `verify Pester result step (<os>)`, so a ruleset requiring the plain name never sees it report. `self-test.yml` keeps the name with a summary job over the legs, rather than editing `protect-main`, which also covers `release/*`.
   - **On Windows, git fixture repos in `TestDrive:` break Pester's cleanup.** git writes object files read-only, so the container fails after every test passed. Remove them with `Remove-Item -Force` in `AfterAll`.
   - **A parameter typed `[System.Management.Automation.PSCustomObject]` rejects `[PSCustomObject] @{}`.** The value's runtime type is `PSObject`, so type such parameters `[System.Management.Automation.PSObject]`.
   - **Never send a second command to a terminal running a long job.** It interrupted a mutation run part-way; check every mutated file is restored before trusting the tree.
+  - **`Invoke-ScriptAnalyzer -Recurse` descends into dot-folders**, so analysing a checkout root also reports `.harness/`. `Invoke-HarnessAnalysis` analyses each top-level item except `.harness` and `.git` instead.
+  - **actionlint 1.7.12 rejects `job.workflow_repository` and `job.workflow_sha`**, though GitHub documents both. `.github/actionlint.yaml` ignores exactly those two names; remove it once a release includes [rhysd/actionlint#707](https://github.com/rhysd/actionlint/pull/707).
 - [ ] **D8. Record the mechanism for `PS-MCS`** in ADR-0006's Consequences: what `mcssec-ops` would adopt unchanged, and that its `@main`-pinned consumers need an input switch or verification before merge, since there is no tag to repoint. *(AC11)*
   - Verify for D1–D8: markdownlint clean; every link resolves; ADRs follow the bullet style and dated Status line.
 
 ## E. Release
 
-- [ ] **E1. Cut `v2.0.0`** as an annotated tag on the commit C5 proved, and create the moving `v2` tag on it.
+- [ ] **E1. Cut `v2.0.0`** as an annotated tag on #72's squash-merge commit on `main`, and create the moving `v2` tag on it. C5 proved `a3e5f5c`, which a squash merge does not put on `main`, so first confirm `git diff a3e5f5c <merge> -- .github Build templates tests` is empty: the tagged code is then exactly the code C5 ran.
   - Verify: `git ls-remote origin 'refs/tags/v2^{}'` shows that commit; confirm via the API that `protect-release-tags` now covers `v2` (AGENTS.md says its pattern does; unverified until now).
+  - Carried nit from the #72 review, deliberately not fixed before the tag: `pssa-sarif.yml` reads `depend.psd1` with `Import-PowerShellDataFile -Path` where the rest of the code uses `-LiteralPath`. Harmless for that fixed path; fix in the next change.
 
 ## F. Migrations, in order, one PR per repo
 
@@ -105,9 +122,10 @@ Each PR follows the same checklist:
 
 - Shim in place of `Build/build.ps1`; delete `build.psake.ps1`, `depend.psd1` and `PSScriptAnalyzerSettings.psd1`.
 - `Build/harness.psd1` only where listed below.
-- All three callers on `@v2`; the release caller gains its `pull_request` dry-run trigger.
+- Where C5 left a draft PR, start from it: rebase on the repo's `main`, then repoint its SHA pins to `@v2` as the last commit.
+- All three callers on `@v2`; the release caller gains its `pull_request` dry-run trigger, `dry-run: ${{ github.event_name == 'pull_request' }}`, and an `artifact-name` that is valid on a PR (`github.ref_name` is `<n>/merge` there, and artifact names cannot contain `/`).
 - Test files renamed to lowercase with `git mv`, confirmed as renames in `git status`.
-- AGENTS.md, CONTRIBUTING.md and any test-file comments checked for references to the deleted files.
+- AGENTS.md, CONTRIBUTING.md, ADRs and test-file comments checked for references to the deleted files **and** for prose describing the old psake build; point them at the consumer guide (D7a).
 - Close any Dependabot `@v1` → `@v2` PR.
 
 Verification for every repo, read from the run artifacts, not log text:
@@ -119,13 +137,13 @@ Verification for every repo, read from the run artifacts, not log text:
 
 | Task | Repo | Repo-specific | Baseline executed |
 | ---- | ---- | ------------- | ----------------- |
-| F1 | PS.GHOps | — | 95 × 3 legs |
+| F1 | PS.GHOps | start from #23; psake prose in `AGENTS.md:45`, `CONTRIBUTING.md:93-94`, ADR-0001 line 18, `Module.tests.ps1:7` | 95 × 3 legs |
 | F2 | PS.GitHub | — | 112 × 3 legs |
 | F3 | PS.Log | artifact drops `Documentation/` | 91 |
 | F4 | PS.DCU | `PesterStrictMode = $true`; 3 renames; confirm the dev container image has `git` | 85 |
 | F5 | AWSAutomation | `PSScriptAnalyzerExcludeRules` (2 rules); 15 runtime modules now from the manifest | 444 |
-| F6 | PS.SSL | `PesterExcludeTag = 'Network'`; 22 renames | 346 ubuntu, 347 windows |
-| F7 | SecurityTools | `ImportExcel` moves off `7.8.10`; per-leg scopes unchanged | 996 ubuntu, 21 windows |
+| F6 | PS.SSL | start from #79; `PesterExcludeTag = 'Network'`; 22 renames; inline `SuppressMessageAttribute` for `PSAvoidUsingConvertToSecureStringWithPlainText` in the `ConvertTo-PEM` and `Export-PFX` tests (fixture passwords); `AGENTS.md` lines 14, 15, 20, 28, 51 and 59 describe the old build, and its *run `Network`-tagged tests* note should give the `Invoke-Pester -TagFilter 'Network'` command; compare the PR's analyzer warnings (6 in pssa-sarif, 1 in Analyze at C5) against `main`'s Security tab and name any that are new | 346 ubuntu, 347 windows |
+| F7 | SecurityTools | start from #170; `ImportExcel` floats from the manifest instead of the `7.8.10` pin (7.8.10 is still the latest, so no change yet); per-leg scopes unchanged; `Tests/Common/{Help,Manifest,Meta}.Tests.ps1` keep their case and follow #53; `AGENTS.md:13`, `:46` and its PSScriptAnalyzer policy section describe the old build and settings | 996 ubuntu, 21 windows |
 
 - [ ] F1. PS.GHOps
 - [ ] F2. PS.GitHub

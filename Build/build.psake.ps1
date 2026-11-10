@@ -40,7 +40,6 @@ Properties {
 
     [ValidateSet('Error', 'Warning', 'Any', 'None')]
     $ScriptAnalysisFailBuildOnSeverityLevel = 'Error'
-    Set-Variable -Name 'ScriptAnalyzerSettingsPath' -Value (Join-Path -Path $PSScriptRoot -ChildPath 'PSScriptAnalyzerSettings.psd1')
 
     Set-Variable -Name 'ArtifactFolder' -Value (Join-Path -Path $ProjectRoot -ChildPath 'Artifacts')
     $StagingFolder = Join-Path -Path $ProjectRoot -ChildPath 'Staging'
@@ -117,9 +116,8 @@ Task 'Analyze' -depends 'ImportStagingModule' {
     Write-Output -InputObject ('Running PSScriptAnalyzer on path: [{0}]' -f $StagingModulePath)
 
     # THE SHARED SETTINGS PLUS ONLY THIS REPO'S EXCLUSIONS, SO ONE REPO'S EXCLUSION NEVER HIDES ANOTHER'S FINDING
-    $analyzerSettings = Import-PowerShellDataFile -LiteralPath $ScriptAnalyzerSettingsPath
+    $analyzerSettings = Get-HarnessAnalyzerSetting -ProjectPath $ProjectRoot
     if ($HarnessSettings.PSScriptAnalyzerExcludeRules.Count -gt 0) {
-        $analyzerSettings['ExcludeRules'] = $HarnessSettings.PSScriptAnalyzerExcludeRules
         Write-Output -InputObject ('Excluding rules from Build/harness.psd1: {0}' -f ($HarnessSettings.PSScriptAnalyzerExcludeRules -join ', '))
     }
     $analyzeParams = @{
