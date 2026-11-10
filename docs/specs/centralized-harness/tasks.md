@@ -86,7 +86,11 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
 - [ ] **D4. `docs/test-integrity.md`**: add the three durable rules #20 asks to extract (`Run.Path` and a scalar `FileInfo`; an `Assert` on an undefined variable passes silently; a non-terminating `Write-Error` does fail a psake task).
 - [ ] **D5. `docs/dependency-stack.md`**: build tools pinned centrally; runtime modules from the manifest.
 - [ ] **D6. Delete `docs/shared-ci-standards.md`**, as its own header instructs.
-- [ ] **D7. `README.md` and `AGENTS.md`**: `v2` usage, `harness.psd1`, the shim, layout, two major tags, the lowercase test-file convention, and how to cut and move `v2`.
+- [ ] **D7. `README.md` and `AGENTS.md`**: `v2` usage, `harness.psd1`, the shim, layout, two major tags, the lowercase test-file convention, and how to cut and move `v2`. Also add these to AGENTS.md's *Gotchas*, each found during phase B (PR #71):
+  - **A job matrix renames its required check.** Adding `strategy.matrix` turns `verify Pester result step` into `verify Pester result step (<os>)`, so a ruleset requiring the plain name never sees it report. `self-test.yml` keeps the name with a summary job over the legs, rather than editing `protect-main`, which also covers `release/*`.
+  - **On Windows, git fixture repos in `TestDrive:` break Pester's cleanup.** git writes object files read-only, so the container fails after every test passed. Remove them with `Remove-Item -Force` in `AfterAll`.
+  - **A parameter typed `[System.Management.Automation.PSCustomObject]` rejects `[PSCustomObject] @{}`.** The value's runtime type is `PSObject`, so type such parameters `[System.Management.Automation.PSObject]`.
+  - **Never send a second command to a terminal running a long job.** It interrupted a mutation run part-way; check every mutated file is restored before trusting the tree.
 - [ ] **D8. Record the mechanism for `PS-MCS`** in ADR-0006's Consequences: what `mcssec-ops` would adopt unchanged, and that its `@main`-pinned consumers need an input switch or verification before merge, since there is no tag to repoint. *(AC11)*
   - Verify for D1–D8: markdownlint clean; every link resolves; ADRs follow the bullet style and dated Status line.
 
