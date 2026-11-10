@@ -138,7 +138,7 @@ Verification for every repo, read from the run artifacts, not log text:
 | F3 | PS.Log | artifact drops `Documentation/` | 91 |
 | F4 | PS.DCU | `PesterStrictMode = $true`; 3 renames; confirm the dev container image has `git` | 85 |
 | F5 | AWSAutomation | `PSScriptAnalyzerExcludeRules` (2 rules); 15 runtime modules now from the manifest | 444 |
-| F6 | PS.SSL | `PesterExcludeTag = 'Network'`; 22 renames | 346 ubuntu, 347 windows |
+| F6 | PS.SSL | `PesterExcludeTag = 'Network'`; 22 renames; inline `SuppressMessageAttribute` for `PSAvoidUsingConvertToSecureStringWithPlainText` in the `ConvertTo-PEM` and `Export-PFX` tests (fixture passwords) | 346 ubuntu, 347 windows |
 | F7 | SecurityTools | `ImportExcel` moves off `7.8.10`; per-leg scopes unchanged | 996 ubuntu, 21 windows |
 
 - [ ] F1. PS.GHOps
