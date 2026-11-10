@@ -112,8 +112,8 @@ Reviewed against the six Well-Architected pillars.
 ## ADR check
 
 - **ADR-0006 moves to Accepted**, citing the self-checkout spike (run [42090065876](https://github.com/jjohns-dev/PS.Log/actions/runs/42090065876)) and the 2026-11-09 shim spike, and amends its Decision: per-repo variation lives in `harness.psd1` and the manifest, not only in workflow inputs, because settings that change the build must also reach local runs.
-- **ADR-0002 is amended** with the major-version exception (Q5).
-- **A new ADR-0007: runtime modules float from the manifest; build tools are pinned centrally.** This is a fleet-wide dependency policy that outlives this spec, and it generalises a rule AWSAutomation records only for itself (its own ADR-0002).
+- **ADR-0002 is amended** with the major-version exception (Q5), by a new ADR-0007.
+- **A new ADR-0008: runtime modules float from the manifest; build tools are pinned centrally.** This is a fleet-wide dependency policy that outlives this spec, and it generalises a rule AWSAutomation records only for itself (its own ADR-0002).
 - **Feature-local, not ADRs:** strict mode (Q7), the lowercase test-file convention (Q4; recorded in AGENTS.md conventions), and the shim's internals.
 
 ## Decisions
