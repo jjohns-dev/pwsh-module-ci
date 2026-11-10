@@ -66,6 +66,9 @@ Nine items, in order. The ordering is not arbitrary and it is not a simple chain
 - [ ] **7 — [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20), move the harness**
   **Closes when** all four `Build/` files live in this repo, no consumer vendors a copy, the four inputs exist, and all seven repos are green with executed counts unchanged either side.
   **Why here:** Classification is complete; what remains is the move itself, and it should happen once. Gates Phase 6.
+- [ ] **7a — [#73](https://github.com/jjohns-dev/pwsh-module-ci/issues/73), shim runs a stale harness on a branch pin**
+  **Closes when** the shim resolves a branch ref to `origin/<branch>`, its tests cover a branch that moves after the first run as well as tags, SHAs and a missing ref, and the fix ships as `v2.0.1`.
+  **Why here:** Directly after #20, and deliberately not in it: `v2.0.0` stays exactly the code C5 proved. Found 2026-11-10 while recording the mechanism for `PS-MCS`. No jjohns-dev consumer is affected, since all pin tags or SHAs; it must land before `PS-MCS/mcssec-ops` adopts the harness. `mcssec-ops` is also moving from `@main` to a moving major tag, as here, which avoids the problem for its own consumers either way.
 - [ ] **8 — [#53](https://github.com/jjohns-dev/pwsh-module-ci/issues/53), implement the minimum**
   **Closes when** every repo satisfies the agreed minimum, the shared half is centralised, and all seven floors are recalculated from the new executed counts. Note that PS.DCU's counted total **falls**, because 42 of its current common tests are per-file encoding checks that the floor stops counting.
   **Why here:** **After #20, and must not overlap it.** #20's closing condition is that executed counts are unchanged; #53 deliberately changes which tests exist, so running them together makes it impossible to tell which one moved a count. The centralisation mechanism also already exists by then.

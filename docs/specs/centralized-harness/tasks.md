@@ -85,7 +85,7 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
 
 ## D. Records and docs
 
-- [ ] **D1. ADR-0006 to Accepted**, citing run [42090065876](https://github.com/jjohns-dev/PS.Log/actions/runs/42090065876) and the 2026-11-09 shim spike; amend its Decision for the shim, `harness.psd1` and the manifest. *(AC10)*
+- [x] **D1. ADR-0006 to Accepted**, citing run [42090065876](https://github.com/jjohns-dev/PS.Log/actions/runs/42090065876) and the 2026-11-09 shim spike; amend its Decision for the shim, `harness.psd1` and the manifest. *(AC10)* Also cites the C5 results.
 - [ ] **D2. Amend ADR-0002** with the major-version exception. *(Q5)*
 - [ ] **D3. New ADR-0007**: runtime modules float from the manifest, build tools pinned centrally.
 - [ ] **D4. `docs/test-integrity.md`**: add the three durable rules #20 asks to extract (`Run.Path` and a scalar `FileInfo`; an `Assert` on an undefined variable passes silently; a non-terminating `Write-Error` does fail a psake task).
@@ -107,7 +107,8 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
   - **Never send a second command to a terminal running a long job.** It interrupted a mutation run part-way; check every mutated file is restored before trusting the tree.
   - **`Invoke-ScriptAnalyzer -Recurse` descends into dot-folders**, so analysing a checkout root also reports `.harness/`. `Invoke-HarnessAnalysis` analyses each top-level item except `.harness` and `.git` instead.
   - **actionlint 1.7.12 rejects `job.workflow_repository` and `job.workflow_sha`**, though GitHub documents both. `.github/actionlint.yaml` ignores exactly those two names; remove it once a release includes [rhysd/actionlint#707](https://github.com/rhysd/actionlint/pull/707).
-- [ ] **D8. Record the mechanism for `PS-MCS`** in ADR-0006's Consequences: what `mcssec-ops` would adopt unchanged, and that its `@main`-pinned consumers need an input switch or verification before merge, since there is no tag to repoint. *(AC11)*
+- [x] **D8. Record the mechanism for `PS-MCS`** in ADR-0006's Consequences: what `mcssec-ops` would adopt unchanged, and that its `@main`-pinned consumers need an input switch or verification before merge, since there is no tag to repoint. *(AC11)*
+  - **Outcome:** recorded. Decided 2026-11-10 that `mcssec-ops` moves from `@main` to a moving major tag with immutable `vX.Y.Z` tags, as here, which removes the no-tag-to-repoint problem. Recording it found that the shim resolves a branch pin to a stale commit; tracked as [#73](https://github.com/jjohns-dev/pwsh-module-ci/issues/73), ROLLOUT item 7a, fixed in `v2.0.1` before `mcssec-ops` adopts.
   - Verify for D1–D8: markdownlint clean; every link resolves; ADRs follow the bullet style and dated Status line.
 
 ## E. Release
