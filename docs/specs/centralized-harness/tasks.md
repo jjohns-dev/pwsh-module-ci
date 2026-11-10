@@ -87,7 +87,7 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
 
 - [x] **D1. ADR-0006 to Accepted**, citing run [42090065876](https://github.com/jjohns-dev/PS.Log/actions/runs/42090065876) and the 2026-11-09 shim spike; amend its Decision for the shim, `harness.psd1` and the manifest. *(AC10)* Also cites the C5 results.
 - [x] **D2. Amend ADR-0002** with the major-version exception. *(Q5)* Done as [ADR-0007](../../adr/0007-replacing-what-runs-the-build-is-a-major.md), `Amends: ADR-0002`, since the ADR skill amends an accepted ADR with a new one; ADR-0002 carries the dated note.
-- [ ] **D3. New ADR-0008** (numbered 0007 before D2 took that number): runtime modules float from the manifest, build tools pinned centrally.
+- [x] **D3. New ADR-0008** (numbered 0007 before D2 took that number): runtime modules float from the manifest, build tools pinned centrally.
 - [ ] **D4. `docs/test-integrity.md`**: add the three durable rules #20 asks to extract (`Run.Path` and a scalar `FileInfo`; an `Assert` on an undefined variable passes silently; a non-terminating `Write-Error` does fail a psake task).
 - [ ] **D5. `docs/dependency-stack.md`**: build tools pinned centrally; runtime modules from the manifest.
 - [ ] **D6. Delete `docs/shared-ci-standards.md`**, as its own header instructs.
