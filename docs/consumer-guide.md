@@ -98,8 +98,6 @@ jobs:
       checks: write
 ```
 
-The default is `'["ubuntu-latest", "windows-latest", "macos-latest"]'`.
-
 **A JSON array of objects.** Use this when runners need *different* values — a different test scope, a different floor, or both. Each object must carry `os`; `pesterScope` and `minTests` are optional and apply only to that leg.
 
 ```yaml
@@ -152,13 +150,11 @@ jobs:
       checks: write
 ```
 
-`min-tests` is a floor, not an exact count, so adding tests never fails a run. Derive it from the **executed** count, using the lowest across your runner OSes when they differ — Pester's JUnitXml routes both skipped and tag-excluded tests to `disabled` while still counting them in `tests`, so a repo that skips anything has an executed count below its collected one. It catches a large drop rather than a single lost file, and it only stays useful if you raise it as the suite grows. The full procedure is in [`test-integrity.md`](test-integrity.md#deriving-a-min-tests-floor).
+`min-tests` is a floor, not an exact count, so adding tests never fails a run. Derive it from the **executed** count, using the lowest across your runner OSes when they differ. It catches a large drop rather than a single lost file, and it only stays useful if you raise it as the suite grows. The full procedure is in [`test-integrity.md`](test-integrity.md#deriving-a-min-tests-floor).
 
 When the lowest-across-OSes compromise costs too much — one leg running a fraction of the suite, so a single floor is either far too low for the other leg or fails it outright — give each leg its own `minTests` through the object form of `os-matrix`, described under [Runner matrix](#runner-matrix). A leg that declares no `minTests` falls back to the workflow-wide `min-tests`.
 
 The floor is compared against each result file separately, so it assumes one `Test-*.xml` per run, which is what the harness writes.
-
-The root `tests` count includes tests excluded by `Filter.ExcludeTag`; Pester reports them in the root `disabled` attribute without a `<testcase>` element. A floor therefore does not catch a filter that starts excluding more of the suite.
 
 ## The build harness
 
@@ -235,7 +231,7 @@ An unknown key, or a value of the wrong type, fails the build, so a misspelt set
 Invoke-Pester -Path ./Tests -TagFilter 'Network' -Output Detailed
 ```
 
-This works when the test files import the module themselves, from `$env:BHPSModuleManifest` when set and otherwise the manifest at the repo root, as PS.SSL's do.
+This works because PS.SSL's test files import the module themselves: `$env:BHPSModuleManifest` when it is set, otherwise the manifest at the repo root. A repo whose tests rely on the harness to import the module needs the same fallback.
 
 ### Dependencies
 

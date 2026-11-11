@@ -1,17 +1,15 @@
 # Dependency stack
 
-The designed set of build and test dependencies for the module repos, and why each one is in it.
+The build and test dependencies for the module repos, and why each one is in it.
 
-**This is the single place the stack is defined.** Since `v2.0.0` the build tools are declared once, in this repo's [`Build/depend.psd1`](../Build/depend.psd1), and every consumer on `@v2` inherits them through the harness ([#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20), [ADR-0008](adr/0008-runtime-modules-float-build-tools-pinned.md)). A consumer still on `@v1` carries its own `Build/depend.psd1` until its migration PR deletes it; the drift recorded below is the state before those migrations.
-
-This file is **not** interim. It outlives #20, because the question "what do we depend on and why" does not go away once the files stop being copy-pasted.
+**This file explains the stack; [`Build/depend.psd1`](../Build/depend.psd1) declares it.** From `v2.0.0` every consumer on `@v2` inherits those pins through the harness ([ADR-0008](adr/0008-runtime-modules-float-build-tools-pinned.md)). A consumer still on `@v1` carries its own `Build/depend.psd1` until its migration PR deletes it. This file is not interim: the question of what we depend on, and why, outlives #20.
 
 ## The stack
 
 | Tool | Role | Pin | Why it is in the set |
 | ---- | ---- | --- | -------------------- |
 | `Pester` | test runner | `6.2.0` | No alternative worth considering in PowerShell. 6.x renders a `CommandInfo` passed to `-ForEach` as its full type name, so every affected test is renamed unless names are passed instead — see the note below |
-| `psake` | build orchestration | `5.0.4` | Incumbent. Under review against Sampler — see *Under evaluation* |
+| `psake` | build orchestration | `5.0.4` | Incumbent. Under review against Sampler and PowerShellBuild — see *Under evaluation* |
 | `PSScriptAnalyzer` | static analysis | `1.25.0` | The only real linter for PowerShell. Also drives the SARIF upload to the Security tab |
 | `PSResourceGet` | dependency resolution | runner-supplied | Replaced `PSDepend` fleet-wide. Ships with the runner images, so it adds nothing to install |
 | `ConvertToSARIF` | PSSA output conversion | unpinned | Only consumed by `pssa-sarif.yml`. Exists solely to feed the Security tab |
@@ -19,7 +17,7 @@ This file is **not** interim. It outlives #20, because the question "what do we 
 Deliberately **not** in the set:
 
 - **`PSDepend`** — removed fleet-wide. It required bootstrapping itself before it could resolve anything, and the registration-state flakiness tracked in [#27](https://github.com/jjohns-dev/pwsh-module-ci/issues/27) was the trigger. `Install-PSResource` needs no bootstrap.
-- **`BuildHelpers`** — **absent from all ten module repos across both orgs**, verified 2026-11-05. It was a real dependency in `PS.Log` and `PS.ETL` and vestigial elsewhere; both were converged under [#24](https://github.com/jjohns-dev/pwsh-module-ci/issues/24), now closed. The `$env:BH*` variable names survive as a naming fossil — 526 live sites, each repo assigning them itself — and were deliberately left in place, since renaming them changes no behaviour and [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20) may replace the files that carry them.
+- **`BuildHelpers`** — **absent from all ten module repos across both orgs**, verified 2026-11-05. It was a real dependency in `PS.Log` and `PS.ETL` and vestigial elsewhere; both were converged under [#24](https://github.com/jjohns-dev/pwsh-module-ci/issues/24), now closed. The `$env:BH*` variable names survive as a naming fossil: the harness sets them alongside its own `$env:HARNESS_*` names because consumers' tests still read them.
 - **`PlatyPS`** — **removed 2026-11-04** by [AWSAutomation#106](https://github.com/jjohns-dev/AWSAutomation/pull/106). It had been pinned at `0.14.2` in that repo's `depend.psd1` and **never invoked**: verified 2026-11-02 across all 69 text files there, with no `New-MarkdownHelp`, `New-ExternalHelp` or `Update-MarkdownHelp`; no `en-US/`, no `*-help.xml`, no markdown help; no docs task in `build.psake.ps1`; and `HelpInfoURI` commented out in the manifest. All three mentions were declarative — the pin, a line in `AGENTS.md`, and ADR-0002 — so it was installed on every CI run and did nothing.
 - **A mutation-testing tool** — none adopted. See *Under evaluation*.
 
@@ -42,7 +40,7 @@ Two mechanical consequences worth knowing:
 
 ## Drift before the harness, measured 2026-11-06
 
-Kept as the record of why the stack moved into the harness. Each repo leaves this table in its migration PR, when its `depend.psd1` is deleted and it inherits the pins above.
+The record of why the stack moved into the harness. It is not a sweep to run: each repo's row is resolved by its migration PR, which deletes its `depend.psd1` so the harness's pins apply.
 
 | Repo | Pester | psake | PSScriptAnalyzer | Other |
 | ---- | ------ | ----- | ---------------- | ----- |
@@ -56,19 +54,18 @@ Kept as the record of why the stack moved into the harness. Each repo leaves thi
 
 One thing this surfaces:
 
-- **Two PSScriptAnalyzer versions analyse the same code.** `Build/depend.psd1` pins 1.24.0 for the gating `Analyze` task in five of seven repos, while the reusable `pssa-sarif.yml` installs 1.25.0. In those five the build gate and the Security tab run different analyzers, and can legitimately disagree about the same file. `PS.Log` and `AWSAutomation` are at 1.25.0 and are the repos where they match — the consistent ones, not the outliers they look like.
+- **Two PSScriptAnalyzer versions analyse the same code** until each repo migrates. `Build/depend.psd1` pins 1.24.0 for the gating `Analyze` task in five of seven repos, while `pssa-sarif.yml` installs 1.25.0, so in those five the build gate and the Security tab can disagree about the same file. `PS.Log` and `AWSAutomation` are the consistent ones, not the outliers they look like.
 
 **Pester and psake are uniform fleet-wide** at 6.2.0 and 5.0.4. `AWSAutomation` was the last repo on psake 4.9.1 and moved to 5.0.4 in [#106](https://github.com/jjohns-dev/AWSAutomation/pull/106), which also took it to PSScriptAnalyzer 1.25.0 and dropped its unused `PlatyPS` pin.
 
-**This is not a sweep to run.** Aligning seven `depend.psd1` files by hand reproduces the exact problem #20 exists to end. Each migration PR resolves its row by deleting that file; the harness's pins then apply, including PSScriptAnalyzer 1.25.0 for the five repos still on 1.24.0.
-
 ## Under evaluation
 
-Neither is adopted. Both are independent decisions at different layers — adopting one says nothing about the other, and neither blocks the other.
+None is adopted. `Sampler` and `PowerShellBuild` are alternatives to each other, for the build layer; `PSMutant` is at the test-quality layer, so adopting either kind says nothing about the other.
 
 | Candidate | Layer | Issue | Status |
 | --------- | ----- | ----- | ------ |
 | `Sampler` | build orchestration, would replace psake | [#19](https://github.com/jjohns-dev/pwsh-module-ci/issues/19) | Deferred, not rejected. Sampler is Invoke-Build underneath, and the DSC Community has standardised on it. #19 records three things its defaults do not provide that must not be lost |
+| `PowerShellBuild` | shared psake tasks distributed as a module | [#19](https://github.com/jjohns-dev/pwsh-module-ci/issues/19#issuecomment-6775962578) | Not adopted. The closest match to the harness, but its README calls it a work in progress (0.8.2), and it calls BuildHelpers' `Set-BuildEnvironment` |
 | `PSMutant` | test quality | [#34](https://github.com/jjohns-dev/pwsh-module-ci/issues/34) | Unevaluated. 0.9.1, published 2026-10-26. Mutation testing is the established answer to assertions that cannot fail, which is the defect class this fleet has spent two weeks fixing by hand |
 
 **A build framework will not improve test quality**, and expecting it to is a category error. #19 records that Sampler *"would have prevented none of"* the test-authoring defects that prompted this work. Build orchestrators sequence tasks; whether an assertion can fail is a different layer.
