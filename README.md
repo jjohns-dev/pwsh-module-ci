@@ -1,6 +1,6 @@
 # pwsh-module-ci
 
-Reusable GitHub Actions workflows and the shared build harness for [johnsarie27](https://github.com/johnsarie27)'s PowerShell module repos: PS.Log, PS.GHOps, PS.GitHub, PS.SSL, PS.DCU, AWSAutomation and SecurityTools.
+Reusable GitHub Actions workflows and the shared build harness for [johnsarie27](https://github.com/johnsarie27)'s PowerShell module repos: PS.Log, PS.GHOps, PS.GitHub, PS.SSL, PS.DCU, AWSAutomation, SecurityTools and PS.YNAB.
 
 From `v2`, every consumer's build runs from the harness in [`Build/`](Build): staging, PSScriptAnalyzer, Pester and packaging, with the build tools pinned once here. Each consumer keeps only its caller workflows, an identical `Build/build.ps1` shim for local runs, and an optional `Build/harness.psd1` for the few settings that genuinely differ. The workflows also centralize the third-party action pins (`actions/checkout`, `actions/upload-artifact`, `dorny/test-reporter`, `github/codeql-action`, `softprops/action-gh-release`), so a version bump happens once here instead of once per consumer repo.
 
