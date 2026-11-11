@@ -28,6 +28,7 @@ Consequences for how you work:
 | `.github/workflows/actionlint.yml` | This repo's own CI; lints the workflows above |
 | `.github/workflows/self-test.yml` | This repo's own CI; runs `tests/` on ubuntu and windows |
 | `.github/actionlint.yaml` | actionlint config; ignores only the `job.workflow_*` properties actionlint 1.7.12 does not know ([rhysd/actionlint#707](https://github.com/rhysd/actionlint/pull/707)) |
+| `.github/release.yml` | Label categories for this repo's generated release notes; not a workflow |
 | `Build/` | The harness: `build.ps1` entry point (`-ProjectPath`), `build.psake.ps1` tasks, `Harness.Functions.ps1`, pinned `depend.psd1`, shared `PSScriptAnalyzerSettings.psd1` |
 | `templates/Build/` | The consumer shim `build.ps1`, byte-identical in every consumer, and the optional `harness.psd1` sample |
 | `tests/` | Pester suites for the harness, the shim and the workflows' `run:` blocks, their fixtures, and the runner |
@@ -68,7 +69,12 @@ Nothing automates this; `release.yml` is for consumers and never runs here. Ever
 ```pwsh
 git tag -a v1.3.0 -m 'v1.3.0' <commit>
 git push origin v1.3.0
+gh release create v1.3.0 --verify-tag --title 'v1.3.0' --notes-file <notes.md>
 ```
+
+Every `vX.Y.Z` gets a GitHub release: it is where consumers read what changed, and what a Releases watch notifies on. List the PRs since the previous tag *on the same major*, by hand or with `--generate-notes --notes-start-tag <previous vX.Y.Z>`, which groups them by the labels in `.github/release.yml`; the default start tag is undocumented and may cross majors while `v1` and `v2` are both live. A `v1.6.x` fix takes `--latest=false`. Moving tags (`v1`, `v2`) get no release.
+
+Releases are immutable (repo setting, enabled 2026-11-10): a published release locks its tag, and deleting the release does not free the tag name. Notes, title and the latest flag stay editable.
 
 Moving `v1` is a separate act, only after every consumer is confirmed:
 
@@ -84,7 +90,7 @@ Two non-overlapping tag rulesets block updating and deleting tags (ADR-0003):
 
 | Ruleset | Covers | Bypass |
 | ------- | ------ | ------ |
-| `protect-release-tags` | `v*` excluding `v*.*.*`: `v1`, and `v2` by pattern (confirm via the API when `v2` is first cut) | repository admin |
+| `protect-release-tags` | `v*` excluding `v*.*.*`: `v1`, `v2` | repository admin |
 | `protect-version-tags` | `v*.*.*` | none, owner included |
 
 So only an admin can move a major tag; anyone else gets `GH013: Cannot update this protected ref`. Never disable a ruleset or widen a bypass to get a push through. A `vX.Y.Z` cut on the wrong commit is never moved: cut the next patch, check no consumer pins the bad one, and never move the major tag onto it.

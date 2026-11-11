@@ -114,8 +114,9 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
 
 ## E. Release
 
-- [ ] **E1. Cut `v2.0.0`** as an annotated tag on #72's squash-merge commit on `main`, and create the moving `v2` tag on it. C5 proved `a3e5f5c`, which a squash merge does not put on `main`, so first confirm `git diff a3e5f5c <merge> -- .github Build templates tests` is empty: the tagged code is then exactly the code C5 ran.
+- [x] **E1. Cut `v2.0.0`** as an annotated tag on #72's squash-merge commit on `main`, and create the moving `v2` tag on it. C5 proved `a3e5f5c`, which a squash merge does not put on `main`, so first confirm `git diff a3e5f5c <merge> -- .github Build templates tests` is empty: the tagged code is then exactly the code C5 ran.
   - Verify: `git ls-remote origin 'refs/tags/v2^{}'` shows that commit; confirm via the API that `protect-release-tags` now covers `v2` (AGENTS.md says its pattern does; unverified until now).
+  - **Outcome, 2026-11-10:** annotated `v2.0.0` and `v2` on `b7be996`, whose code is identical to `a3e5f5c`; both read back from the remote at `b7be996`. Each matches exactly one ruleset, read via the API: `v2` is covered by `protect-release-tags` (active, update and deletion blocked, admin bypass) and `v2.0.0` by `protect-version-tags` (active, no bypass). Immutable releases were enabled and the [`v2.0.0` release](https://github.com/jjohns-dev/pwsh-module-ci/releases/tag/v2.0.0) published with hand-written notes, re-created once so it is immutable; `v1.6.1` got one too, not marked latest. AGENTS.md now makes a release part of every `vX.Y.Z`; older `v1.x` tags were not backfilled.
   - Carried nit from the #72 review, deliberately not fixed before the tag: `pssa-sarif.yml` reads `depend.psd1` with `Import-PowerShellDataFile -Path` where the rest of the code uses `-LiteralPath`. Harmless for that fixed path; fix in the next change.
 
 ## F. Migrations, in order, one PR per repo
