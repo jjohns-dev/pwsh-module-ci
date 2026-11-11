@@ -85,13 +85,14 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
 
 ## D. Records and docs
 
-- [ ] **D1. ADR-0006 to Accepted**, citing run [42090065876](https://github.com/jjohns-dev/PS.Log/actions/runs/42090065876) and the 2026-11-09 shim spike; amend its Decision for the shim, `harness.psd1` and the manifest. *(AC10)*
-- [ ] **D2. Amend ADR-0002** with the major-version exception. *(Q5)*
-- [ ] **D3. New ADR-0007**: runtime modules float from the manifest, build tools pinned centrally.
-- [ ] **D4. `docs/test-integrity.md`**: add the three durable rules #20 asks to extract (`Run.Path` and a scalar `FileInfo`; an `Assert` on an undefined variable passes silently; a non-terminating `Write-Error` does fail a psake task).
-- [ ] **D5. `docs/dependency-stack.md`**: build tools pinned centrally; runtime modules from the manifest.
-- [ ] **D6. Delete `docs/shared-ci-standards.md`**, as its own header instructs.
-- [ ] **D7a. Consumer guide, `docs/consumer-guide.md`.** Move the consumer-facing material out of `README.md` (Usage, Runner matrix, Pester result verification, Minimum test count) into its own document, and leave `README.md` as an overview with a link to it. Update the moved content for `v2`, and add what a consumer needs to adopt the harness:
+- [x] **D1. ADR-0006 to Accepted**, citing run [42090065876](https://github.com/jjohns-dev/PS.Log/actions/runs/42090065876) and the 2026-11-09 shim spike; amend its Decision for the shim, `harness.psd1` and the manifest. *(AC10)* Also cites the C5 results.
+- [x] **D2. Amend ADR-0002** with the major-version exception. *(Q5)* Done as [ADR-0007](../../adr/0007-replacing-what-runs-the-build-is-a-major.md), `Amends: ADR-0002`, since the ADR skill amends an accepted ADR with a new one; ADR-0002 carries the dated note.
+- [x] **D3. New ADR-0008** (numbered 0007 before D2 took that number): runtime modules float from the manifest, build tools pinned centrally.
+- [x] **D4. `docs/test-integrity.md`**: add the three durable rules #20 asks to extract (`Run.Path` and a scalar `FileInfo`; an `Assert` on an undefined variable passes silently; a non-terminating `Write-Error` does fail a psake task).
+- [x] **D5. `docs/dependency-stack.md`**: build tools pinned centrally; runtime modules from the manifest.
+- [x] **D6. Delete `docs/shared-ci-standards.md`**, as its own header instructs.
+  - **Outcome:** two of its five reference rows were obsolete; the three about help-suite pieces, which #20 does not carry, were [preserved on #53](https://github.com/jjohns-dev/pwsh-module-ci/issues/53#issuecomment-6780926659) before deletion.
+- [x] **D7a. Consumer guide, `docs/consumer-guide.md`.** Move the consumer-facing material out of `README.md` (Usage, Runner matrix, Pester result verification, Minimum test count) into its own document, and leave `README.md` as an overview with a link to it. Update the moved content for `v2`, and add what a consumer needs to adopt the harness:
   - the three caller workflows on `@v2`, including the release caller's `pull_request` trigger with `dry-run`, and that `psscriptanalyzer-settings-path` is gone;
   - the shim: what it does, where it caches the harness, running from a clone instead, and the drift warning;
   - `Build/harness.psd1`: its three keys, and that an unknown key fails the build;
@@ -100,14 +101,15 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
   - the task names and properties a consumer can pass;
   - running tests the repo excludes by tag: the harness always applies `PesterExcludeTag` and has no override, so run them with Pester directly, e.g. PS.SSL's `Invoke-Pester -Path ./Tests -TagFilter 'Network' -Output Detailed` from the repo root (its test files import `$env:BHPSModuleManifest` when set, else the source manifest at the repo root).
   - Verify: no content lost in the move (`git diff -w` of the moved sections against `README.md` at the base); every in-page anchor that moved still resolves; `AGENTS.md`'s layout row for `README.md` points at the guide.
-- [ ] **D7b. `AGENTS.md`** (maintainers): layout, two major tags, and how to cut and move `v2`. Also add these to AGENTS.md's *Gotchas*, each found during phase B (PR #71) or phase C (PR #72):
+- [x] **D7b. `AGENTS.md`** (maintainers): layout, two major tags, and how to cut and move `v2`. Also add these to AGENTS.md's *Gotchas*, each found during phase B (PR #71) or phase C (PR #72):
   - **A job matrix renames its required check.** Adding `strategy.matrix` turns `verify Pester result step` into `verify Pester result step (<os>)`, so a ruleset requiring the plain name never sees it report. `self-test.yml` keeps the name with a summary job over the legs, rather than editing `protect-main`, which also covers `release/*`.
   - **On Windows, git fixture repos in `TestDrive:` break Pester's cleanup.** git writes object files read-only, so the container fails after every test passed. Remove them with `Remove-Item -Force` in `AfterAll`.
   - **A parameter typed `[System.Management.Automation.PSCustomObject]` rejects `[PSCustomObject] @{}`.** The value's runtime type is `PSObject`, so type such parameters `[System.Management.Automation.PSObject]`.
   - **Never send a second command to a terminal running a long job.** It interrupted a mutation run part-way; check every mutated file is restored before trusting the tree.
   - **`Invoke-ScriptAnalyzer -Recurse` descends into dot-folders**, so analysing a checkout root also reports `.harness/`. `Invoke-HarnessAnalysis` analyses each top-level item except `.harness` and `.git` instead.
   - **actionlint 1.7.12 rejects `job.workflow_repository` and `job.workflow_sha`**, though GitHub documents both. `.github/actionlint.yaml` ignores exactly those two names; remove it once a release includes [rhysd/actionlint#707](https://github.com/rhysd/actionlint/pull/707).
-- [ ] **D8. Record the mechanism for `PS-MCS`** in ADR-0006's Consequences: what `mcssec-ops` would adopt unchanged, and that its `@main`-pinned consumers need an input switch or verification before merge, since there is no tag to repoint. *(AC11)*
+- [x] **D8. Record the mechanism for `PS-MCS`** in ADR-0006's Consequences: what `mcssec-ops` would adopt unchanged, and that its `@main`-pinned consumers need an input switch or verification before merge, since there is no tag to repoint. *(AC11)*
+  - **Outcome:** recorded. Decided 2026-11-10 that `mcssec-ops` moves from `@main` to a moving major tag with immutable `vX.Y.Z` tags, as here, which removes the no-tag-to-repoint problem. Recording it found that the shim resolves a branch pin to a stale commit; tracked as [#73](https://github.com/jjohns-dev/pwsh-module-ci/issues/73), ROLLOUT item 7a, fixed in `v2.0.1` before `mcssec-ops` adopts.
   - Verify for D1–D8: markdownlint clean; every link resolves; ADRs follow the bullet style and dated Status line.
 
 ## E. Release

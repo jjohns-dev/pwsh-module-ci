@@ -4,17 +4,17 @@ Guidance for AI coding agents working in `pwsh-module-ci`.
 
 ## What this repo is
 
-Reusable GitHub Actions workflows called by seven PowerShell module repos: PS.Log, PS.GHOps, PS.GitHub, PS.SSL, PS.DCU, AWSAutomation, SecurityTools. It contains no application code and no PowerShell module — only workflow definitions, their pinned action versions, and the docs describing both.
+Reusable GitHub Actions workflows called by seven PowerShell module repos: PS.Log, PS.GHOps, PS.GitHub, PS.SSL, PS.DCU, AWSAutomation, SecurityTools. From `v2` it also hosts the **build harness** in `Build/` that runs every consumer's stage, analyze, test and package tasks, plus the consumer shim template in `templates/`. It contains no application code and no PowerShell module of its own.
 
 SecurityTools is the only consumer of the object form of `os-matrix`: each leg carries its own `pesterScope` and `minTests`. It adopted `ci.yml` in #21 (SecurityTools#169); a change to how `ci.yml` handles either key must be checked against it.
 
 ## Blast radius — read before editing a workflow
 
-Consumers pin to the moving `@v1` tag, so anything merged here and tagged reaches every consumer's CI with no review on their side. A mistake in `ci.yml` breaks the whole fleet at once, and there is no staging environment.
+Consumers pin to a moving major tag, `@v1` or `@v2`, so anything merged here and tagged reaches every consumer on that major with no review on their side. A mistake in `ci.yml` or in the harness breaks the whole fleet at once, and there is no staging environment. The workflows check the harness out at their own commit (`job.workflow_sha`), so a harness change ships exactly when the workflow tag moves.
 
 Consequences for how you work:
 
-- Never move the `v1` tag as part of landing a change. Land the change, cut `vX.Y.Z`, and move `v1` only after consumers are confirmed.
+- Never move a major tag as part of landing a change. Land the change, cut `vX.Y.Z`, and move the major tag only after consumers are confirmed.
 - Treat a change that can flip a consumer's CI from green to red as a rollout, not a commit. Pin consumers to the immutable `@vX.Y.Z` first.
 - Verify a behavior change in **both** directions: that it fires when it should *and* stays quiet when it should. A check that never fires looks identical to a check that passes.
 
@@ -26,12 +26,16 @@ Consequences for how you work:
 | `.github/workflows/release.yml` | Reusable: build artifact, cut a GitHub release |
 | `.github/workflows/pssa-sarif.yml` | Reusable: PSScriptAnalyzer findings to the Security tab |
 | `.github/workflows/actionlint.yml` | This repo's own CI; lints the workflows above |
-| `.github/workflows/self-test.yml` | This repo's own CI; exercises the shipped `run:` blocks with real logic |
-| `tests/` | Pester suites for the `run:` blocks with real logic, their fixtures, and the runner |
+| `.github/workflows/self-test.yml` | This repo's own CI; runs `tests/` on ubuntu and windows |
+| `.github/actionlint.yaml` | actionlint config; ignores only the `job.workflow_*` properties actionlint 1.7.12 does not know ([rhysd/actionlint#707](https://github.com/rhysd/actionlint/pull/707)) |
+| `Build/` | The harness: `build.ps1` entry point (`-ProjectPath`), `build.psake.ps1` tasks, `Harness.Functions.ps1`, pinned `depend.psd1`, shared `PSScriptAnalyzerSettings.psd1` |
+| `templates/Build/` | The consumer shim `build.ps1`, byte-identical in every consumer, and the optional `harness.psd1` sample |
+| `tests/` | Pester suites for the harness, the shim and the workflows' `run:` blocks, their fixtures, and the runner |
 | `docs/adr/` | Architecture Decision Records, Nygard format |
+| `docs/specs/` | Spec-driven work: requirements, design and tasks per feature |
 | `docs/test-integrity.md` | Why a suite can be green and prove nothing: test-design decisions, vacuity traps, and the `min-tests` floor procedure. Permanent |
-| `docs/shared-ci-standards.md` | Which repo holds the reference version of each copy-pasted file. Interim; #20 removes the need for it |
-| `README.md` | Consumer-facing usage and inputs |
+| `README.md` | Overview, workflows and versioning; links the consumer guide |
+| `docs/consumer-guide.md` | Consumer-facing usage: callers, inputs, the harness's repo layout, `harness.psd1`, dependencies, local runs, migrating from `v1` |
 | `ROLLOUT.md` | Index and running order for the in-flight cross-repo batch. Temporary; it disclaims its own authority — where it and an issue disagree, the issue wins. Deleted in its own PR when the batch ends |
 
 The three reusable workflows are `on: workflow_call` only. `actionlint.yml` and `self-test.yml` are the only workflows that run on this repo's own pushes and PRs.
@@ -45,25 +49,28 @@ The three reusable workflows are `on: workflow_call` only. `actionlint.yml` and 
 - **Conventional commit subjects** — `feat(ci):`, `docs(adr):`, `ci:`. Reference the tracking issue in the body, not the subject.
 - **Sign all commits.** Never disable signing to get a commit through.
 - Do not add a `.github/copilot-instructions.md`; this file is loaded natively.
+- **`templates/Build/build.ps1` is fleet-identical.** Any change to it is a change to every consumer's copy; the harness warns on drift but does not fail. Consumer test files are lowercase, `*.tests.ps1` and `*.tests.windows.ps1` (design Q4); the consumer-facing rules are in `docs/consumer-guide.md`.
 
 ## Versioning
 
-Semver tags plus one moving tag, `v1`, tracking the latest non-breaking release. Consumers normally pin `@v1`. While staging a release that can change CI outcomes they pin the **immutable** `vX.Y.Z` instead, so the dependency is frozen while they migrate, then repoint to `@v1` once `v1` has moved. There is deliberately no moving `vX.Y` tag — a staging pin that moves underneath an in-flight migration defeats the point of staging. Leaving a consumer pinned is debt: it stops receiving the centralized action bumps this repo exists to deliver.
+Semver tags plus one moving tag per major. Two majors are live while the fleet migrates: **`v2`** runs the shared harness, and **`v1`** stays on `v1.6.x` for consumers that still vendor their own `Build/`. Replacing what runs a consumer's build is a major even when the call still works (ADR-0007), which is why the harness is `v2`. A consumer migrates by repointing all three callers to `@v2` in one PR; `v1` is retired after the last one.
 
-"Breaking" means the consumer's **call** stops working, not its **build** stops passing — see ADR-0002. Removing an input no consumer passes is a minor; removing one any consumer passes, or renaming a job (which silently un-gates branch protection), is a `v2`. A change that turns a wrongly-green build red is not breaking, and is staged through an immutable `vX.Y.Z` pin instead. Verify which you have by checking the seven consumer repos, and record the result in the PR.
+`main` carries `v2`. A `v1` fix is cut from the **`release/v1`** branch (at `v1.6.1`, `b40b9c8`; covered by `protect-main`), never from `main`, and released as `v1.6.x`.
+
+Consumers normally pin the major tag; while staging a release that can change CI outcomes they pin the immutable `vX.Y.Z`, then repoint once the major tag has moved. There is deliberately no moving `vX.Y` tag, and a consumer left pinned stops receiving the centralized action bumps (ADR-0002).
+
+"Breaking" otherwise means the consumer's **call** stops working, not its **build** stops passing (ADR-0002): removing an input any consumer passes, or renaming a job (which silently un-gates branch protection), is a new major; removing an input no consumer passes is a minor; turning a wrongly-green build red is not breaking. Verify which you have against the seven consumer repos and record it in the PR.
 
 ### Cutting a release
 
-Nothing automates this. `release.yml` is a reusable workflow *for consumers*; it never runs here, and there is no tagging pipeline in this repo.
-
-Every existing tag is **annotated**, including `v1`. Keep it that way — the ref-SHA gotcha below assumes it.
+Nothing automates this; `release.yml` is for consumers and never runs here. Every tag is **annotated**; keep it that way. The examples use `v1`; `v2` works the same way.
 
 ```pwsh
 git tag -a v1.3.0 -m 'v1.3.0' <commit>
 git push origin v1.3.0
 ```
 
-Moving `v1` is a separate, deliberate act performed only after every consumer is confirmed, never bundled with cutting the release:
+Moving `v1` is a separate act, only after every consumer is confirmed:
 
 ```pwsh
 git fetch origin --tags --force
@@ -73,24 +80,24 @@ git push --force origin v1
 git ls-remote origin 'refs/tags/v1^{}'   # must show the target commit
 ```
 
-Two tag rulesets block updating and deleting tags, and their targets do not overlap (ADR-0003):
+Two non-overlapping tag rulesets block updating and deleting tags (ADR-0003):
 
 | Ruleset | Covers | Bypass |
 | ------- | ------ | ------ |
-| `protect-release-tags` | `v*` excluding `v*.*.*`, i.e. `v1` | repository admin |
+| `protect-release-tags` | `v*` excluding `v*.*.*`: `v1`, and `v2` by pattern (confirm via the API when `v2` is first cut) | repository admin |
 | `protect-version-tags` | `v*.*.*` | none, owner included |
 
-The `v1` force-push must therefore come from an admin; anyone else gets `GH013: Cannot update this protected ref`. Do not disable either ruleset or widen a bypass to get a push through.
-
-A `vX.Y.Z` tag can never be moved or deleted. If one is cut on the wrong commit, cut the next patch version instead, check no consumer is pinned to the bad one, and never move `v1` onto it.
+So only an admin can move a major tag; anyone else gets `GH013: Cannot update this protected ref`. Never disable a ruleset or widen a bypass to get a push through. A `vX.Y.Z` cut on the wrong commit is never moved: cut the next patch, check no consumer pins the bad one, and never move the major tag onto it.
 
 ## Validating a change
 
 `actionlint` checks workflow syntax, expression validity, and (via shellcheck) `run:` blocks — it does **not** execute anything.
 
-`tests/` holds a Pester suite for each of the three `run:` blocks with real logic, all extracted from the workflow YAML rather than copied: `VerifyPesterResults.Tests.ps1` runs the `Verify Pester results` body against the fixtures in `tests/fixtures/` and asserts that `ci.yml` and `release.yml` carry it identically; `TestStep.Tests.ps1` runs `ci.yml`'s Test step against a stub `build.ps1` to prove an empty scope omits `-Properties` rather than passing it empty; `Normalize.Tests.ps1` runs the `normalize` job's step, including the single-entry `os-matrix` that `PS.Log` depends on. `WorkflowStep.Helpers.ps1` extracts a step body by name or id and runs it in a child `pwsh`. Extracting from the YAML is deliberate: the code under test is then the code that ships, by construction.
+`tests/` holds Pester suites for the harness and for the three `run:` blocks with real logic. The workflow suites extract the step body from the workflow YAML rather than copying it: `VerifyPesterResults.Tests.ps1` runs the `Verify Pester results` body against the fixtures in `tests/fixtures/` and asserts that `ci.yml` and `release.yml` carry it identically; `TestStep.Tests.ps1` runs `ci.yml`'s Test step against a stub `.harness/Build/build.ps1` to prove an empty scope omits `-Properties` rather than passing it empty; `Normalize.Tests.ps1` runs the `normalize` job's step, including the single-entry `os-matrix` that `PS.Log` depends on. `WorkflowStep.Helpers.ps1` extracts a step body by name or id and runs it in a child `pwsh`. Extracting from the YAML is deliberate: the code under test is then the code that ships, by construction.
 
-Run it with `pwsh -File tests/Invoke-VerificationTest.ps1`. It needs `powershell-yaml` 0.4.12 and Pester 6.2.0, which `self-test.yml` installs at pinned versions; a failed import stops the run with a GitHub error annotation naming the module and the reason. The job, `verify Pester result step`, is a **required check** on `main`.
+The harness suites: `Harness.Tests.ps1` covers `Harness.Functions.ps1` (project resolution, `harness.psd1` validation, dependency resolution, analyzer settings and the `.harness` exclusion); `HarnessTasks.Tests.ps1` runs real psake tasks in a child `pwsh` against fixture modules in `TestDrive:`; `Shim.Tests.ps1` runs the template shim against local git origins; `Workflows.Tests.ps1` checks the three workflows' structure (harness checkout at `job.workflow_sha` without credentials, no call to a consumer's shim, the dry-run gate).
+
+Run it with `pwsh -File tests/Invoke-VerificationTest.ps1`. It needs `powershell-yaml` 0.4.12, Pester 6.2.0 and the harness's build tools, which `self-test.yml` installs at pinned versions; a failed import stops the run with a GitHub error annotation naming the module and the reason. `self-test.yml` runs it on ubuntu and windows as `verify Pester (<os>)`, and a summary job named `verify Pester result step` passes only when every leg did. That summary name is the **required check** on `main` and `release/*`.
 
 Every case asserts a **direction** — some must make the step fail and some must leave it quiet — because a check that never fires is indistinguishable from one that passes. When you add a case, add its opposite too.
 
@@ -102,19 +109,26 @@ The workflow pins actionlint `1.7.12` with a SHA256 check. Match that version lo
 
 ## Gotchas that have bitten here
 
-- **`#Requires -Modules` silently discards a script's exit code under `pwsh -File`.** A script that calls `exit 1` exits `0`, so a CI gate invoking it is permanently green. `#Requires -Version` is unaffected, and `pwsh -Command "& ./script.ps1"` propagates correctly. `tests/Invoke-VerificationTest.ps1` therefore uses `Import-Module` and says so in its `.NOTES`; do not "correct" it back to the house `#Requires` convention. Verified on PowerShell 7.6.6.
-- **Under `shell: pwsh`, a step exits with whatever `$LASTEXITCODE` holds.** GitHub invokes the script as `pwsh -command ". '<file>'"`, so a stale non-zero `$LASTEXITCODE` left by any earlier native call fails the step even when the script itself succeeded. `pwsh -File` does not behave this way, so it passes locally and fails in CI. End any script that shells out with an explicit `exit 0`.
-- **A tag pattern that matches `v1` freezes it along with the version tags.** `protect-release-tags` originally matched all of `refs/tags/v*` with no bypass, so nobody could move `v1`, owner included. That went unnoticed for a month because nothing needed to move it. It was split on 2026-10-11 into the two non-overlapping rulesets above. If you change either ruleset's include or exclude, check that every tag still matches exactly one: GitHub's docs do not say whether a bypass in one ruleset exempts the actor from an overlapping one. `/rules/branches/{branch}` reports the rules on a branch, but `/rules/tags/{tag}` returns 404, so check the patterns against `git tag --list` with fnmatch instead.
-- **An annotated tag's ref SHA is not its commit SHA.** `git rev-parse v1` and the GitHub refs API both return the tag *object*; `git log` quietly dereferences to the commit. Use `git rev-parse 'v1^{commit}'` when you mean the commit, and do not "fix" a tag SHA in prose without checking which one it is.
-- **A moved `v1` makes `git pull` fail outright, not just skip the tag.** Because `v1` is force-moved on every release, a clone's local `v1` goes stale, and fetch refuses to overwrite an existing tag: `! [rejected] v1 -> v1 (would clobber existing tag)`. That aborts the whole pull, so the *branch* does not update either and the error names only a tag — easy to misread as cosmetic. One-off fix is `git fetch --tags --force origin`. Permanent fix is a force refspec, `git config --add remote.origin.fetch '+refs/tags/*:refs/tags/*'`, after which a plain `git fetch` reports `t [tag update]` and self-heals. That config lives in `.git/config`, so it is **not** committed and every clone needs it applied once. Verified 2026-10-26 by staling `v1` deliberately and confirming a plain fetch repaired it.
+- **`#Requires -Modules` silently discards a script's exit code under `pwsh -File`**: `exit 1` exits `0`, so a gate invoking it is permanently green. `#Requires -Version` and `pwsh -Command "& ./script.ps1"` are unaffected. `tests/Invoke-VerificationTest.ps1` uses `Import-Module` for this reason; do not "correct" it to `#Requires`. Verified on PowerShell 7.6.6.
+- **Under `shell: pwsh`, a step exits with whatever `$LASTEXITCODE` holds**, because GitHub runs `pwsh -command ". '<file>'"`. A stale non-zero from an earlier native call fails a step that succeeded, in CI but not under local `pwsh -File`. End any script that shells out with `exit 0`.
+- **A tag pattern that matches `v1` freezes it along with the version tags**; that is why the two rulesets above must not overlap (ADR-0003). If you change either include or exclude, check every tag still matches exactly one. `/rules/tags/{tag}` returns 404, so test the patterns against `git tag --list` with fnmatch.
+- **An annotated tag's ref SHA is not its commit SHA.** `git rev-parse v1` and the refs API return the tag object; use `git rev-parse 'v1^{commit}'` for the commit, and check which one a SHA in prose is before "fixing" it.
+- **A moved `v1` makes `git pull` fail outright**, branch included: fetch refuses to overwrite the stale local tag (`would clobber existing tag`), and the error names only the tag. One-off fix: `git fetch --tags --force origin`. Permanent: `git config --add remote.origin.fetch '+refs/tags/*:refs/tags/*'`, which lives in `.git/config` and so is needed once per clone.
 
 - **YAML block scalars cannot carry a PowerShell here-string.** A here-string's closing delimiter (`'@`) must sit at column 0, which terminates the block scalar. Build multi-line strings with an array and `-join` instead.
 - **PowerShell's XML adapter surfaces attributes as properties**, so on `<testsuites name="Pester">` the expression `$root.Name` returns `Pester`, not `testsuites`. Use `.LocalName` for element names and `GetAttribute()` for attributes whenever an attribute could shadow a real member.
-- **A step that never started still reports `outcome` as `'skipped'`.** The docs describe the `steps` context as holding steps that "have already run", and say a nonexistent property evaluates to `''` — which reads as though a never-started step would be absent and compare as empty. It is not. Measured on a real run where an earlier step failed: both `outcome` and `conclusion` were `skipped`, so `!= 'skipped'` and `== 'success' || == 'failure'` are equivalent there. Do not rewrite one into the other believing the first is broken; probe it with a step that echoes the value.
-- **`always()` is not available inside a step's `env:` block** — only `hashFiles` is. Putting it there fails the whole run at workflow resolution with zero jobs, which `gh run rerun` then refuses to retry; re-trigger with a new commit instead. The context-availability table in the Actions docs lists what each key accepts.
+- **A step that never started still reports `outcome` as `'skipped'`**, despite the docs reading as though it would be absent and compare as `''`. Measured on a run where an earlier step failed, so `!= 'skipped'` and `== 'success' || == 'failure'` are equivalent there. Do not rewrite one into the other; probe with a step that echoes the value.
+- **`always()` is not available inside a step's `env:` block** — only `hashFiles` is. It fails the whole run at workflow resolution with zero jobs, which `gh run rerun` refuses to retry; re-trigger with a new commit.
 - **`[int]''` is `0` but `[int]'abc'` throws.** When reading a numeric XML attribute that might be absent *or* malformed, `[int]($x -as [int])` yields `0` for both. Do not "simplify" it to a bare cast.
-- **Pester container and discovery errors do not increment `FailedCount`.** They attach to the container and land in the root `<testsuites>` `errors` attribute, so a psake gate reading `FailedCount` misses them entirely. That was the original reason `ci.yml` verifies results independently, but it is no longer the whole story — measured 2026-10-26 across every `Build/build.psake.ps1`, **9 of the 10 module repos now gate on `$TestResults.Result -ne 'Passed'`**, which does catch them; `PS-MCS/PS.ETL` is the lone holdout still reading `FailedCount`. The step's remaining independent value is the `min-tests` floor, detecting a missing result file, and not depending on each consumer's harness staying correct. Do not assert that a given repo's gate is blind without reading its `Test` task.
-- **Pester's JUnitXml routes skipped and tag-excluded tests to `disabled`, never `skipped`, and still counts them in `tests`.** Measured on Pester 6.2.0: `Set-ItResult -Skipped`, `-Skip` and `Filter.ExcludeTag` all land in `disabled`, reporting as `Skipped`, `Skipped` and `NotRun` respectively. A four-test run with one of each gave `tests="4" skipped="" disabled="3"`. So reading `skipped` always finds nothing, and `tests - disabled` is the executed count. The `min-tests` floor measured `tests` until #23, which meant it could not tell a healthy run from one where the suite had stopped executing — reachable in PS.SSL (openssl, `Network` tag) and SecurityTools (platform, optional modules). Since `v1.5.0` it gates on executed. **Consumers still pinned to an older tag keep the old behaviour**, so when reading a consumer's CI, check which tag it pins before assuming its floor measures what ran.
+- **Pester container and discovery errors do not increment `FailedCount`.** They land in the root `<testsuites>` `errors` attribute, so a gate reading `FailedCount` misses them. The harness gates on `$TestResults.Result -ne 'Passed'`, which catches them; `ci.yml`'s verify step still checks independently, and adds the `min-tests` floor and the missing-result-file check. A `v1` consumer runs its own vendored gate: read its `Test` task before asserting it is blind or sound.
+- **Pester's JUnitXml routes skipped and tag-excluded tests to `disabled`, never `skipped`, and still counts them in `tests`.** Measured on Pester 6.2.0: `-Skip`, `Set-ItResult -Skipped` and `Filter.ExcludeTag` all land in `disabled`, so `tests - disabled` is the executed count. The `min-tests` floor gates on executed since `v1.5.0` (#23); a consumer pinned to an older tag still measures `tests`, so check its pin before assuming the floor measures what ran.
 
-- **These repos are not under classic branch protection.** `GET /branches/main/protection` returns 404 across the fleet; required checks come from repository **rulesets** instead. In the module repos that ruleset is named `protect` (id `18439023` in `PS.GitHub`), carrying the required checks plus `required_signatures`, `required_linear_history`, `non_fast_forward`, `deletion` and `pull_request`. It matters whenever a change renames a required check: `PS.DCU`'s `os-matrix` switch to Windows renamed `validate (ubuntu-latest)` to `(windows-latest)`, so the required check would never report and the pull request could never merge until the **ruleset** was edited. Hunting for a branch-protection setting to change is wasted time. Verified 2026-10-30.
-- **Updating a ruleset is `PUT`, not `PATCH` — and a failed `gh` call does not throw.** `PATCH` returns 404. Worse, `gh` exiting non-zero does not raise in PowerShell, so a failed update still lets a script print a tidy "after" section and report success while nothing changed. Read the ruleset back and compare before against after; do not trust the exit path.
+- **These repos use rulesets, not classic branch protection.** `GET /branches/main/protection` returns 404 fleet-wide. In the module repos the ruleset is `protect` (id `18439023` in `PS.GitHub`): required checks plus `required_signatures`, `required_linear_history`, `non_fast_forward`, `deletion` and `pull_request`. A change that renames a required check needs the **ruleset** edited, or the PR can never merge.
+- **Updating a ruleset is `PUT`, not `PATCH`, and a failed `gh` call does not throw.** `PATCH` returns 404, and a script can report success while nothing changed. Read the ruleset back and compare before and after.
+- **A job matrix renames its required check.** Adding `strategy.matrix` turned `verify Pester result step` into `verify Pester result step (<os>)`, so a ruleset requiring the plain name never sees it report. `self-test.yml` keeps the name with a summary job over the legs rather than editing `protect-main`, which also covers `release/*`, whose self-test has no matrix.
+- **On Windows, git fixture repos in `TestDrive:` break Pester's cleanup.** git writes object files read-only, so the container fails after every test passed. Remove them with `Remove-Item -Force` in `AfterAll`, as `Shim.Tests.ps1` does.
+- **A parameter typed `[System.Management.Automation.PSCustomObject]` rejects `[PSCustomObject] @{}`.** The value's runtime type is `PSObject`, so type such parameters `[System.Management.Automation.PSObject]`.
+- **A mutation run interrupted mid-way leaves a mutant in the tree.** A second command sent to a terminal running a long job interrupted one during phase B. Run mutations from a script that restores the original bytes in a `finally`, and check every mutated file is restored before trusting the tree.
+- **`Invoke-ScriptAnalyzer -Recurse` descends into dot-folders**, so analysing a checkout root also reports `.harness/` and `.git/`. `Invoke-HarnessAnalysis` analyses each top-level item except those two instead. Measured 2026-11-10.
+- **actionlint 1.7.12 rejects `job.workflow_repository` and `job.workflow_sha`**, though GitHub documents both. `.github/actionlint.yaml` ignores exactly those two names, so a typo such as `job.workflow_shaa` is still reported. Remove the config once a release includes [rhysd/actionlint#707](https://github.com/rhysd/actionlint/pull/707).
+- **The shim resolves a branch pin to a stale commit.** `git checkout --detach main` in the cache picks the local `main` that `git fetch` never advances. Tags and SHAs are unaffected. Tracked as [#73](https://github.com/jjohns-dev/pwsh-module-ci/issues/73).

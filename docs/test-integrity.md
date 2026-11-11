@@ -1,8 +1,8 @@
 # Test integrity
 
-Why a test suite can be green and prove nothing, and the rules that follow from it. Covers the Pester suites in the PowerShell module repos, the shared `Help.Tests.ps1` template, and the `min-tests` floor that guards them.
+Why a test suite can be green and prove nothing, and the rules that follow from it. Covers the Pester suites in the PowerShell module repos, including their `Help.Tests.ps1` suites, and the `min-tests` floor that guards them.
 
-**This file is not interim.** [`shared-ci-standards.md`](shared-ci-standards.md) deletes itself when [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20) lands, because *"which repo holds the best copy of X"* stops being a question once those files are inherited rather than copy-pasted. Nothing here depends on that. These are decisions about how tests are written and measured, and they outlive any amount of de-duplication — the same reasoning that carved out [`dependency-stack.md`](dependency-stack.md).
+**This file is not interim.** These decisions about how tests are written and measured outlive any de-duplication, as [`dependency-stack.md`](dependency-stack.md) does. They moved here on 2026-11-04 from `shared-ci-standards.md`, which #20 deleted; that file's map of which repo holds the reference copy of each test piece is preserved on [#53](https://github.com/jjohns-dev/pwsh-module-ci/issues/53#issuecomment-6780926659).
 
 ## The defect class
 
@@ -31,11 +31,11 @@ Do not relitigate these. Each was decided once, with evidence.
 
 - **A `$null` help-content guard is required, and the obvious reference implementations lack it.** When a function has no comment-based help at all, `$HelpContent` is `$null`, and `$null.Parameters.Keys` piped through `Where-Object` yields a **one-element array containing `$null`** — not an empty array. That generates a single case literally named `$null`, which then fails. `-AllowNullOrEmptyForEach` does not help, because the array is neither null nor empty. The guard is `Where-Object { $_ -and ... }`. Found while implementing jjohns-dev/PS.Log#54.
 
-- **`Help.Tests.ps1` opens with an analyzer-suppression preamble, and it is for editors, not CI.** Every repo's `Analyze` task runs `Invoke-ScriptAnalyzer` against the staging folder only, so `Tests/` is never linted in a build and the preamble changes no CI outcome. Without it, every Pester fixture variable raises `PSUseDeclaredVarsMoreThanAssignments` in the editor and in a local analyzer run, because the rule cannot follow assignment in `BeforeDiscovery`/`BeforeAll` into an `It`. That noise is what the suppression removes.
-  **Do not conclude it is dead weight from the fact that CI ignores it** — that reasoning appears in PS-MCS/MCS#207, and MCS has carried the preamble ever since.
+- **`Help.Tests.ps1` opens with an analyzer-suppression preamble. It does not affect the build gate, and it is not dead weight.** The `Analyze` task lints only the staged module, so the preamble changes no pass/fail result. But the rule it suppresses, `PSUseDeclaredVarsMoreThanAssignments`, fires on every Pester fixture variable because it cannot follow assignment in `BeforeDiscovery`/`BeforeAll` into an `It`, and that noise appears in the editor, in local analyzer runs, and in the Security tab, since `pssa-sarif.yml` scans the whole repo, `Tests/` included.
+  **Do not conclude it is dead weight because the build ignores it** — that reasoning appears in PS-MCS/MCS#207, and MCS has carried the preamble ever since.
   *Recorded 2026-10-28 as byte-identical at 264 characters in every repo that has it; not re-measured since, and see the `-ceq` trap below for why "identical" needs saying precisely.*
 
-- **Build tooling is pinned exactly, never to a range and never to `latest`.** Pester, psake and PSScriptAnalyzer change test and analysis outcomes, so an unpinned bump turns a green build red — or a red build green — with no commit to explain it. The stack, the policy and the `Install-PSResource` version-string mechanics are in [`dependency-stack.md`](dependency-stack.md).
+- **Build tooling is pinned exactly, never to a range and never to `latest`**, because an unpinned bump can change a test or analysis result with no commit to explain it. The stack, the policy and the `Install-PSResource` mechanics are in [`dependency-stack.md`](dependency-stack.md).
 
 ## Traps that have cost real time
 
@@ -51,6 +51,12 @@ Do not relitigate these. Each was decided once, with evidence.
 
 - **`-ceq` proves character-identity after parsing, not byte-identity on disk.** It is the right operator for comparing a copied `run:` block, because PowerShell's bare `-eq` is case-insensitive on strings and would call `$ErrorActionPreference` and `$erroractionpreference` equal — a comparison that cannot fail on a real class of drift. But YAML normalises line endings inside a block scalar, so a CRLF file and an LF file parse to the **same string**, and `-ceq` is true for both. Measured 2026-11-03.
   **Check the file's encoding as a separate claim.** That gap is why [SecurityTools#161](https://github.com/jjohns-dev/SecurityTools/issues/161) existed at all rather than being covered by a `-ceq` result. Same defect class as everything above: a comparison that cannot report the difference you are asking about.
+
+- **Pester's `Run.Path` throws on a scalar `FileInfo` and accepts an array.** A glob matching exactly one file returns a single `FileInfo`, so a build that worked with two test files breaks with one. Verified on Pester 6.2.0 in [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20); the harness passes `[System.String[]]` of full paths for this reason.
+
+- **An `Assert` on an undefined variable passes silently.** psake does not apply `Set-StrictMode` to task bodies on its own, so a misspelt variable is `$null` and the condition can come out `True`. Six of seven repos had exactly that in `Analyze`'s `default` branch (`$analysisResult` for `$Results`), and on psake 5.0.4 the build succeeded (#20). The harness sets `Set-StrictMode -Version Latest` at the top of `build.psake.ps1`, which does reach task bodies; setting it in `build.ps1` does not (measured 2026-11-09).
+
+- **A non-terminating `Write-Error` already fails a psake task.** `$psake.build_success` was `False` with and without `-ErrorAction Stop` (#20). A gate that uses a bare `Write-Error` works, so do not add `-ErrorAction Stop` everywhere believing it does not.
 
 ## Deriving a `min-tests` floor
 

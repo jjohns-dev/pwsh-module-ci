@@ -94,6 +94,7 @@ The per-question alternatives are under each decision. At the level of the whole
 - **[PSModule/Process-PSModule](https://github.com/PSModule/Process-PSModule)** (added 2026-11-10). A complete reusable GitHub Actions pipeline that builds, tests, versions, documents and publishes to the PowerShell Gallery. Not adopted: it brings its own conventions for versioning, documentation and publishing, where these repos keep their layout and `release.yml` publishes GitHub releases, not Gallery packages. Whether its required repo structure fits these repos was not checked.
 - **Publish the harness as a PowerShell module** (#20's second option). Rejected: it adds a publishing pipeline and Gallery versioning, and it separates the harness version from the workflow version, losing the `job.workflow_sha` guarantee.
 - **Keep a canonical copy here and sync it to consumers with automated PRs** (#20's first option). Rejected: it automates the N copies and N PRs rather than removing them.
+- **Carry the `harness.psd1` settings in the module manifest** (considered 2026-11-10). Rejected. A top-level key makes `Test-ModuleManifest` and `Import-Module` fail ("manifest contains one or more members that are not valid"), measured on PowerShell 7.6.9. Under `PrivateData` the settings load, but they would ship in every release and appear in `(Get-Module).PrivateData`, and a build-only change would alter the shipped manifest. `RequiredModules` stays in the manifest because users' installs read it; these three settings mean nothing outside the build.
 
 ## Risks and tradeoffs
 
@@ -112,8 +113,8 @@ Reviewed against the six Well-Architected pillars.
 ## ADR check
 
 - **ADR-0006 moves to Accepted**, citing the self-checkout spike (run [42090065876](https://github.com/jjohns-dev/PS.Log/actions/runs/42090065876)) and the 2026-11-09 shim spike, and amends its Decision: per-repo variation lives in `harness.psd1` and the manifest, not only in workflow inputs, because settings that change the build must also reach local runs.
-- **ADR-0002 is amended** with the major-version exception (Q5).
-- **A new ADR-0007: runtime modules float from the manifest; build tools are pinned centrally.** This is a fleet-wide dependency policy that outlives this spec, and it generalises a rule AWSAutomation records only for itself (its own ADR-0002).
+- **ADR-0002 is amended** with the major-version exception (Q5), by a new ADR-0007.
+- **A new ADR-0008: runtime modules float from the manifest; build tools are pinned centrally.** This is a fleet-wide dependency policy that outlives this spec, and it generalises a rule AWSAutomation records only for itself (its own ADR-0002).
 - **Feature-local, not ADRs:** strict mode (Q7), the lowercase test-file convention (Q4; recorded in AGENTS.md conventions), and the shim's internals.
 
 ## Decisions

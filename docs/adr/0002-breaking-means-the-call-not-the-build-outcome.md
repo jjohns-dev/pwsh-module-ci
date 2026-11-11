@@ -6,6 +6,12 @@ Amends: ADR-0001
 
 Accepted — 2026-10-02
 
+Amended by [ADR-0007](0007-replacing-what-runs-the-build-is-a-major.md) — 2026-11-10. One statement below is now incomplete and is left in place:
+
+- The Decision bullet reading "We will define a **breaking** change as one that stops a consumer's call from working as configured, and bump the major version for it." That is no longer the only reason for a major: ADR-0007 adds that a change replacing what runs a consumer's build is a major even when the call still works.
+
+Everything else in this record still stands.
+
 ## Context
 
 - ADR-0001 commits consumers to the moving `@v1` tag and states that "a breaking change to inputs or job structure bumps to `v2`", without defining either term.
