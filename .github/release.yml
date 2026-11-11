@@ -1,0 +1,37 @@
+# Groups PRs by label in generated release notes. Unlabeled PRs land in "Other Changes".
+# Action bumps stay in: consumers read releases for them.
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+  categories:
+    - title: Breaking Changes
+      labels:
+        - breaking
+        - breaking-change
+    - title: New Features
+      labels:
+        - enhancement
+        - feature
+    - title: Bug Fixes
+      labels:
+        - bug
+        - fix
+    - title: Security
+      labels:
+        - security
+    - title: Action and Dependency Updates
+      labels:
+        - dependencies
+        - github_actions
+    - title: Documentation
+      labels:
+        - documentation
+        - docs
+    - title: CI / Build
+      labels:
+        - ci
+        - build
+    - title: Other Changes
+      labels:
+        - "*"
