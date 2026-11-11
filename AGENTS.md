@@ -68,7 +68,10 @@ Nothing automates this; `release.yml` is for consumers and never runs here. Ever
 ```pwsh
 git tag -a v1.3.0 -m 'v1.3.0' <commit>
 git push origin v1.3.0
+gh release create v1.3.0 --verify-tag --title 'v1.3.0' --notes-file <notes.md>
 ```
+
+Every `vX.Y.Z` gets a GitHub release: it is where consumers read what changed, and what a Releases watch notifies on. List the PRs since the previous tag *on the same major*, by hand or with `--generate-notes --notes-start-tag <previous vX.Y.Z>`; the default start tag is undocumented and may cross majors while `v1` and `v2` are both live. A `v1.6.x` fix takes `--latest=false`. Moving tags (`v1`, `v2`) get no release.
 
 Moving `v1` is a separate act, only after every consumer is confirmed:
 
@@ -84,7 +87,7 @@ Two non-overlapping tag rulesets block updating and deleting tags (ADR-0003):
 
 | Ruleset | Covers | Bypass |
 | ------- | ------ | ------ |
-| `protect-release-tags` | `v*` excluding `v*.*.*`: `v1`, and `v2` by pattern (confirm via the API when `v2` is first cut) | repository admin |
+| `protect-release-tags` | `v*` excluding `v*.*.*`: `v1`, `v2` | repository admin |
 | `protect-version-tags` | `v*.*.*` | none, owner included |
 
 So only an admin can move a major tag; anyone else gets `GH013: Cannot update this protected ref`. Never disable a ruleset or widen a bypass to get a push through. A `vX.Y.Z` cut on the wrong commit is never moved: cut the next patch, check no consumer pins the bad one, and never move the major tag onto it.
