@@ -172,5 +172,6 @@ If any repo's `main` has moved since the baseline, re-measure that repo before i
 - [x] **G2. Every consumer shim byte-identical** to `templates/Build/build.ps1`, using the line-ending handling B10 chose. *(AC7)*
   - Verify: a scripted comparison across all seven repos' `main`.
   - **Outcome, 2026-11-12:** byte-identical on all eight consumers' `main`, the seven migrated plus PS.YNAB, which started on `v2`. Every `Build/` holds only `build.ps1`, plus `harness.psd1` in PS.SSL, PS.DCU and AWSAutomation, and every caller pins `@v2`.
-- [ ] **G3. Close #20** with the evidence: the counts per repo, the dry-run comparisons, and the release tags.
+- [x] **G3. Close #20** with the evidence: the counts per repo, the dry-run comparisons, and the release tags.
+  - **Outcome, 2026-11-12:** closed with [the evidence comment](https://github.com/jjohns-dev/pwsh-module-ci/issues/20#issuecomment-6836731123).
 - [x] **G4. Tick item 7 in `ROLLOUT.md`** and update the phase table.
