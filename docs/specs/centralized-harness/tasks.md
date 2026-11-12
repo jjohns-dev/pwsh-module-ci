@@ -148,7 +148,8 @@ Verification for every repo, read from the run artifacts, not log text:
 | F6 | PS.SSL | start from #79; `PesterExcludeTag = 'Network'`; 22 renames; inline `SuppressMessageAttribute` for `PSAvoidUsingConvertToSecureStringWithPlainText` in the `ConvertTo-PEM` and `Export-PFX` tests (fixture passwords); `AGENTS.md` lines 14, 15, 20, 28, 51 and 59 describe the old build, and its *run `Network`-tagged tests* note should give the `Invoke-Pester -TagFilter 'Network'` command; compare the PR's analyzer warnings (6 in pssa-sarif, 1 in Analyze at C5) against `main`'s Security tab and name any that are new | 346 ubuntu, 347 windows |
 | F7 | SecurityTools | start from #170; `ImportExcel` floats from the manifest instead of the `7.8.10` pin (7.8.10 is still the latest, so no change yet); per-leg scopes unchanged; `Tests/Common/{Help,Manifest,Meta}.Tests.ps1` keep their case and follow #53; `AGENTS.md:13`, `:46` and its PSScriptAnalyzer policy section describe the old build and settings | 996 ubuntu, 21 windows |
 
-- [ ] F1. PS.GHOps
+- [x] F1. PS.GHOps
+  - **Outcome, 2026-11-12:** [#23](https://github.com/jjohns-dev/PS.GHOps/pull/23) squash-merged as `7f6156a`; [verification](https://github.com/jjohns-dev/PS.GHOps/pull/23#issuecomment-6828167938) on head `d28fc66`: 95 executed on each leg, 0 errors, dry-run artifact matches `v0.5.0` except the `johnsarie27` → `jjohns-dev` URLs from #14, required checks unchanged; post-merge checks green. The `Module.tests.ps1:7` comment was left as is: the harness still runs psake and its `ImportStagingModule` task, so it is accurate.
 - [ ] F2. PS.GitHub
 - [ ] F3. PS.Log
 - [ ] F4. PS.DCU
