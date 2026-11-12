@@ -89,12 +89,6 @@ Ten items, in order. The ordering is not arbitrary and it is not a simple chain 
 
 A consequence of choosing *a new minimum both satisfy* rather than converging on either existing approach: **both** groups change, so all seven repos' floors move, not just the five with `Tests/Common/`.
 
-- [ ] **pwsh-module-ci** — [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20)
-  Stop duplicating `Build/`. **Classification complete 2026-11-05** — all five duplicated files measured across the seven repos, consolidated in the issue body, which supersedes its own comment thread.
-  **Ten file variants reduce to four inputs**: test selection, Pester tag exclusion, PSScriptAnalyzer `ExcludeRules`, and `min-tests` per runner. Everything else is drift, dead code, stale comments or style.
-  **Eight corrections were found stranded in one or two repos each**, none propagated — including a silent dead gate in six of seven, where `Analyze`'s `default` branch asserts on a variable that is never defined. Measured: it passes and the build succeeds. Unreachable today only because every repo uses `'Error'`, which the `[ValidateSet]` does not require.
-  `Tests/Common/` was split out to [#53](https://github.com/jjohns-dev/pwsh-module-ci/issues/53).
-
 ## Phase 6 — Migration
 
 - [ ] **pwsh-module-ci** — [#19](https://github.com/jjohns-dev/pwsh-module-ci/issues/19) — gated on Phases 1–5
