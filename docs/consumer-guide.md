@@ -263,13 +263,13 @@ Run the same commands CI runs, through your repo's `Build/build.ps1`:
 `Build/build.ps1` is a **shim**, identical in every consumer, copied from [`templates/Build/build.ps1`](../templates/Build/build.ps1). Do not edit it. It:
 
 1. reads the harness version from the `jjohns-dev/pwsh-module-ci/.github/workflows/ci.yml@<ref>` line in your `.github/workflows/ci.yml`, so local runs use the same harness as CI;
-2. keeps a clone of this repo under your local application data folder, `pwsh-module-ci` (on macOS, `~/Library/Application Support/pwsh-module-ci`), fetches with `--tags --force`, and checks out `<ref>`;
+2. keeps a clone of this repo under your local application data folder, `pwsh-module-ci` (on macOS, `~/Library/Application Support/pwsh-module-ci`), fetches with `--tags --force`, and checks out `<ref>`, or `origin/<ref>` when `<ref>` is a branch;
 3. calls the harness's `Build/build.ps1 -ProjectPath <your repo>` with every argument you passed, and exits with its exit code.
 
 Things to know:
 
 - **It needs `git` and PowerShell 7 on `PATH`, and network access.** A failed fetch stops the run rather than running a cached harness that may not match CI.
-- **Pin a tag or a full commit SHA.** A branch pin such as `@main` resolves to a stale commit in the cache ([#73](https://github.com/jjohns-dev/pwsh-module-ci/issues/73), to be fixed in `v2.0.1`). CI is unaffected, since it never runs the shim.
+- **Pin a tag or a full commit SHA.** A branch pin such as `@main` works from shim `2.0.2` (the `Version:` line in its header); an older copy resolves it to a stale commit in the cache ([#73](https://github.com/jjohns-dev/pwsh-module-ci/issues/73)), so refresh it first. CI is unaffected either way, since it never runs the shim.
 - **The harness warns when your shim differs from the template.** The build still runs; replace your copy with the template's.
 - **The cache is shared** by every repo on the machine, and switches commit when repos pin different versions.
 

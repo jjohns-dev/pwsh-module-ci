@@ -109,7 +109,7 @@ The eight stranded corrections from #20 *(AC8)*, and where each lands:
   - **`Invoke-ScriptAnalyzer -Recurse` descends into dot-folders**, so analysing a checkout root also reports `.harness/`. `Invoke-HarnessAnalysis` analyses each top-level item except `.harness` and `.git` instead.
   - **actionlint 1.7.12 rejects `job.workflow_repository` and `job.workflow_sha`**, though GitHub documents both. `.github/actionlint.yaml` ignores exactly those two names; remove it once a release includes [rhysd/actionlint#707](https://github.com/rhysd/actionlint/pull/707).
 - [x] **D8. Record the mechanism for `PS-MCS`** in ADR-0006's Consequences: what `mcssec-ops` would adopt unchanged, and that its `@main`-pinned consumers need an input switch or verification before merge, since there is no tag to repoint. *(AC11)*
-  - **Outcome:** recorded. Decided 2026-11-10 that `mcssec-ops` moves from `@main` to a moving major tag with immutable `vX.Y.Z` tags, as here, which removes the no-tag-to-repoint problem. Recording it found that the shim resolves a branch pin to a stale commit; tracked as [#73](https://github.com/jjohns-dev/pwsh-module-ci/issues/73), ROLLOUT item 7a, fixed in `v2.0.1` before `mcssec-ops` adopts.
+  - **Outcome:** recorded. Decided 2026-11-10 that `mcssec-ops` moves from `@main` to a moving major tag with immutable `vX.Y.Z` tags, as here, which removes the no-tag-to-repoint problem. Recording it found that the shim resolves a branch pin to a stale commit; tracked as [#73](https://github.com/jjohns-dev/pwsh-module-ci/issues/73), ROLLOUT item 7a, fixed in `v2.0.2` before `mcssec-ops` adopts.
   - Verify for D1–D8: markdownlint clean; every link resolves; ADRs follow the bullet style and dated Status line.
 
 ## E. Release

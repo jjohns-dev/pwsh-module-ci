@@ -23,7 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check out the module
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # The harness at this workflow's own commit, so the two cannot drift apart.
       - name: Check out the build harness
@@ -39,19 +40,23 @@ jobs:
         shell: pwsh
         run: Move-Item -LiteralPath '.harness' -Destination (Join-Path -Path $env:RUNNER_TEMP -ChildPath 'harness')
 
-      - shell: pwsh # install dependencies
+      - name: Install dependencies
+        shell: pwsh
         run: |
           & "$env:RUNNER_TEMP/harness/Build/build.ps1" -ProjectPath $env:GITHUB_WORKSPACE -ResolveDependency -TaskList 'Init'
 
-      - shell: pwsh # stage module
+      - name: Stage the module
+        shell: pwsh
         run: |
           & "$env:RUNNER_TEMP/harness/Build/build.ps1" -ProjectPath $env:GITHUB_WORKSPACE -TaskList 'CombineFunctionsAndStage'
 
-      - shell: pwsh # psscriptanalyzer
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
         run: |
           & "$env:RUNNER_TEMP/harness/Build/build.ps1" -ProjectPath $env:GITHUB_WORKSPACE -TaskList 'Analyze'
 
-      - shell: pwsh # pester
+      - name: Run Pester tests
+        shell: pwsh
         id: pester
         run: |
           & "$env:RUNNER_TEMP/harness/Build/build.ps1" -ProjectPath $env:GITHUB_WORKSPACE -TaskList 'Test'
@@ -135,18 +140,21 @@ jobs:
               throw ('Pester result verification failed with {0} problem(s).' -f $problems.Count)
           }
 
-      - shell: pwsh # compress module
+      - name: Create the build artifact
+        shell: pwsh
         run: |
           & "$env:RUNNER_TEMP/harness/Build/build.ps1" -ProjectPath $env:GITHUB_WORKSPACE -TaskList 'CreateBuildArtifact'
 
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      - name: Upload the build artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ inputs.artifact-name }}
           path: "Artifacts"
           if-no-files-found: error
 
       # The only step a dry run skips, so a consumer's PR proves the whole release path without publishing.
-      - uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
+      - name: Publish the GitHub release
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         if: ${{ !inputs.dry-run }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

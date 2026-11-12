@@ -181,6 +181,35 @@ Describe -Name 'Shim template' -Fixture {
         & $shim
         (Read-ShimRecord).Version | Should -BeExactly 'B'
     }
+    It -Name 'follows the default branch when it moves after the cache was cloned' -Test {
+        Set-Content -Path $callerPath -Value $callerV1.Replace('@v1', '@main')
+        Set-Content -Path $harnessFile -Value $stubHarness.Replace('__VERSION__', 'C')
+        Invoke-Git -C $source commit --quiet -am 'harness C' | Out-Null
+        Invoke-Git -C $source push --quiet origin main | Out-Null
+        & $shim
+        (Read-ShimRecord).Version | Should -BeExactly 'C'
+    }
+    It -Name 'follows a non-default branch, and again after it moves' -Test {
+        Set-Content -Path $callerPath -Value $callerV1.Replace('@v1', '@feature/x')
+        Invoke-Git -C $source switch --quiet -c 'feature/x' | Out-Null
+        try {
+            Set-Content -Path $harnessFile -Value $stubHarness.Replace('__VERSION__', 'D')
+            Invoke-Git -C $source commit --quiet -am 'harness D' | Out-Null
+            Invoke-Git -C $source push --quiet origin 'feature/x' | Out-Null
+            & $shim
+            (Read-ShimRecord).Version | Should -BeExactly 'D'
+
+            Remove-Item -Path $env:SHIM_RECORD
+            Set-Content -Path $harnessFile -Value $stubHarness.Replace('__VERSION__', 'E')
+            Invoke-Git -C $source commit --quiet -am 'harness E' | Out-Null
+            Invoke-Git -C $source push --quiet origin 'feature/x' | Out-Null
+            & $shim
+            (Read-ShimRecord).Version | Should -BeExactly 'E'
+        }
+        finally {
+            Invoke-Git -C $source switch --quiet main | Out-Null
+        }
+    }
     It -Name 'stops, runs nothing, and names the cache when the fetch fails' -Test {
         $moved = '{0}.unreachable' -f $origin
         Move-Item -Path $origin -Destination $moved
