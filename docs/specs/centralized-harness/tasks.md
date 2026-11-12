@@ -152,7 +152,8 @@ Verification for every repo, read from the run artifacts, not log text:
   - **Outcome, 2026-11-12:** [#23](https://github.com/jjohns-dev/PS.GHOps/pull/23) squash-merged as `7f6156a`; [verification](https://github.com/jjohns-dev/PS.GHOps/pull/23#issuecomment-6828167938) on head `d28fc66`: 95 executed on each leg, 0 errors, dry-run artifact matches `v0.5.0` except the `johnsarie27` → `jjohns-dev` URLs from #14, required checks unchanged; post-merge checks green. The `Module.tests.ps1:7` comment was left as is: the harness still runs psake and its `ImportStagingModule` task, so it is accurate.
 - [x] F2. PS.GitHub
   - **Outcome, 2026-11-12:** [#41](https://github.com/jjohns-dev/PS.GitHub/pull/41) squash-merged as `8f1c2c1`; [verification](https://github.com/jjohns-dev/PS.GitHub/pull/41#issuecomment-6829845115) on head `a615648`: 112 executed on each leg, 0 errors (macOS from a second attempt, after the first was never given a runner), dry-run artifact matches `v0.3.1` except the `johnsarie27` → `jjohns-dev` URLs from #32, required checks unchanged; post-merge checks green.
-- [ ] F3. PS.Log
+- [x] F3. PS.Log
+  - **Outcome, 2026-11-12:** [#62](https://github.com/jjohns-dev/PS.Log/pull/62) squash-merged as `2f36114`; [verification](https://github.com/jjohns-dev/PS.Log/pull/62#issuecomment-6831052996) on head `498aa3c`: 91 executed on the ubuntu leg, 0 errors; dry-run artifact identical to `v0.4.1` apart from the 7 `Documentation/` files, which are no longer staged (re-measured here, since the agent's command list does not show that comparison); required check unchanged; post-merge checks green. `Tests/Common/{Help,Manifest,Meta}.Tests.ps1` were lowercased here rather than left for #53. A stale `Meta.Tests.ps1` mention remains in a `Tests/Common/MetaFixers.psm1` comment.
 - [ ] F4. PS.DCU
 - [ ] F5. AWSAutomation
 - [ ] F6. PS.SSL
