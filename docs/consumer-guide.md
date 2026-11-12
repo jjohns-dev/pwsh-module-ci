@@ -60,7 +60,7 @@ jobs:
 
 The release caller's `pull_request` trigger runs the whole release path on every PR (build, test, verify, upload the artifact) and skips only publishing, so a PR proves the release works before a tag is pushed. If the job carries an `if:` that admits only tags, widen it to `startsWith(github.ref, 'refs/tags/v') || github.event_name == 'pull_request'`, or the PR run is skipped.
 
-Each workflow checks this repo out at its own commit into `.harness/` and runs the harness against your checkout, so the harness version always matches the workflow version you pinned. `.harness/` is never analysed, tested or packaged as part of your module.
+Each workflow checks this repo out at its own commit and moves it to the runner's temporary folder, outside your checkout, before running it against your checkout. So the harness version always matches the workflow version you pinned, and your tests, analysis and package never see the harness's files. `v2.0.0` left it in `.harness/` inside your checkout, where a test that walks the repo found it on Windows ([#77](https://github.com/jjohns-dev/pwsh-module-ci/issues/77)).
 
 ### Inputs
 
@@ -78,7 +78,7 @@ Each workflow checks this repo out at its own commit into `.harness/` and runs t
       artifact-name: ${{ github.event_name == 'pull_request' && 'MyModule-dry-run' || format('MyModule-{0}', github.ref_name) }}
 ```
 
-`pssa-sarif.yml` takes no inputs. `v1`'s `psscriptanalyzer-settings-path` is gone: the scan uses the harness's settings plus your [`harness.psd1`](#buildharnesspsd1) exclusions, the same settings as the build's `Analyze` task. The scopes differ: `Analyze` checks only the staged module, while the Security-tab scan covers the whole repo, tests included, except `.harness/` and `.git/`.
+`pssa-sarif.yml` takes no inputs. `v1`'s `psscriptanalyzer-settings-path` is gone: the scan uses the harness's settings plus your [`harness.psd1`](#buildharnesspsd1) exclusions, the same settings as the build's `Analyze` task. The scopes differ: `Analyze` checks only the staged module, while the Security-tab scan covers the whole repo, tests included, except `.git/`.
 
 ## Runner matrix
 

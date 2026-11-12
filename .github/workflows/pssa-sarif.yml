@@ -27,6 +27,11 @@ jobs:
           path: .harness
           persist-credentials: false
 
+      # checkout only accepts a path under the workspace; keep the harness out of the scanned tree (#77).
+      - name: Move the build harness out of the workspace
+        shell: pwsh
+        run: Move-Item -LiteralPath '.harness' -Destination (Join-Path -Path $env:RUNNER_TEMP -ChildPath 'harness')
+
       - name: Run PSScriptAnalyzer
         shell: pwsh
         run: |
@@ -40,15 +45,14 @@ jobs:
             ErrorAction     = 'Stop'
           }
 
-          $pssaVersion = (Import-PowerShellDataFile -Path './.harness/Build/depend.psd1')['PSScriptAnalyzer']
+          $pssaVersion = (Import-PowerShellDataFile -LiteralPath "$env:RUNNER_TEMP/harness/Build/depend.psd1")['PSScriptAnalyzer']
           Install-PSResource -Name 'PSScriptAnalyzer' -Version $pssaVersion @moduleParams
           Install-PSResource -Name 'ConvertToSARIF' @moduleParams
 
           Import-Module -Name 'PSScriptAnalyzer' -RequiredVersion $pssaVersion -Force -ErrorAction Stop
           Import-Module -Name 'ConvertToSARIF' -Force -ErrorAction Stop
 
-          # Skips .harness/: -Recurse on the checkout root would report the harness's own code too.
-          . ./.harness/Build/Harness.Functions.ps1
+          . "$env:RUNNER_TEMP/harness/Build/Harness.Functions.ps1"
           Invoke-HarnessAnalysis -ProjectPath $env:GITHUB_WORKSPACE | ConvertTo-SARIF -FilePath 'results.sarif'
 
       - name: Upload SARIF results file

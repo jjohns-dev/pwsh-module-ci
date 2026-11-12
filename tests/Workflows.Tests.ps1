@@ -42,10 +42,32 @@ Describe -Name 'Harness checkout in <File>' -ForEach $workflows -Fixture {
     }
 }
 
+Describe -Name 'Harness location in <File>' -ForEach $workflows -Fixture {
+    BeforeAll {
+        $steps = @((Get-WorkflowJob -File $File -Job $Job)['steps'])
+        $checkoutIndex = $steps.IndexOf(@($steps.Where({ $_['with'] -and $_['with']['path'] -eq '.harness' }))[0])
+        $moveSteps = @($steps.Where({ "$($_['run'])" -match 'Move-Item\s+-LiteralPath\s+''\.harness''\s+-Destination\s+\(Join-Path\s+-Path\s+\$env:RUNNER_TEMP\s+-ChildPath\s+''harness''\)' }))
+        $harnessUsers = @($steps.Where({ "$($_['run'])" -match 'RUNNER_TEMP/harness/' }))
+    }
+    It -Name 'moves the harness out of the workspace exactly once' -Test {
+        $moveSteps | Should -HaveCount 1
+    }
+    It -Name 'moves it right after checking it out, before any step uses it' -Test {
+        $steps.IndexOf($moveSteps[0]) | Should -Be ($checkoutIndex + 1)
+        $harnessUsers.Count | Should -BeGreaterThan 0
+        foreach ($user in $harnessUsers) {
+            $steps.IndexOf($user) | Should -BeGreaterThan $steps.IndexOf($moveSteps[0])
+        }
+    }
+    It -Name 'never runs anything from .harness/ inside the workspace' -Test {
+        $steps.Where({ "$($_['run'])" -match '\.harness[\\/]' }) | Should -HaveCount 0
+    }
+}
+
 Describe -Name 'Build calls in <File>' -ForEach $buildCallers -Fixture {
     BeforeAll {
         $runBodies = @((Get-WorkflowJob -File $File -Job $Job)['steps'].Where({ $_['run'] }).ForEach({ $_['run'] }))
-        $harnessCalls = @($runBodies.Where({ $_ -match '\.harness/Build/build\.ps1' }))
+        $harnessCalls = @($runBodies.Where({ $_ -match 'RUNNER_TEMP/harness/Build/build\.ps1' }))
     }
     It -Name 'never runs the consumer''s Build/build.ps1, which is the shim' -Test {
         $runBodies.Where({ $_ -match '(^|[\s(])\./Build/build\.ps1' }) | Should -HaveCount 0
@@ -93,12 +115,12 @@ Describe -Name 'pssa-sarif.yml' -Fixture {
     It -Name 'no longer takes a settings path input' -Test {
         $document['on']['workflow_call'] | Should -BeNullOrEmpty
     }
-    It -Name 'analyses through the harness, which skips .harness/' -Test {
+    It -Name 'analyses the caller''s workspace through the harness' -Test {
         $run | Should -Match 'Invoke-HarnessAnalysis -ProjectPath \$env:GITHUB_WORKSPACE'
         $run | Should -Not -Match 'Invoke-ScriptAnalyzer'
     }
     It -Name 'takes the PSScriptAnalyzer version from the harness pin, not a literal' -Test {
-        $run | Should -Match '\.harness/Build/depend\.psd1'
+        $run | Should -Match 'RUNNER_TEMP/harness/Build/depend\.psd1'
         $run | Should -Not -Match '1\.2\d\.\d'
     }
 }
