@@ -78,7 +78,7 @@ flowchart LR
 ### Each consumer, in its migration PR
 
 - Replace `Build/build.ps1` with the shim; delete `build.psake.ps1`, `depend.psd1` and `PSScriptAnalyzerSettings.psd1`.
-- Add `Build/harness.psd1` only where needed, starting from the template: AWSAutomation (`PSScriptAnalyzerExcludeRules`), PS.SSL (`PesterExcludeTag`), PS.DCU (`PesterStrictMode`). The other four have none.
+- Add `Build/harness.psd1` only where needed, starting from the template: AWSAutomation (`PSScriptAnalyzerExcludeRules`), PS.SSL (`PesterExcludeTag`). The other five have none. PS.DCU was to set `PesterStrictMode`; F4 measured that its tests never ran strict under `v1`, so it migrates without it and turns strict tests on separately in [PS.DCU#23](https://github.com/jjohns-dev/PS.DCU/issues/23).
 - Repoint all three callers to `@v2`, and drop any `psscriptanalyzer-settings-path` input. The `release.yml` caller also gains a `pull_request` trigger, passing `dry-run: ${{ github.event_name == 'pull_request' }}`, so the migration PR runs the release path from its own branch without publishing. (`workflow_dispatch` cannot do this: GitHub only dispatches a workflow that is already on the default branch.)
 - Rename test files to lowercase: PS.SSL 22, PS.DCU 3 (Q4).
 - Remove the runtime entries from `depend.psd1` along with the file; the manifest already lists them (Q2).
@@ -405,7 +405,7 @@ ADR-0002 defines "breaking" as the consumer's call no longer working. By that te
 
 - **The harness's own code runs under `Set-StrictMode -Version Latest`**, set at the **top of `build.psake.ps1`** (measured under B5, below). Setting it in `build.ps1` does not work.
 - **Consumer tests run without strict mode by default.** The `Test` task turns strict mode off explicitly around `Invoke-Pester`, so the harness's setting never reaches a consumer's tests.
-- **A repo can opt in to strict tests** with `PesterStrictMode = $true` in `Build/harness.psd1`. PS.DCU sets it, keeping what it has today. Other repos adopt it one at a time, after confirming their tests pass under it.
+- **A repo can opt in to strict tests** with `PesterStrictMode = $true` in `Build/harness.psd1`, one repo at a time, after confirming its tests pass under it. PS.DCU is the first candidate ([PS.DCU#23](https://github.com/jjohns-dev/PS.DCU/issues/23)); see the 2026-11-12 correction below.
 
 #### Evidence: measured 2026-11-09, psake 5.0.4 and Pester 6.2.0, each run in a fresh `pwsh`
 
@@ -416,6 +416,7 @@ ADR-0002 defines "breaking" as the consumer's call no longer working. By that te
 
 - Strict mode set in `build.ps1` does not reach psake task bodies.
 - It does reach the consumer's Pester tests.
+- **Contradicted 2026-11-12 for PS.DCU itself.** At `d38c98c`, PS.DCU's real `v1` build passed a probe test that reads an undefined variable, so its tests did not run strict. Why this differs from the row above is not established.
 
 #### Placement, measured 2026-11-09 for task B5 (psake 5.0.4)
 
@@ -438,7 +439,7 @@ The classification on #20 observed that PS.DCU is the only repo running strict m
 
 - Strict harness code is what catches the defect class #20 found, such as the dead analysis gate. The harness is this repo's code, so its failures are ours to fix.
 - If the harness's strict mode reached `Invoke-Pester`, all seven repos' tests would turn strict at once, and tests that pass today could fail. That would break criterion 5's unchanged counts.
-- PS.DCU's 85 tests pass under strict mode today. Dropping it would lose that protection, so the opt-in keeps it, and gives the rest of the fleet a path to strict tests one repo at a time.
+- The opt-in gives the fleet a path to strict tests one repo at a time. *Corrected 2026-11-12:* this bullet said PS.DCU's 85 tests pass under strict mode today. That was never measured and is wrong: under `PesterStrictMode = $true` three `help.tests.ps1` cases fail, and the `v1` build never ran them strict (see the evidence above).
 
 #### Verification
 
