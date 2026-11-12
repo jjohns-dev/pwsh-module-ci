@@ -34,14 +34,16 @@ Describe -Name 'Test step scope branch' -Fixture {
     }
     It -Name '<Verdict> for <Description>' -ForEach $cases -Test {
         $caseRoot = Join-Path -Path $TestDrive -ChildPath ([System.Guid]::NewGuid())
-        # THE STEP RUNS THE HARNESS CHECKED OUT AT .harness/, AGAINST THE CALLER'S WORKSPACE
-        $buildRoot = Join-Path -Path $caseRoot -ChildPath '.harness' -AdditionalChildPath 'Build'
+        $runnerTemp = Join-Path -Path $TestDrive -ChildPath ([System.Guid]::NewGuid())
+        # THE STEP RUNS THE HARNESS MOVED TO $RUNNER_TEMP/harness, AGAINST THE CALLER'S WORKSPACE
+        $buildRoot = Join-Path -Path $runnerTemp -ChildPath 'harness' -AdditionalChildPath 'Build'
+        New-Item -Path $caseRoot -ItemType 'Directory' -Force | Out-Null
         New-Item -Path $buildRoot -ItemType 'Directory' -Force | Out-Null
         Set-Content -Path (Join-Path -Path $buildRoot -ChildPath 'build.ps1') -Value $stubBuild -Encoding 'utf8'
         $stepParams = @{
             Body             = $body
             WorkingDirectory = $caseRoot
-            Environment      = @{ PESTER_SCOPE = $Scope; GITHUB_WORKSPACE = $caseRoot }
+            Environment      = @{ PESTER_SCOPE = $Scope; GITHUB_WORKSPACE = $caseRoot; RUNNER_TEMP = $runnerTemp }
         }
         $result = Invoke-StepBody @stepParams
         $recordPath = Join-Path -Path $caseRoot -ChildPath 'invocation.json'
