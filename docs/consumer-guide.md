@@ -1,6 +1,6 @@
 # Consumer guide
 
-How a PowerShell module repo calls the reusable workflows in this repo, and how its build runs. Covers `v2`, which runs every consumer's build from the shared harness in [`Build/`](../Build). A repo still on `@v1` runs its own vendored `Build/` and is migrated by the steps under [Migrating from `v1`](#migrating-from-v1).
+How a PowerShell module repo calls the reusable workflows in this repo, and how its build runs. Covers `v2`, which runs every consumer's build from the shared harness in [`Build/`](../Build). A repo still pinned to a `v1.x.y` tag runs its own vendored `Build/` and is migrated by the steps under [Migrating from `v1`](#migrating-from-v1); the moving `@v1` tag no longer exists.
 
 ## Calling the workflows
 

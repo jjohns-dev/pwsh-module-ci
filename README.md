@@ -18,9 +18,7 @@ From `v2`, every consumer's build runs from the harness in [`Build/`](Build): st
 
 Tagged with semver (`v2.0.0`, `v2.1.0`, ...). Each major has one moving tag tracking its latest release, and consumer repos pin to it for normal operation. What counts as breaking is in [ADR-0002](docs/adr/0002-breaking-means-the-call-not-the-build-outcome.md), as amended by [ADR-0007](docs/adr/0007-replacing-what-runs-the-build-is-a-major.md): a change that replaces what runs a consumer's build is a major even when its call still works, which is why the shared harness is `v2`.
 
-Two majors are live while the fleet migrates:
-
-- **`v2`** runs the shared harness. A consumer moves to it in one PR that repoints all three callers from `@v1`.
-- **`v1`** stays on `v1.6.x` and runs each consumer's own vendored `Build/`. It receives urgent fixes only, cut from a branch off `v1.6.1`, and is retired once the last consumer has moved.
+- **`v2`** runs the shared harness. Every consumer is on it.
+- **`v1`** is retired: `v1.6.1` was its last release. It ran each consumer's own vendored `Build/`. The moving `v1` tag was deleted once no caller used it; the `v1.x.y` tags and releases remain, and AGENTS.md has the steps to restore `v1`.
 
 A release can turn a passing build red without being breaking, when the new failure reflects a real defect that was always there. Those are rolled out by pinning each consumer to the **immutable** `vX.Y.Z` tag, confirming it, and only then moving the major tag — after which every staging pin is returned to the major tag. There is deliberately no moving `vX.Y` tag: staging wants the dependency frozen so the consumer's own change is the only variable, and a consumer left pinned stops receiving the centralized action bumps this repo exists to deliver.

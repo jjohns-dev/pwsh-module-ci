@@ -167,8 +167,10 @@ If any repo's `main` has moved since the baseline, re-measure that repo before i
 
 ## G. Close-out
 
-- [ ] **G1. Retire `v1`**: record in AGENTS.md that no further `v1` releases will be made; leave the tag and maintenance branch in place.
-- [ ] **G2. Every consumer shim byte-identical** to `templates/Build/build.ps1`, using the line-ending handling B10 chose. *(AC7)*
+- [x] **G1. Retire `v1`**: record in AGENTS.md that no further `v1` releases will be made; leave the tag and maintenance branch in place.
+  - **Outcome, 2026-11-12:** recorded in AGENTS.md and README.md. With no caller left on `@v1` (code search plus every consumer's callers), the moving `v1` tag and `release/v1` were then deleted rather than kept, at the user's direction; both pointed at `v1.6.1` (`b40b9c8`), which stays locked, and AGENTS.md records how to restore them.
+- [x] **G2. Every consumer shim byte-identical** to `templates/Build/build.ps1`, using the line-ending handling B10 chose. *(AC7)*
   - Verify: a scripted comparison across all seven repos' `main`.
+  - **Outcome, 2026-11-12:** byte-identical on all eight consumers' `main`, the seven migrated plus PS.YNAB, which started on `v2`. Every `Build/` holds only `build.ps1`, plus `harness.psd1` in PS.SSL, PS.DCU and AWSAutomation, and every caller pins `@v2`.
 - [ ] **G3. Close #20** with the evidence: the counts per repo, the dry-run comparisons, and the release tags.
-- [ ] **G4. Tick item 7 in `ROLLOUT.md`** and update the phase table.
+- [x] **G4. Tick item 7 in `ROLLOUT.md`** and update the phase table.
