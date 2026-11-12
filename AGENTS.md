@@ -10,7 +10,7 @@ SecurityTools is the only consumer of the object form of `os-matrix`: each leg c
 
 ## Blast radius — read before editing a workflow
 
-Consumers pin to a moving major tag, `@v1` or `@v2`, so anything merged here and tagged reaches every consumer on that major with no review on their side. A mistake in `ci.yml` or in the harness breaks the whole fleet at once, and there is no staging environment. The workflows check the harness out at their own commit (`job.workflow_sha`), so a harness change ships exactly when the workflow tag moves.
+Consumers pin to a moving major tag, `@v2`, so anything merged here and tagged reaches every consumer on that major with no review on their side. A mistake in `ci.yml` or in the harness breaks the whole fleet at once, and there is no staging environment. The workflows check the harness out at their own commit (`job.workflow_sha`), so a harness change ships exactly when the workflow tag moves.
 
 Consequences for how you work:
 
@@ -54,9 +54,22 @@ The three reusable workflows are `on: workflow_call` only. `actionlint.yml` and 
 
 ## Versioning
 
-Semver tags plus one moving tag per major. Two majors are live while the fleet migrates: **`v2`** runs the shared harness, and **`v1`** stays on `v1.6.x` for consumers that still vendor their own `Build/`. Replacing what runs a consumer's build is a major even when the call still works (ADR-0007), which is why the harness is `v2`. A consumer migrates by repointing all three callers to `@v2` in one PR; `v1` is retired after the last one.
+Semver tags plus one moving tag per major. **`v2`** runs the shared harness, and every consumer is on it. **`v1` is retired and deleted** (2026-11-12): `v1.6.1` was its last release, no further `v1` releases will be made, and with no caller left the moving `v1` tag and the `release/v1` branch were deleted. Every `v1.x.y` tag and release remains. Replacing what runs a consumer's build is a major even when the call still works (ADR-0007), which is why the harness is `v2`.
 
-`main` carries `v2`. A `v1` fix is cut from the **`release/v1`** branch (at `v1.6.1`, `b40b9c8`; covered by `protect-main`), never from `main`, and released as `v1.6.x`.
+`main` carries `v2`.
+
+**Restoring `v1`** if a caller turns out to need it. Both pointed at `v1.6.1` (`b40b9c8`), which an immutable release and `protect-version-tags` lock, so they can be recreated exactly. `v1` has no release, so its name is not locked:
+
+```pwsh
+git fetch origin --tags --force
+git rev-parse 'v1.6.1^{commit}'   # must be b40b9c849f62c609f969436583401593103a526a
+git tag -a v1 -m 'v1 -> v1.6.1' 'v1.6.1^{commit}'
+git push origin v1
+git branch release/v1 'v1.6.1^{commit}'   # only if a v1 fix must be cut
+git push origin release/v1
+```
+
+The rulesets still cover both names (`release/*` in `protect-main`, `v*` in `protect-release-tags`), so a restored ref is protected from its first push. Old clones keep a stale local `v1` until `git fetch --prune --prune-tags origin`.
 
 Consumers normally pin the major tag; while staging a release that can change CI outcomes they pin the immutable `vX.Y.Z`, then repoint once the major tag has moved. There is deliberately no moving `vX.Y` tag, and a consumer left pinned stops receiving the centralized action bumps (ADR-0002).
 
@@ -64,33 +77,33 @@ Consumers normally pin the major tag; while staging a release that can change CI
 
 ### Cutting a release
 
-Nothing automates this; `release.yml` is for consumers and never runs here. Every tag is **annotated**; keep it that way. The examples use `v1`; `v2` works the same way.
+Nothing automates this; `release.yml` is for consumers and never runs here. Every tag is **annotated**; keep it that way.
 
 ```pwsh
-git tag -a v1.3.0 -m 'v1.3.0' <commit>
-git push origin v1.3.0
-gh release create v1.3.0 --verify-tag --title 'v1.3.0' --notes-file <notes.md>
+git tag -a v2.3.0 -m 'v2.3.0' <commit>
+git push origin v2.3.0
+gh release create v2.3.0 --verify-tag --title 'v2.3.0' --notes-file <notes.md>
 ```
 
-Every `vX.Y.Z` gets a GitHub release: it is where consumers read what changed, and what a Releases watch notifies on. List the PRs since the previous tag *on the same major*, by hand or with `--generate-notes --notes-start-tag <previous vX.Y.Z>`, which groups them by the labels in `.github/release.yml`; the default start tag is undocumented and may cross majors while `v1` and `v2` are both live. A `v1.6.x` fix takes `--latest=false`. Moving tags (`v1`, `v2`) get no release.
+Every `vX.Y.Z` gets a GitHub release: it is where consumers read what changed, and what a Releases watch notifies on. List the PRs since the previous tag *on the same major*, by hand or with `--generate-notes --notes-start-tag <previous vX.Y.Z>`, which groups them by the labels in `.github/release.yml`; the default start tag is undocumented and may cross majors. A release on an older major takes `--latest=false`. Moving tags (`v2`) get no release.
 
 Releases are immutable (repo setting, enabled 2026-11-10): a published release locks its tag, and deleting the release does not free the tag name. Notes, title and the latest flag stay editable.
 
-Moving `v1` is a separate act, only after every consumer is confirmed:
+Moving `v2` is a separate act, only after every consumer is confirmed:
 
 ```pwsh
 git fetch origin --tags --force
-git rev-parse 'v1.3.1^{commit}'   # confirm the target before moving
-git tag -fa v1 -m 'v1 -> v1.3.1' 'v1.3.1^{commit}'
-git push --force origin v1
-git ls-remote origin 'refs/tags/v1^{}'   # must show the target commit
+git rev-parse 'v2.3.1^{commit}'   # confirm the target before moving
+git tag -fa v2 -m 'v2 -> v2.3.1' 'v2.3.1^{commit}'
+git push --force origin v2
+git ls-remote origin 'refs/tags/v2^{}'   # must show the target commit
 ```
 
 Two non-overlapping tag rulesets block updating and deleting tags (ADR-0003):
 
 | Ruleset | Covers | Bypass |
 | ------- | ------ | ------ |
-| `protect-release-tags` | `v*` excluding `v*.*.*`: `v1`, `v2` | repository admin |
+| `protect-release-tags` | `v*` excluding `v*.*.*`: `v2`, and any future major tag | repository admin |
 | `protect-version-tags` | `v*.*.*` | none, owner included |
 
 So only an admin can move a major tag; anyone else gets `GH013: Cannot update this protected ref`. Never disable a ruleset or widen a bypass to get a push through. A `vX.Y.Z` cut on the wrong commit is never moved: cut the next patch, check no consumer pins the bad one, and never move the major tag onto it.
@@ -117,16 +130,17 @@ The workflow pins actionlint `1.7.12` with a SHA256 check. Match that version lo
 
 - **`#Requires -Modules` silently discards a script's exit code under `pwsh -File`**: `exit 1` exits `0`, so a gate invoking it is permanently green. `#Requires -Version` and `pwsh -Command "& ./script.ps1"` are unaffected. `tests/Invoke-VerificationTest.ps1` uses `Import-Module` for this reason; do not "correct" it to `#Requires`. Verified on PowerShell 7.6.6.
 - **Under `shell: pwsh`, a step exits with whatever `$LASTEXITCODE` holds**, because GitHub runs `pwsh -command ". '<file>'"`. A stale non-zero from an earlier native call fails a step that succeeded, in CI but not under local `pwsh -File`. End any script that shells out with `exit 0`.
-- **A tag pattern that matches `v1` freezes it along with the version tags**; that is why the two rulesets above must not overlap (ADR-0003). If you change either include or exclude, check every tag still matches exactly one. `/rules/tags/{tag}` returns 404, so test the patterns against `git tag --list` with fnmatch.
-- **An annotated tag's ref SHA is not its commit SHA.** `git rev-parse v1` and the refs API return the tag object; use `git rev-parse 'v1^{commit}'` for the commit, and check which one a SHA in prose is before "fixing" it.
-- **A moved `v1` makes `git pull` fail outright**, branch included: fetch refuses to overwrite the stale local tag (`would clobber existing tag`), and the error names only the tag. One-off fix: `git fetch --tags --force origin`. Permanent: `git config --add remote.origin.fetch '+refs/tags/*:refs/tags/*'`, which lives in `.git/config` and so is needed once per clone.
+- **A tag pattern that matches a major tag freezes it along with the version tags**; that is why the two rulesets above must not overlap (ADR-0003). If you change either include or exclude, check every tag still matches exactly one. `/rules/tags/{tag}` returns 404, so test the patterns against `git tag --list` with fnmatch.
+- **An annotated tag's ref SHA is not its commit SHA.** `git rev-parse v2` and the refs API return the tag object; use `git rev-parse 'v2^{commit}'` for the commit, and check which one a SHA in prose is before "fixing" it.
+- **Re-running a consumer's run picks up a moved major tag, and `referenced_workflows` records the tag object.** After `v2` moved from `b7be996` to `19862a3`, `gh run rerun` on PS.DCU's runs ran the new harness: attempt 1 recorded the old tag object `85fa20d`, attempt 2 the new one `9cd60b5` (2026-11-12). So no new commit is needed to re-verify a consumer after a tag move. To confirm which harness a run used, compare `referenced_workflows[].sha` with `git rev-parse v2`, not `v2^{commit}`; a SHA pin records the commit itself.
+- **A moved major tag makes `git pull` fail outright**, branch included (hit when `v1` moved): fetch refuses to overwrite the stale local tag (`would clobber existing tag`), and the error names only the tag. One-off fix: `git fetch --tags --force origin`. Permanent: `git config --add remote.origin.fetch '+refs/tags/*:refs/tags/*'`, which lives in `.git/config` and so is needed once per clone.
 
 - **YAML block scalars cannot carry a PowerShell here-string.** A here-string's closing delimiter (`'@`) must sit at column 0, which terminates the block scalar. Build multi-line strings with an array and `-join` instead.
 - **PowerShell's XML adapter surfaces attributes as properties**, so on `<testsuites name="Pester">` the expression `$root.Name` returns `Pester`, not `testsuites`. Use `.LocalName` for element names and `GetAttribute()` for attributes whenever an attribute could shadow a real member.
 - **A step that never started still reports `outcome` as `'skipped'`**, despite the docs reading as though it would be absent and compare as `''`. Measured on a run where an earlier step failed, so `!= 'skipped'` and `== 'success' || == 'failure'` are equivalent there. Do not rewrite one into the other; probe with a step that echoes the value.
 - **`always()` is not available inside a step's `env:` block** — only `hashFiles` is. It fails the whole run at workflow resolution with zero jobs, which `gh run rerun` refuses to retry; re-trigger with a new commit.
 - **`[int]''` is `0` but `[int]'abc'` throws.** When reading a numeric XML attribute that might be absent *or* malformed, `[int]($x -as [int])` yields `0` for both. Do not "simplify" it to a bare cast.
-- **Pester container and discovery errors do not increment `FailedCount`.** They land in the root `<testsuites>` `errors` attribute, so a gate reading `FailedCount` misses them. The harness gates on `$TestResults.Result -ne 'Passed'`, which catches them; `ci.yml`'s verify step still checks independently, and adds the `min-tests` floor and the missing-result-file check. A `v1` consumer runs its own vendored gate: read its `Test` task before asserting it is blind or sound.
+- **Pester container and discovery errors do not increment `FailedCount`.** They land in the root `<testsuites>` `errors` attribute, so a gate reading `FailedCount` misses them. The harness gates on `$TestResults.Result -ne 'Passed'`, which catches them; `ci.yml`'s verify step still checks independently, and adds the `min-tests` floor and the missing-result-file check.
 - **Pester's JUnitXml routes skipped and tag-excluded tests to `disabled`, never `skipped`, and still counts them in `tests`.** Measured on Pester 6.2.0: `-Skip`, `Set-ItResult -Skipped` and `Filter.ExcludeTag` all land in `disabled`, so `tests - disabled` is the executed count. The `min-tests` floor gates on executed since `v1.5.0` (#23); a consumer pinned to an older tag still measures `tests`, so check its pin before assuming the floor measures what ran.
 
 - **These repos use rulesets, not classic branch protection.** `GET /branches/main/protection` returns 404 fleet-wide. In the module repos the ruleset is `protect` (id `18439023` in `PS.GitHub`): required checks plus `required_signatures`, `required_linear_history`, `non_fast_forward`, `deletion` and `pull_request`. A change that renames a required check needs the **ruleset** edited, or the PR can never merge.

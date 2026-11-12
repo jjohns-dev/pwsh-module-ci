@@ -143,25 +143,34 @@ Verification for every repo, read from the run artifacts, not log text:
 | F1 | PS.GHOps | start from #23; psake prose in `AGENTS.md:45`, `CONTRIBUTING.md:93-94`, ADR-0001 line 18, `Module.tests.ps1:7` | 95 × 3 legs |
 | F2 | PS.GitHub | — | 112 × 3 legs |
 | F3 | PS.Log | artifact drops `Documentation/` | 91 |
-| F4 | PS.DCU | `PesterStrictMode = $true`; 3 renames; confirm the dev container image has `git` | 85 |
+| F4 | PS.DCU | no `harness.psd1`: strict tests never ran under `v1` and move to [PS.DCU#23](https://github.com/jjohns-dev/PS.DCU/issues/23); 3 renames; confirm the dev container image has `git`; expect 79 executed, since `Meta.Tests` counts 2 per source file and 3 `Build/` files go, so `min-tests` becomes 76 | 85 |
 | F5 | AWSAutomation | `PSScriptAnalyzerExcludeRules` (2 rules); 15 runtime modules now from the manifest | 444 |
 | F6 | PS.SSL | start from #79; `PesterExcludeTag = 'Network'`; 22 renames; inline `SuppressMessageAttribute` for `PSAvoidUsingConvertToSecureStringWithPlainText` in the `ConvertTo-PEM` and `Export-PFX` tests (fixture passwords); `AGENTS.md` lines 14, 15, 20, 28, 51 and 59 describe the old build, and its *run `Network`-tagged tests* note should give the `Invoke-Pester -TagFilter 'Network'` command; compare the PR's analyzer warnings (6 in pssa-sarif, 1 in Analyze at C5) against `main`'s Security tab and name any that are new | 346 ubuntu, 347 windows |
 | F7 | SecurityTools | start from #170; `ImportExcel` floats from the manifest instead of the `7.8.10` pin (7.8.10 is still the latest, so no change yet); per-leg scopes unchanged; `Tests/Common/{Help,Manifest,Meta}.Tests.ps1` keep their case and follow #53; `AGENTS.md:13`, `:46` and its PSScriptAnalyzer policy section describe the old build and settings | 996 ubuntu, 21 windows |
 
-- [ ] F1. PS.GHOps
-- [ ] F2. PS.GitHub
-- [ ] F3. PS.Log
-- [ ] F4. PS.DCU
-- [ ] F5. AWSAutomation
-- [ ] F6. PS.SSL
-- [ ] F7. SecurityTools
+- [x] F1. PS.GHOps
+  - **Outcome, 2026-11-12:** [#23](https://github.com/jjohns-dev/PS.GHOps/pull/23) squash-merged as `7f6156a`; [verification](https://github.com/jjohns-dev/PS.GHOps/pull/23#issuecomment-6828167938) on head `d28fc66`: 95 executed on each leg, 0 errors, dry-run artifact matches `v0.5.0` except the `johnsarie27` → `jjohns-dev` URLs from #14, required checks unchanged; post-merge checks green. The `Module.tests.ps1:7` comment was left as is: the harness still runs psake and its `ImportStagingModule` task, so it is accurate.
+- [x] F2. PS.GitHub
+  - **Outcome, 2026-11-12:** [#41](https://github.com/jjohns-dev/PS.GitHub/pull/41) squash-merged as `8f1c2c1`; [verification](https://github.com/jjohns-dev/PS.GitHub/pull/41#issuecomment-6829845115) on head `a615648`: 112 executed on each leg, 0 errors (macOS from a second attempt, after the first was never given a runner), dry-run artifact matches `v0.3.1` except the `johnsarie27` → `jjohns-dev` URLs from #32, required checks unchanged; post-merge checks green.
+- [x] F3. PS.Log
+  - **Outcome, 2026-11-12:** [#62](https://github.com/jjohns-dev/PS.Log/pull/62) squash-merged as `2f36114`; [verification](https://github.com/jjohns-dev/PS.Log/pull/62#issuecomment-6831052996) on head `498aa3c`: 91 executed on the ubuntu leg, 0 errors; dry-run artifact identical to `v0.4.1` apart from the 7 `Documentation/` files, which are no longer staged (re-measured here, since the agent's command list does not show that comparison); required check unchanged; post-merge checks green. `Tests/Common/{Help,Manifest,Meta}.Tests.ps1` were lowercased here rather than left for #53. A stale `Meta.Tests.ps1` mention remains in a `Tests/Common/MetaFixers.psm1` comment.
+- [x] F4. PS.DCU
+  - **Outcome, 2026-11-12:** [#24](https://github.com/jjohns-dev/PS.DCU/pull/24) squash-merged as `6d57e31`; [verification](https://github.com/jjohns-dev/PS.DCU/pull/24#issuecomment-6833049889) on head `74c0a37`: 79 executed on the Windows leg and in the dry run, 0 errors, `min-tests` 76; dry-run artifact matches `v0.1.1` except a `README.md` line from #21; required check unchanged; post-merge checks green. No `harness.psd1`: the `v1` tests never ran strict, so strict tests move to [PS.DCU#23](https://github.com/jjohns-dev/PS.DCU/issues/23). The first verification found 111 executed on Windows, 32 of them testing the harness in `.harness\`; fixed in `v2.0.1` ([#77](https://github.com/jjohns-dev/pwsh-module-ci/issues/77)), and the re-run on the moved `v2` executed 79.
+- [x] F5. AWSAutomation
+  - **Outcome, 2026-11-12:** [#108](https://github.com/jjohns-dev/AWSAutomation/pull/108) squash-merged as `2f454a1`; [verification](https://github.com/jjohns-dev/AWSAutomation/pull/108#issuecomment-6834447047) on head `aa8394d`, harness `v2.0.1`: 444 executed on the ubuntu leg and in the dry run, 0 errors; all 15 runtime modules logged as `Resolved dependency:` lines; dry-run artifact matches `v0.13.0` except `AWSAutomation.psd1` and `Set-AwsSsoCredential.ps1` from #96 and the `README.md` line this PR corrects; no open alert for either excluded rule; required check unchanged; post-merge checks green. The two exclusions moved to `Build/harness.psd1`, with an editor-only copy in `.vscode/PSScriptAnalyzerSettings.psd1`: both rules fire on 25 of the 36 public functions, so per-function suppression was rejected.
+- [x] F6. PS.SSL
+  - **Outcome, 2026-11-12:** [#79](https://github.com/jjohns-dev/PS.SSL/pull/79) squash-merged as `7ed0afe`; [verification](https://github.com/jjohns-dev/PS.SSL/pull/79#issuecomment-6836007303) on head `0fbecfb`, harness `v2.0.1`: 346 executed on ubuntu and 347 on Windows, as on `main` (Windows also skips one existing `Loader.tests.ps1` case, so 15 disabled there against 14), 0 errors; dry-run artifact matches `v0.3.3` except `PS.SSL.psd1` and this PR's `README.md` line; open alerts unchanged from `main`; required checks unchanged; post-merge checks green. `Tests/Common` lowercased. The documented Network command was narrowed to the one Network test file: run against `./Tests`, five other files fail discovery outside the harness, which also corrected the consumer guide.
+- [x] F7. SecurityTools
+  - **Outcome, 2026-11-12:** [#170](https://github.com/jjohns-dev/SecurityTools/pull/170) squash-merged as `29863db`; [verification](https://github.com/jjohns-dev/SecurityTools/pull/170#issuecomment-6836334661) on head `267a759`, harness `v2.0.1`: 996 executed on ubuntu (`CrossPlatform`) and 21 on Windows (`WindowsOnly`), 0 errors; `ImportExcel` floats from the manifest and resolved to 7.8.10, the old pin; dry-run artifact has the same 79 files as `v0.12.1`, 53 differing only in line endings from #163 and 3 in content from #154 and #169; no open alerts on the PR or `main`, so dropping the `PSAvoidGlobalVars` exclusion surfaced nothing; required checks unchanged. Unlike the row above, `Tests/Common/{Help,Manifest,Meta}.Tests.ps1` were lowercased, matching F3 to F6.
 
 If any repo's `main` has moved since the baseline, re-measure that repo before its PR rather than comparing against the old row.
 
 ## G. Close-out
 
-- [ ] **G1. Retire `v1`**: record in AGENTS.md that no further `v1` releases will be made; leave the tag and maintenance branch in place.
-- [ ] **G2. Every consumer shim byte-identical** to `templates/Build/build.ps1`, using the line-ending handling B10 chose. *(AC7)*
+- [x] **G1. Retire `v1`**: record in AGENTS.md that no further `v1` releases will be made; leave the tag and maintenance branch in place.
+  - **Outcome, 2026-11-12:** recorded in AGENTS.md and README.md. With no caller left on `@v1` (code search plus every consumer's callers), the moving `v1` tag and `release/v1` were then deleted rather than kept, at the user's direction; both pointed at `v1.6.1` (`b40b9c8`), which stays locked, and AGENTS.md records how to restore them.
+- [x] **G2. Every consumer shim byte-identical** to `templates/Build/build.ps1`, using the line-ending handling B10 chose. *(AC7)*
   - Verify: a scripted comparison across all seven repos' `main`.
+  - **Outcome, 2026-11-12:** byte-identical on all eight consumers' `main`, the seven migrated plus PS.YNAB, which started on `v2`. Every `Build/` holds only `build.ps1`, plus `harness.psd1` in PS.SSL, PS.DCU and AWSAutomation, and every caller pins `@v2`.
 - [ ] **G3. Close #20** with the evidence: the counts per repo, the dry-run comparisons, and the release tags.
-- [ ] **G4. Tick item 7 in `ROLLOUT.md`** and update the phase table.
+- [x] **G4. Tick item 7 in `ROLLOUT.md`** and update the phase table.

@@ -1,6 +1,6 @@
 # Consumer guide
 
-How a PowerShell module repo calls the reusable workflows in this repo, and how its build runs. Covers `v2`, which runs every consumer's build from the shared harness in [`Build/`](../Build). A repo still on `@v1` runs its own vendored `Build/` and is migrated by the steps under [Migrating from `v1`](#migrating-from-v1).
+How a PowerShell module repo calls the reusable workflows in this repo, and how its build runs. Covers `v2`, which runs every consumer's build from the shared harness in [`Build/`](../Build). A repo still pinned to a `v1.x.y` tag runs its own vendored `Build/` and is migrated by the steps under [Migrating from `v1`](#migrating-from-v1); the moving `@v1` tag no longer exists.
 
 ## Calling the workflows
 
@@ -225,13 +225,13 @@ Optional, and only for a genuine difference that must also apply to local runs. 
 
 An unknown key, or a value of the wrong type, fails the build, so a misspelt setting cannot be silently ignored. Exclusions apply to both the build's `Analyze` task and the Security-tab scan. Prefer an inline `SuppressMessageAttribute` when a finding is confined to a few files, such as a test fixture, so the rule stays on for the rest of the module.
 
-**Running excluded tests.** The harness always applies `PesterExcludeTag` and has no override. Run tagged tests with Pester directly from the repo root, for example PS.SSL's network tests:
+**Running excluded tests.** The harness always applies `PesterExcludeTag` and has no override. Run tagged tests with Pester directly from the repo root, pointing `-Path` at the files that hold them, for example PS.SSL's network tests:
 
 ```powershell
-Invoke-Pester -Path ./Tests -TagFilter 'Network' -Output Detailed
+Invoke-Pester -Path ./Tests/Integration/PS.SSL.Network.Integration.tests.ps1 -TagFilter 'Network' -Output Detailed
 ```
 
-This works because PS.SSL's test files import the module themselves: `$env:BHPSModuleManifest` when it is set, otherwise the manifest at the repo root. A repo whose tests rely on the harness to import the module needs the same fallback.
+Name the files rather than `./Tests`: Pester still discovers every file under `-Path` before applying `-TagFilter`, and a test file that depends on `$env:BHPSModuleManifest` or `$env:HARNESS_*` at discovery can fail outside the harness, where they are unset. PS.SSL's network test file falls back to the manifest at the repo root when those are unset; five of its other test files do not, so `-Path ./Tests` reports 5 failed containers (measured 2026-11-12).
 
 ### Dependencies
 
