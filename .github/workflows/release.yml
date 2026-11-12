@@ -34,18 +34,27 @@ jobs:
           path: .harness
           persist-credentials: false
 
+      # checkout only accepts a path under the workspace; on Windows a dot-folder is not hidden, so consumer tests that walk the repo would find it (#77).
+      - name: Move the build harness out of the workspace
+        shell: pwsh
+        run: Move-Item -LiteralPath '.harness' -Destination (Join-Path -Path $env:RUNNER_TEMP -ChildPath 'harness')
+
       - shell: pwsh # install dependencies
-        run: ./.harness/Build/build.ps1 -ProjectPath $env:GITHUB_WORKSPACE -ResolveDependency -TaskList 'Init'
+        run: |
+          & "$env:RUNNER_TEMP/harness/Build/build.ps1" -ProjectPath $env:GITHUB_WORKSPACE -ResolveDependency -TaskList 'Init'
 
       - shell: pwsh # stage module
-        run: ./.harness/Build/build.ps1 -ProjectPath $env:GITHUB_WORKSPACE -TaskList 'CombineFunctionsAndStage'
+        run: |
+          & "$env:RUNNER_TEMP/harness/Build/build.ps1" -ProjectPath $env:GITHUB_WORKSPACE -TaskList 'CombineFunctionsAndStage'
 
       - shell: pwsh # psscriptanalyzer
-        run: ./.harness/Build/build.ps1 -ProjectPath $env:GITHUB_WORKSPACE -TaskList 'Analyze'
+        run: |
+          & "$env:RUNNER_TEMP/harness/Build/build.ps1" -ProjectPath $env:GITHUB_WORKSPACE -TaskList 'Analyze'
 
       - shell: pwsh # pester
         id: pester
-        run: ./.harness/Build/build.ps1 -ProjectPath $env:GITHUB_WORKSPACE -TaskList 'Test'
+        run: |
+          & "$env:RUNNER_TEMP/harness/Build/build.ps1" -ProjectPath $env:GITHUB_WORKSPACE -TaskList 'Test'
 
       - name: Verify Pester results
         shell: pwsh
@@ -127,7 +136,8 @@ jobs:
           }
 
       - shell: pwsh # compress module
-        run: ./.harness/Build/build.ps1 -ProjectPath $env:GITHUB_WORKSPACE -TaskList 'CreateBuildArtifact'
+        run: |
+          & "$env:RUNNER_TEMP/harness/Build/build.ps1" -ProjectPath $env:GITHUB_WORKSPACE -TaskList 'CreateBuildArtifact'
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
