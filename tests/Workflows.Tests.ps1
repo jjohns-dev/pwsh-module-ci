@@ -42,6 +42,31 @@ Describe -Name 'Harness checkout in <File>' -ForEach $workflows -Fixture {
     }
 }
 
+Describe -Name 'Step names in <File>' -ForEach $workflows -Fixture {
+    BeforeAll {
+        $document = ConvertFrom-Yaml -Yaml (Get-Content -Path (Join-Path -Path $workflowRoot -ChildPath $File) -Raw)
+        $allSteps = @(foreach ($j in $document['jobs'].Values) { $j['steps'] })
+    }
+    It -Name 'names every step, so the Actions UI never shows the first line of a run: block (#79)' -Test {
+        $allSteps.Count | Should -BeGreaterThan 0
+        $allSteps.Where({ [System.String]::IsNullOrWhiteSpace($_['name']) }).ForEach({ "$($_['uses'])$($_['run'])" }) | Should -BeNullOrEmpty
+    }
+}
+
+Describe -Name 'Step names shared by ci.yml and release.yml' -Fixture {
+    BeforeAll {
+        function Get-HarnessStepName ([System.String] $File, [System.String] $Job, [System.String] $Task) {
+            @((Get-WorkflowJob -File $File -Job $Job)['steps'].Where({ "$($_['run'])" -match ('-TaskList\s+''{0}''|TaskList\s*=\s*''{0}''' -f $Task) })).ForEach({ $_['name'] })
+        }
+    }
+    It -Name 'gives the <_> step the same name in both' -ForEach @('Init', 'CombineFunctionsAndStage', 'Analyze', 'Test') -Test {
+        $ciName = @(Get-HarnessStepName -File 'ci.yml' -Job 'validate' -Task $_)
+        $ciName | Should -HaveCount 1
+        $ciName[0] | Should -Not -BeNullOrEmpty
+        Get-HarnessStepName -File 'release.yml' -Job 'release' -Task $_ | Should -BeExactly $ciName[0]
+    }
+}
+
 Describe -Name 'Harness location in <File>' -ForEach $workflows -Fixture {
     BeforeAll {
         $steps = @((Get-WorkflowJob -File $File -Job $Job)['steps'])

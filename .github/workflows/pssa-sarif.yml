@@ -15,7 +15,8 @@ jobs:
     name: PSScriptAnalyzer
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check out the module
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # The harness supplies the shared analyzer settings and the PSScriptAnalyzer pin,
       # so the Security tab and the build gate apply the same rules at the same version.
