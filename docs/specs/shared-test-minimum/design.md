@@ -90,7 +90,7 @@ Reads the manifest with `Import-PowerShellDataFile`, for what is literally decla
 | 10 | `PowerShellVersion` present, parses, and is `5.1` or in `7.0`..`$PSVersionTable.PSVersion` | declared |
 | 11 | the staged module's `ExportedFunctions` equal `Public/*.ps1` base names | imported |
 
-#11 imports `Staging/<ModuleName>` with `-Force -PassThru` and reads the returned module, not `Get-Module`, because a consumer test may have removed or replaced the loaded copy. It catches what #7 cannot: a `Public/` file whose function is named differently, or which defines nothing, is declared and present yet never exported, and `Import-Module` does not error on a missing export. Measured 2026-11-13 on pwsh 7.6.9: such a module imports cleanly with `ExportedFunctions` empty, while `Test-ModuleManifest` still reports the declared name. Staged, because that is what the artifact ships.
+Test 11 imports `Staging/<ModuleName>` with `-Force -PassThru` and reads the returned module, not `Get-Module`, because a consumer test may have removed or replaced the loaded copy. It catches what test 7 cannot: a `Public/` file whose function is named differently, or which defines nothing, is declared and present yet never exported, and `Import-Module` does not error on a missing export. Measured 2026-11-13 on pwsh 7.6.9: such a module imports cleanly with `ExportedFunctions` empty, while `Test-ModuleManifest` still reports the declared name. Staged, because that is what the artifact ships.
 
 Set comparisons join sorted arrays before comparing, as PS.YNAB's suite does, so an empty side cannot pass vacuously.
 
