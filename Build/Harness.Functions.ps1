@@ -1,6 +1,6 @@
 # ==============================================================================
 # Filename: Harness.Functions.ps1
-# Version:  0.1.0 | Updated: 2026-11-09
+# Version:  0.2.0 | Updated: 2026-11-13
 # Author:   johnsarie27
 # ==============================================================================
 <#
@@ -364,4 +364,55 @@ function Get-HarnessCommit {
         return 'unknown'
     }
     $sha.Trim()
+}
+
+function Get-HarnessSharedContainer {
+    <#
+    .SYNOPSIS
+        Returns one Pester container per shared suite, each carrying the -Data its param block declares.
+    .DESCRIPTION
+        The shared suites in Build/SharedTests run against the consumer's project in the same
+        Invoke-Pester call as its own tests. Each is given only the keys it declares, so a suite
+        that takes ProjectPath alone is never handed ModuleName. Containers come back in file
+        name order; the Test task appends them after the consumer's, so they run last.
+    .PARAMETER SharedTestPath
+        Folder holding the shared *.tests.ps1 files. Defaults to SharedTests beside this file.
+    .PARAMETER ProjectPath
+        Root of the consumer module's checkout.
+    .PARAMETER ModuleName
+        The consumer module's name.
+    .OUTPUTS
+        Pester.ContainerInfo, one per shared suite.
+    #>
+    [CmdletBinding()]
+    [OutputType([System.Object])]
+    param (
+        [Parameter()]
+        [ValidateNotNullOrEmpty()]
+        [System.String] $SharedTestPath = (Join-Path -Path $PSScriptRoot -ChildPath 'SharedTests'),
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [System.String] $ProjectPath,
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [System.String] $ModuleName
+    )
+
+    $available = @{ ProjectPath = $ProjectPath; ModuleName = $ModuleName }
+    $suites = @(Get-ChildItem -LiteralPath $SharedTestPath -Filter '*.tests.ps1' -File | Sort-Object -Property 'Name')
+    if ($suites.Count -eq 0) {
+        Write-Error -Message ('No shared suites found in [{0}].' -f $SharedTestPath) -ErrorAction 'Stop'
+    }
+    foreach ($suite in $suites) {
+        $paramBlock = [System.Management.Automation.Language.Parser]::ParseFile($suite.FullName, [ref] $null, [ref] $null).ParamBlock
+        $declared = if ($paramBlock) { @($paramBlock.Parameters).ForEach({ $_.Name.VariablePath.UserPath }) } else { @() }
+        $data = @{}
+        foreach ($name in $declared) {
+            if (-not $available.ContainsKey($name)) {
+                Write-Error -Message ('Shared suite [{0}] declares [{1}], which the harness does not supply.' -f $suite.Name, $name) -ErrorAction 'Stop'
+            }
+            $data[$name] = $available[$name]
+        }
+        New-PesterContainer -Path $suite.FullName -Data $data
+    }
 }

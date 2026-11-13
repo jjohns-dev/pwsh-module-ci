@@ -11,6 +11,7 @@ BeforeAll {
             [System.String] $FunctionBody = $cleanFunction,
             [System.Collections.Hashtable] $Tests = @{ 'Get-Fixture.tests.ps1' = $passingTest },
             [System.String] $Settings,
+            [System.Collections.Hashtable] $ManifestChange,
             [System.Management.Automation.SwitchParameter] $NoPublic,
             [System.Management.Automation.SwitchParameter] $EmptyPublic,
             [System.Management.Automation.SwitchParameter] $NoPrivate,
@@ -18,14 +19,22 @@ BeforeAll {
         )
         $root = Join-Path -Path $TestDrive -ChildPath ([System.Guid]::NewGuid())
         New-Item -Path $root -ItemType 'Directory' | Out-Null
+        # COMPLETE ENOUGH TO PASS THE SHARED SUITES, SO EACH CASE TESTS ONLY WHAT IT NAMES
         $manifestParams = @{
             Path              = Join-Path -Path $root -ChildPath 'Fixture.psd1'
             RootModule        = 'Fixture.psm1'
             ModuleVersion     = '1.2.3'
+            Author            = 'fixture'
+            Description       = 'fixture'
+            PowerShellVersion = '7.0'
+            ProjectUri        = 'https://example.invalid/fixture'
             FunctionsToExport = 'Get-Fixture'
             CmdletsToExport   = @()
             AliasesToExport   = @()
             VariablesToExport = @()
+        }
+        if ($ManifestChange) {
+            foreach ($k in $ManifestChange.Keys) { $manifestParams[$k] = $ManifestChange[$k] }
         }
         New-ModuleManifest @manifestParams
         $loader = 'foreach ($f in @(Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath ''*'') -Include ''*.ps1'' -Recurse)) { . $f.FullName }'
@@ -86,6 +95,7 @@ BeforeAll {
             Tests    = [System.Int32] $root.GetAttribute('tests')
             Disabled = [System.Int32] ($root.GetAttribute('disabled') -as [System.Int32])
             Failures = [System.Int32] $root.GetAttribute('failures')
+            Suites   = @($root.SelectNodes('testsuite').ForEach({ Split-Path -Path $_.GetAttribute('name') -Leaf }))
         }
     }
 }
@@ -163,13 +173,45 @@ Describe -Name 'Test' -Fixture {
             'Get-Other.tests.windows.ps1'   = $passingTest
         }
         $windowsCount = if ($IsWindows) { 3 } else { 1 }
+        # 11 MANIFEST + 3 META + 1 PATH-LITERAL, FOR THE FIXTURE'S ONE PUBLIC FILE
+        $sharedCount = 15
+        $sharedSuites = @('manifest.tests.ps1', 'meta.tests.ps1', 'pathliterals.tests.ps1')
     }
     It -Name 'runs cross-platform files, plus Windows-only files on Windows, under the default All scope' -Test {
         $project = Initialize-FixtureModule -Tests $mixedTests
         $result = Invoke-FixtureBuild -ProjectPath $project -TaskList 'Test'
         $result.ExitCode | Should -Be 0 -Because $result.Output
         $result.Output | Should -BeLike ('*PesterScope `[All`]: {0} test file(s)*' -f $windowsCount)
-        (Get-FixtureJUnit -ProjectPath $project).Tests | Should -Be $windowsCount
+        (Get-FixtureJUnit -ProjectPath $project).Tests | Should -Be ($windowsCount + $sharedCount)
+    }
+    It -Name 'runs the shared suites after the consumer''s tests, in one result file, under All' -Test {
+        $project = Initialize-FixtureModule
+        $result = Invoke-FixtureBuild -ProjectPath $project -TaskList 'Test'
+        $result.ExitCode | Should -Be 0 -Because $result.Output
+        $result.Output | Should -BeLike ('*Shared suites: {0}*' -f ($sharedSuites -join ', '))
+        $junit = Get-FixtureJUnit -ProjectPath $project
+        $junit.Suites | Should -Be (@('Get-Fixture.tests.ps1') + $sharedSuites)
+        $junit.Tests | Should -Be (1 + $sharedCount)
+    }
+    It -Name 'runs the shared suites under CrossPlatform' -Test {
+        $project = Initialize-FixtureModule -Tests $mixedTests
+        $result = Invoke-FixtureBuild -ProjectPath $project -TaskList 'Test' -Properties @{ PesterScope = 'CrossPlatform' }
+        $result.ExitCode | Should -Be 0 -Because $result.Output
+        (Get-FixtureJUnit -ProjectPath $project).Tests | Should -Be (1 + $sharedCount)
+    }
+    It -Name 'does not run the shared suites under WindowsOnly' -Test {
+        $project = Initialize-FixtureModule -Tests $mixedTests
+        $result = Invoke-FixtureBuild -ProjectPath $project -TaskList 'Test' -Properties @{ PesterScope = 'WindowsOnly' }
+        $result.ExitCode | Should -Be 0 -Because $result.Output
+        $result.Output | Should -Not -BeLike '*Shared suites:*'
+        (Get-FixtureJUnit -ProjectPath $project).Tests | Should -Be 2
+    }
+    It -Name 'fails the build when a shared test fails' -Test {
+        $project = Initialize-FixtureModule -ManifestChange @{ Description = '' }
+        $result = Invoke-FixtureBuild -ProjectPath $project -TaskList 'Test'
+        $result.ExitCode | Should -Not -Be 0
+        $result.Output | Should -BeLike '*Pester result `[Failed`]*'
+        (Get-FixtureJUnit -ProjectPath $project).Failures | Should -Be 1
     }
     It -Name 'runs only cross-platform files under CrossPlatform' -Test {
         $result = Invoke-FixtureBuild -ProjectPath (Initialize-FixtureModule -Tests $mixedTests) -TaskList 'Test' -Properties @{ PesterScope = 'CrossPlatform' }
@@ -210,7 +252,7 @@ Describe -Name 'Test' -Fixture {
             $result = Invoke-FixtureBuild -ProjectPath $project -TaskList 'Test'
             $result.ExitCode | Should -Be 0 -Because $result.Output
             $junit = Get-FixtureJUnit -ProjectPath $project
-            $junit.Tests - $junit.Disabled | Should -Be 1
+            $junit.Tests - $junit.Disabled | Should -Be (1 + $sharedCount)
         }
     }
     Context -Name 'strict mode' -Fixture {

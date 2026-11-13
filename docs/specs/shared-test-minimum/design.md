@@ -1,13 +1,13 @@
 # Shared test minimum — design
 
 - **Requirements:** [requirements.md](requirements.md), approved 2026-11-13
-- **Status:** Approved — 2026-11-13
+- **Status:** Approved — 2026-11-13; amended 2026-11-13 to three suites (see *What the harness already enforces*)
 
 ## Approach
 
-- Four Pester files ship in the harness and run inside the existing `Test` task, in the **same** `Invoke-Pester` call as the consumer's own tests. One run means one JUnit file, so `ci.yml`'s verify step and the `min-tests` floor see shared and consumer tests together with no workflow change.
+- Three Pester files ship in the harness and run inside the existing `Test` task, in the **same** `Invoke-Pester` call as the consumer's own tests. One run means one JUnit file, so `ci.yml`'s verify step and the `min-tests` floor see shared and consumer tests together with no workflow change.
 - Each shared file is handed to Pester as a container built with `New-PesterContainer -Path <file> -Data @{ ProjectPath; ModuleName }` (AC 2). The consumer's files become plain path containers in the same list.
-- Nothing changes in `ci.yml`, `release.yml`, `pssa-sarif.yml` or the shim. The change is `Build/build.psake.ps1`'s `Test` task plus four new files.
+- Nothing changes in `ci.yml`, `release.yml`, `pssa-sarif.yml` or the shim. The change is `Build/build.psake.ps1`'s `Test` task plus three new files.
 
 ## Architecture
 
@@ -15,8 +15,7 @@
 Build/
   build.psake.ps1          Test task: consumer containers + shared containers -> one Invoke-Pester
   SharedTests/
-    manifest.tests.ps1     14 tests, fixed
-    module.tests.ps1        3 tests, fixed
+    manifest.tests.ps1     11 tests, fixed
     meta.tests.ps1          3 tests, fixed (looped)
     pathliterals.tests.ps1  1 per Public/*.ps1
 ```
@@ -30,7 +29,7 @@ The `Test` task already sorts the consumer's files into `$crossPlatform` and `$w
 
 ### Order
 
-Shared containers run **after** the consumer's. The module suite removes and re-imports the module (below), so running it last keeps every consumer test on the module exactly as `ImportStagingModule` left it.
+Shared containers run **after** the consumer's. The manifest suite's resolved-exports check re-imports the staged module (below), so running it last keeps every consumer test on the module exactly as `ImportStagingModule` left it.
 
 ### Strict mode
 
@@ -40,39 +39,60 @@ The `Test` task turns strict mode off around `Invoke-Pester` unless the consumer
 
 | `-Data` key | Value | Used by |
 | ----------- | ----- | ------- |
-| `ProjectPath` | `$ProjectRoot`, the consumer checkout | all four |
-| `ModuleName` | `$ModuleName` | manifest, module |
+| `ProjectPath` | `$ProjectRoot`, the consumer checkout | all three |
+| `ModuleName` | `$ModuleName` | manifest |
 
 `-Data` binds at discovery as well as run time on Pester 6.2.0 (measured 2026-11-06, recorded on #53), which `pathliterals.tests.ps1` needs to build one case per public file in `BeforeDiscovery`.
 
-## The four suites
+## What the harness already enforces (AC 5)
 
-### `manifest.tests.ps1` — 14 tests (AC 3, AC 4)
+These were in the consumer copies and are **deliberately not** shared tests. Each is guaranteed by a step that runs before `Test`, so as a shared test it could never fail. Do not re-add them.
 
-Reads the manifest two ways, because they catch different failures: `Test-ModuleManifest` for resolved values, `Import-PowerShellDataFile` for what is literally declared.
+| Behaviour | Enforced by |
+| --------- | ----------- |
+| exactly one manifest at the project root | `Resolve-HarnessProject` stops the build otherwise |
+| manifest name matches the module | the module name **is** the manifest's file name, as is `Test-ModuleManifest`'s `Name`; the comparison is a tautology |
+| the `.psm1` loader exists | `CombineFunctionsAndStage` stops the build if a required input is missing |
+| the staged module imports | `ImportStagingModule` imports with `-ErrorAction Stop`, and `Test` depends on it |
+| `ModuleVersion` and `GUID` parse | an unparseable value fails that import (measured 2026-11-13, pwsh 7.6.9) |
+
+Measured 2026-11-13 on pwsh 7.6.9 against fixture manifests, to find which remaining checks the import already covers:
+
+| Defect | `Import-Module` | `Test-ModuleManifest` |
+| ------ | --------------- | --------------------- |
+| `ModuleVersion` or `GUID` unparseable | fails | fails |
+| `PowerShellVersion` `9.0` or `abc` | fails | fails |
+| `PowerShellVersion` `3.0` | imports | passes |
+| `FileList` names a missing file | imports | fails |
+| `RootModule` without extension, or absent | imports | passes |
+| `Description` absent; `FunctionsToExport = '*'` | imports | passes |
+| a `Public/` function misnamed | imports, exports nothing | passes |
+
+So AC 4's upper bound and parsing are also enforced by the import, but its lower bound is not, and that is why the version test stays.
+
+They made sense in the consumers, which ran outside a harness that checks them.
+
+## The three suites
+
+### `manifest.tests.ps1` — 11 tests (AC 3, AC 4)
+
+Reads the manifest with `Import-PowerShellDataFile`, for what is literally declared, plus one `Test-ModuleManifest` call and one import of the staged module.
 
 | # | Assertion | Source |
 | - | --------- | ------ |
-| 1 | manifest exists | path |
-| 2 | passes `Test-ModuleManifest` | resolved |
-| 3 | `Name` equals `ModuleName` | resolved |
-| 4 | `RootModule` is `<ModuleName>.psm1` | resolved |
-| 5 | `ModuleVersion` parses | resolved |
-| 6 | `Guid` parses | resolved |
-| 7–9 | `Description`, `Author`, `Copyright` non-empty | resolved |
-| 10 | `FunctionsToExport` non-empty | declared |
-| 11 | `FunctionsToExport` equals `Public/*.ps1` base names | declared |
-| 12 | no `*` in `FunctionsToExport`, `CmdletsToExport`, `VariablesToExport`, `AliasesToExport` | declared |
-| 13 | `PrivateData.PSData.ProjectUri` non-empty | declared |
-| 14 | `PowerShellVersion` present, parses, and is `5.1` or in `7.0`..`$PSVersionTable.PSVersion` | declared |
+| 1 | passes `Test-ModuleManifest` | resolved |
+| 2 | `RootModule` is `<ModuleName>.psm1` | declared |
+| 3–5 | `Description`, `Author`, `Copyright` non-empty | declared |
+| 6 | `FunctionsToExport` non-empty | declared |
+| 7 | `FunctionsToExport` equals `Public/*.ps1` base names | declared |
+| 8 | no `*` in `FunctionsToExport`, `CmdletsToExport`, `VariablesToExport`, `AliasesToExport` | declared |
+| 9 | `PrivateData.PSData.ProjectUri` non-empty | declared |
+| 10 | `PowerShellVersion` present, parses, and is `5.1` or in `7.0`..`$PSVersionTable.PSVersion` | declared |
+| 11 | the staged module's `ExportedFunctions` equal `Public/*.ps1` base names | imported |
+
+Test 11 imports `Staging/<ModuleName>` with `-Force -PassThru` and reads the returned module, not `Get-Module`, because a consumer test may have removed or replaced the loaded copy. It catches what test 7 cannot: a `Public/` file whose function is named differently, or which defines nothing, is declared and present yet never exported, and `Import-Module` does not error on a missing export. Measured 2026-11-13 on pwsh 7.6.9: such a module imports cleanly with `ExportedFunctions` empty, while `Test-ModuleManifest` still reports the declared name. Staged, because that is what the artifact ships.
 
 Set comparisons join sorted arrays before comparing, as PS.YNAB's suite does, so an empty side cannot pass vacuously.
-
-### `module.tests.ps1` — 3 tests (AC 5)
-
-1. `<ModuleName>.psm1` exists in `ProjectPath`.
-2. `Remove-Module`, then `Import-Module` of the **staged** copy (`Staging/<ModuleName>`) does not throw. Staged, because that is what the artifact ships; removed first, because `ImportStagingModule` has already loaded it and a re-import would prove nothing (the reason PS.GHOps, PS.GitHub and PS.YNAB tear down first).
-3. The imported module's `ExportedFunctions` equals `Public/*.ps1` base names. This catches a function that is declared but fails to load, which #11 in the manifest suite cannot.
 
 ### `meta.tests.ps1` — 3 tests, looped (AC 6, AC 7)
 
@@ -92,10 +112,13 @@ PS.SSL's implementation, adapted to `-Data`: parse each file and inspect only `S
 
 | File | Change |
 | ---- | ------ |
-| `Build/SharedTests/*.tests.ps1` | new, the four suites |
+| `Build/SharedTests/*.tests.ps1` | new, the three suites |
 | `Build/build.psake.ps1` | `Test` task builds containers; shared ones selected by scope, run last |
+| `Build/Harness.Functions.ps1` | new `Get-HarnessSharedContainer`: one container per suite, with only the `-Data` keys its `param` block declares |
 | `tests/SharedTests.Tests.ps1` | new: runs each shared file against fixture modules in `TestDrive:`, one passing fixture and one failing fixture per assertion (AC 14), under strict mode on and off |
-| `tests/HarnessTasks.Tests.ps1` | the `Test` task includes shared containers on `All`/`CrossPlatform` and excludes them on `WindowsOnly` |
+| `tests/SharedSuite.Driver.ps1` | new: runs one suite against a list of fixtures in a child pwsh, so strict mode and imported fixtures stay out of the verification run |
+| `tests/Harness.Tests.ps1` | `Get-HarnessSharedContainer`: keys per suite, file order, an undeclared key, an empty folder |
+| `tests/HarnessTasks.Tests.ps1` | the `Test` task includes shared containers on `All`/`CrossPlatform` and excludes them on `WindowsOnly`; the fixture manifest now passes the shared suites |
 | `docs/test-integrity.md` | *Settled decisions*: why meta loops (AC 7) |
 | `docs/consumer-guide.md` | what the harness now tests; what a consumer no longer carries |
 | `AGENTS.md`, `README.md` | layout row for `Build/SharedTests/` |
@@ -119,9 +142,9 @@ Delete `Tests/Common/manifest.tests.ps1`, `meta.tests.ps1`, `PathLiterals.tests.
 
 ## Risks and tradeoffs
 
-- **Two Pester behaviours are assumed, not measured.** That path and `-Data` containers can be mixed in one run, and that containers run in the order given, which the module suite's "run last" depends on. Converting every consumer file to `New-PesterContainer -Path` avoids mixing `Run.Path` with `Run.Container`; the first task measures both on Pester 6.2.0 before anything else is built.
+- **Two Pester behaviours are assumed, not measured.** That path and `-Data` containers can be mixed in one run, and that containers run in the order given, which the manifest suite's "run last" depends on. Converting every consumer file to `New-PesterContainer -Path` avoids mixing `Run.Path` with `Run.Container`; the first task measures both on Pester 6.2.0 before anything else is built.
 - **A shared-suite bug reaches eight repos at once.** Mitigated by AC 10's two proofs and the one-command rollback.
-- **The module suite re-imports the module.** Safe only because it runs last; a consumer test that ran after it would see a fresh import. Covered by the order rule and a harness test.
+- **The manifest suite re-imports the module.** Safe only because it runs last; a consumer test that ran after it would see a fresh import. Covered by the order rule and a harness test.
 - **`pathliterals` scales with public-function count.** Deleting more than ten public functions in one change trips the floor. Accepted in #53's decision: it tracks the module's surface, as help tests already do.
 
 ## ADR check
