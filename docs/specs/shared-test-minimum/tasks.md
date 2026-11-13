@@ -2,7 +2,7 @@
 
 - **Requirements:** [requirements.md](requirements.md), approved 2026-11-13
 - **Design:** [design.md](design.md), approved 2026-11-13
-- **Status:** Draft — 2026-11-13
+- **Status:** Approved — 2026-11-13
 
 Each task names its verification and the acceptance criteria (AC) it serves. Phases A–B are one PR in this repo; C is the release; D is one PR per consumer, through the agent-prompt pattern, each report verified here from run artifacts before its box is ticked.
 
@@ -34,29 +34,31 @@ Every assertion gets a fixture that must fail it and one that must pass it, unde
 
 - [ ] **C1. Merge B, cut `v2.1.0`** with a GitHub release whose notes say every consumer will run the shared suites when `v2` moves, and which repos are expected red. *(ADR-0002: minor)*
   - Verify: tag annotated, on the merge commit, release immutable.
-- [ ] **C2. Two throwaway proofs pinned `@v2.1.0`.** *(AC 10)*
-  - PS.YNAB: all three workflows green, executed count up by exactly the shared suites' count.
-  - SecurityTools: red on the meta BOM test only, the message naming exactly its four files; the windows leg unchanged at 21.
-  - Verify: `referenced_workflows` shows the `v2.1.0` tag object; counts from JUnit artifacts. Close both unmerged, branches deleted, evidence commented.
+- [ ] **C2. Prove `v2.1.0` on two consumers, in the PRs that become D1 and D8.** Each opens with one commit: its callers pinned `@v2.1.0`, nothing else. That first run is the proof; its evidence is posted as a PR comment before any other commit is pushed. *(AC 10)*
+  - PS.YNAB (D8): all three workflows green, executed count up by exactly the shared suites' count.
+  - SecurityTools (D1): red on the meta BOM test only, the message naming exactly its four files; the windows leg unchanged at 21.
+  - Verify: `referenced_workflows` shows the `v2.1.0` tag object; counts from JUnit artifacts. Both PRs stay open for D.
 - [ ] **C3. Move `v2` to `v2.1.0`.** *(AC 11)*
   - Verify: `git ls-remote origin 'refs/tags/v2^{}'` shows the `v2.1.0` commit; a rerun of one consumer's `main` ci records the new tag object.
 
 ## D. Cleanup PRs, one per consumer *(AC 12, AC 13)*
 
-Each PR: delete the vendored files below; fix that repo's red-list defects; recalculate every leg's floor from the PR's own run; copy the shim template. The PR comment maps every deleted assertion to a shared one, or records why it is dropped.
+Each PR: delete the vendored files below; fix that repo's red-list defects; recalculate every leg's floor from the PR's own run; copy the shim template; callers on `@v2`. The PR comment maps every deleted assertion to a shared one, or records why it is dropped.
+
+D1 and D8 are the C2 PRs, continued after C3: the cleanup commits are added on top of the proof commit, and the callers are repointed from `@v2.1.0` back to `@v2` before merge, so no consumer is left on an immutable pin.
 
 Red repos first, so `main` is green again soonest.
 
-- [ ] **D1. SecurityTools** — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`; remove BOMs from four files. Both legs.
+- [ ] **D1. SecurityTools** (continues C2) — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`; remove BOMs from four files. Both legs.
 - [ ] **D2. AWSAutomation** — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`; fix three `"$HOME\Desktop"` literals.
 - [ ] **D3. PS.SSL** — `Tests/Common/{manifest,meta,PathLiterals}.tests.ps1`, `MetaFixers.psm1`. Both legs.
 - [ ] **D4. PS.Log** — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`.
 - [ ] **D5. PS.DCU** — `Tests/Common/{manifest,meta}.tests.ps1`. Its count falls: 38 per-file meta tests become 3.
 - [ ] **D6. PS.GHOps** — `Tests/Unit/Module.tests.ps1`.
 - [ ] **D7. PS.GitHub** — `Tests/Unit/Module.tests.ps1`.
-- [ ] **D8. PS.YNAB** — `Tests/Unit/Module.tests.ps1`.
+- [ ] **D8. PS.YNAB** (continues C2) — `Tests/Unit/Module.tests.ps1`.
 
-Verify each: post-merge `main` run green; executed count per leg read from JUnit; floor equals executed minus `min(floor(executed * 0.05), 10)`; `Build/build.ps1` byte-identical to the template; `help.tests.ps1` and unit tests untouched.
+Verify each: post-merge `main` run green; executed count per leg read from JUnit; floor equals executed minus `min(floor(executed * 0.05), 10)`; callers pin `@v2`; `Build/build.ps1` byte-identical to the template; `help.tests.ps1` and unit tests untouched.
 
 ## E. Close-out
 
