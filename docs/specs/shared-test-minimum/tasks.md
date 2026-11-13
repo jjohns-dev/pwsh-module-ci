@@ -65,7 +65,8 @@ Red repos first, so `main` is green again soonest.
 
 - [x] **D1. SecurityTools** (continues C2) — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`; remove BOMs from four files. Both legs.
   - **Done 2026-11-13.** [#171](https://github.com/jjohns-dev/SecurityTools/pull/171) squashed to `d18c091`, all commits signed. The agent first stopped on the meta file-type gap, which became C4 (`v2.1.1`). Verified here: BOMs gone from the four files, three vendored files deleted, `help.tests.ps1` unchanged, shim `C09FEE99…0CFF`, callers on `@v2`. ubuntu 1066 executed (996 − 10 + 80 shared) → `minTests` 1056; windows 21 → 20. Post-merge `main`: ci green at 1066 and 21, pssa-sarif green.
-- [ ] **D2. AWSAutomation** — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`; fix three `"$HOME\Desktop"` literals and the tab in `.devcontainer/devcontainer.json` (v2.1.1).
+- [x] **D2. AWSAutomation** — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`; fix three `"$HOME\Desktop"` literals and the tab in `.devcontainer/devcontainer.json` (v2.1.1).
+  - **Done 2026-11-13.** [#109](https://github.com/jjohns-dev/AWSAutomation/pull/109) squashed to `8c1399f` by the repo agent, both commits signed. Verified here: the three code literals now use nested `Join-Path` (5.1-safe), the help `.EXAMPLE` on line 26 left as is; `devcontainer.json` has no tabs and parses; three vendored files deleted, `help.tests.ps1` unchanged; shim `C09FEE99…0CFF`; callers on `@v2`. 484 executed (444 − 10 + 50 shared) → `min-tests` 474. Post-merge `main`: ci green at 484, pssa-sarif green.
 - [ ] **D3. PS.SSL** — `Tests/Common/{manifest,meta,PathLiterals}.tests.ps1`, `MetaFixers.psm1`. Both legs.
 - [ ] **D4. PS.Log** — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`; fix the tab in `.devcontainer/devcontainer.json` (v2.1.1).
 - [ ] **D5. PS.DCU** — `Tests/Common/{manifest,meta}.tests.ps1`. Its count falls: 38 per-file meta tests become 3.
