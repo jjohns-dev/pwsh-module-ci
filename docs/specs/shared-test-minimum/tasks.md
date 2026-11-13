@@ -51,6 +51,9 @@ Every assertion gets a fixture that must fail it and one that must pass it, unde
 - [x] **C3. Move `v2` to `v2.1.0`.** *(AC 11)*
   - Verify: `git ls-remote origin 'refs/tags/v2^{}'` shows the `v2.1.0` commit; a rerun of one consumer's `main` ci records the new tag object.
   - **Done 2026-11-13.** `v2^{}` = `552999b` (tag object `e128d30`). PS.Log `main` ci rerun (43271792912, attempt 3) referenced `e128d30` and passed, executing 111 = 91 own + 20 shared.
+- [x] **C4. `v2.1.1`: widen the meta suite's file types** *(added 2026-11-13; AC 6 amended, AC 13)*
+  - Why: the D1 agent stopped because SecurityTools' `Get-TextFilesList` also checked `.json`, `.xml`, `.cmd`, `.mof`, `.gitignore` and `.gitattributes`; deleting it would have dropped coverage of runtime-loaded `Private/*.json` data.
+  - **Done 2026-11-13.** [#86](https://github.com/jjohns-dev/pwsh-module-ci/pull/86) squashed to `8f74daf`; `v2.1.1` released (tag object `bce2b1b`, immutable); `v2` moved (tag object `2e53e23`). PS.Log `main` ci rerun (attempt 4) referenced `2e53e23` and failed exactly as predicted: 111 tests, one failure, the shared tab test naming only `.devcontainer/devcontainer.json`.
 
 ## D. Cleanup PRs, one per consumer *(AC 12, AC 13)*
 
@@ -61,9 +64,9 @@ D1 and D8 are the C2 PRs, continued after C3: the cleanup commits are added on t
 Red repos first, so `main` is green again soonest.
 
 - [ ] **D1. SecurityTools** (continues C2) — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`; remove BOMs from four files. Both legs.
-- [ ] **D2. AWSAutomation** — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`; fix three `"$HOME\Desktop"` literals.
+- [ ] **D2. AWSAutomation** — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`; fix three `"$HOME\Desktop"` literals and the tab in `.devcontainer/devcontainer.json` (v2.1.1).
 - [ ] **D3. PS.SSL** — `Tests/Common/{manifest,meta,PathLiterals}.tests.ps1`, `MetaFixers.psm1`. Both legs.
-- [ ] **D4. PS.Log** — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`.
+- [ ] **D4. PS.Log** — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`; fix the tab in `.devcontainer/devcontainer.json` (v2.1.1).
 - [ ] **D5. PS.DCU** — `Tests/Common/{manifest,meta}.tests.ps1`. Its count falls: 38 per-file meta tests become 3.
 - [ ] **D6. PS.GHOps** — `Tests/Unit/Module.tests.ps1`.
 - [ ] **D7. PS.GitHub** — `Tests/Unit/Module.tests.ps1`.
