@@ -1,7 +1,7 @@
 # Shared test minimum — design
 
 - **Requirements:** [requirements.md](requirements.md), approved 2026-11-13
-- **Status:** Draft — 2026-11-13
+- **Status:** Approved — 2026-11-13
 
 ## Approach
 
