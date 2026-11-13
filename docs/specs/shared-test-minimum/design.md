@@ -114,8 +114,11 @@ PS.SSL's implementation, adapted to `-Data`: parse each file and inspect only `S
 | ---- | ------ |
 | `Build/SharedTests/*.tests.ps1` | new, the three suites |
 | `Build/build.psake.ps1` | `Test` task builds containers; shared ones selected by scope, run last |
+| `Build/Harness.Functions.ps1` | new `Get-HarnessSharedContainer`: one container per suite, with only the `-Data` keys its `param` block declares |
 | `tests/SharedTests.Tests.ps1` | new: runs each shared file against fixture modules in `TestDrive:`, one passing fixture and one failing fixture per assertion (AC 14), under strict mode on and off |
-| `tests/HarnessTasks.Tests.ps1` | the `Test` task includes shared containers on `All`/`CrossPlatform` and excludes them on `WindowsOnly` |
+| `tests/SharedSuite.Driver.ps1` | new: runs one suite against a list of fixtures in a child pwsh, so strict mode and imported fixtures stay out of the verification run |
+| `tests/Harness.Tests.ps1` | `Get-HarnessSharedContainer`: keys per suite, file order, an undeclared key, an empty folder |
+| `tests/HarnessTasks.Tests.ps1` | the `Test` task includes shared containers on `All`/`CrossPlatform` and excludes them on `WindowsOnly`; the fixture manifest now passes the shared suites |
 | `docs/test-integrity.md` | *Settled decisions*: why meta loops (AC 7) |
 | `docs/consumer-guide.md` | what the harness now tests; what a consumer no longer carries |
 | `AGENTS.md`, `README.md` | layout row for `Build/SharedTests/` |
