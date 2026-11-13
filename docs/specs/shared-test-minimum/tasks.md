@@ -85,6 +85,8 @@ Verify each: post-merge `main` run green; executed count per leg read from JUnit
 
 ## E. Close-out
 
-- [ ] **E1.** Close #53 with the evidence; tick `ROLLOUT.md` item 8 with the merge commits and final floors.
-- [ ] **E2.** Update #55 and `ROLLOUT.md` item 9: help is to be centralized as its own release (agreed 2026-11-13), no longer optional.
+- [x] **E1.** Close #53 with the evidence; tick `ROLLOUT.md` item 8 with the merge commits and final floors.
+  - **Done 2026-11-13.** Closing comment with every consumer's merge, executed count and floor, and the two dropped assertions; #53 closed as completed. `ROLLOUT.md` item 8 ticked.
+- [x] **E2.** Update #55 and `ROLLOUT.md` item 9: help is to be centralized as its own release (agreed 2026-11-13), no longer optional.
+  - **Done 2026-11-13.** #55's *Optional and gates nothing* paragraph replaced; a comment records the eighth consumer, Group D now including PS.YNAB, and PS.SSL's export check being redundant. `ROLLOUT.md` item 9 and the running-order row updated.
   - Verify: issue and file agree.
