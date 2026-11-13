@@ -8,8 +8,10 @@ Each task names its verification and the acceptance criteria (AC) it serves. Pha
 
 ## A. Measure before building
 
-- [ ] **A1. Confirm the two assumed Pester behaviours** on Pester 6.2.0, in a scratch run: path containers and `-Data` containers mixed in one `Invoke-Pester` call, and containers executing in the order given. *(design: Risks)*
+- [x] **A1. Confirm the two assumed Pester behaviours** on Pester 6.2.0, in a scratch run: path containers and `-Data` containers mixed in one `Invoke-Pester` call, and containers executing in the order given. *(design: Risks)*
   - Verify: a probe that records execution order and fails if either behaviour does not hold, plus a control showing the probe can fail. Result recorded in this file. If either fails, revise the design before B.
+  - **Result, 2026-11-13: both hold.** Two path containers and one `-Data` container in one call: 5/5 passed. Order follows input, not file name: `zeta, beta, alpha` given in that order ran in that order, and reversed ran reversed. `-Data` reached `BeforeDiscovery`, which built three cases from it. Control: the same `-Data` file without `-Data` failed the run with a container error and 0 tests.
+  - **Found by the control:** a `Mandatory` parameter in a shared file makes a run without `-Data` prompt interactively, hanging a local run. Shared files declare their parameters non-mandatory and throw in `BeforeDiscovery` when a value is missing.
 
 ## B. Harness change, one PR
 
