@@ -40,14 +40,20 @@ Every assertion gets a fixture that must fail it and one that must pass it, unde
 
 ## C. Release
 
-- [ ] **C1. Merge B, cut `v2.1.0`** with a GitHub release whose notes say every consumer will run the shared suites when `v2` moves, and which repos are expected red. *(ADR-0002: minor)*
+- [x] **C1. Merge B, cut `v2.1.0`** with a GitHub release whose notes say every consumer will run the shared suites when `v2` moves, and which repos are expected red. *(ADR-0002: minor)*
   - Verify: tag annotated, on the merge commit, release immutable.
-- [ ] **C2. Prove `v2.1.0` on two consumers, in the PRs that become D1 and D8.** Each opens with one commit: its callers pinned `@v2.1.0`, nothing else. That first run is the proof; its evidence is posted as a PR comment before any other commit is pushed. *(AC 10)*
+  - **Done 2026-11-13.** #85 squashed to `552999b`; `v2.1.0` annotated (tag object `95a31b2`), release immutable.
+- [x] **C2. Prove `v2.1.0` on two consumers, in the PRs that become D1 and D8.** Each opens with one commit: its callers pinned `@v2.1.0`, nothing else. That first run is the proof; its evidence is posted as a PR comment before any other commit is pushed. *(AC 10)*
   - PS.YNAB (D8): all three workflows green, executed count up by exactly the shared suites' count.
   - SecurityTools (D1): red on the meta BOM test only, the message naming exactly its four files; the windows leg unchanged at 21.
   - Verify: `referenced_workflows` shows the `v2.1.0` tag object; counts from JUnit artifacts. Both PRs stay open for D.
-- [ ] **C3. Move `v2` to `v2.1.0`.** *(AC 11)*
+  - **Done 2026-11-13.** [PS.YNAB#19](https://github.com/jjohns-dev/PS.YNAB/pull/19) (`5c56f3d`): ci, release dry run and pssa-sarif green; 214 executed = 191 own + 23 shared. [SecurityTools#171](https://github.com/jjohns-dev/SecurityTools/pull/171) (`431003f`): ubuntu 1077 tests, 1 disabled, the one failure the BOM test naming exactly its four files; windows 21, no shared suites; release dry run red on the same test; pssa-sarif green. All six runs reference `95a31b2`. Evidence commented on both PRs.
+- [x] **C3. Move `v2` to `v2.1.0`.** *(AC 11)*
   - Verify: `git ls-remote origin 'refs/tags/v2^{}'` shows the `v2.1.0` commit; a rerun of one consumer's `main` ci records the new tag object.
+  - **Done 2026-11-13.** `v2^{}` = `552999b` (tag object `e128d30`). PS.Log `main` ci rerun (43271792912, attempt 3) referenced `e128d30` and passed, executing 111 = 91 own + 20 shared.
+- [x] **C4. `v2.1.1`: widen the meta suite's file types** *(added 2026-11-13; AC 6 amended, AC 13)*
+  - Why: the D1 agent stopped because SecurityTools' `Get-TextFilesList` also checked `.json`, `.xml`, `.cmd`, `.mof`, `.gitignore` and `.gitattributes`; deleting it would have dropped coverage of runtime-loaded `Private/*.json` data.
+  - **Done 2026-11-13.** [#86](https://github.com/jjohns-dev/pwsh-module-ci/pull/86) squashed to `8f74daf`; `v2.1.1` released (tag object `bce2b1b`, immutable); `v2` moved (tag object `2e53e23`). PS.Log `main` ci rerun (attempt 4) referenced `2e53e23` and failed exactly as predicted: 111 tests, one failure, the shared tab test naming only `.devcontainer/devcontainer.json`.
 
 ## D. Cleanup PRs, one per consumer *(AC 12, AC 13)*
 
@@ -57,19 +63,30 @@ D1 and D8 are the C2 PRs, continued after C3: the cleanup commits are added on t
 
 Red repos first, so `main` is green again soonest.
 
-- [ ] **D1. SecurityTools** (continues C2) — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`; remove BOMs from four files. Both legs.
-- [ ] **D2. AWSAutomation** — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`; fix three `"$HOME\Desktop"` literals.
-- [ ] **D3. PS.SSL** — `Tests/Common/{manifest,meta,PathLiterals}.tests.ps1`, `MetaFixers.psm1`. Both legs.
-- [ ] **D4. PS.Log** — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`.
-- [ ] **D5. PS.DCU** — `Tests/Common/{manifest,meta}.tests.ps1`. Its count falls: 38 per-file meta tests become 3.
-- [ ] **D6. PS.GHOps** — `Tests/Unit/Module.tests.ps1`.
-- [ ] **D7. PS.GitHub** — `Tests/Unit/Module.tests.ps1`.
-- [ ] **D8. PS.YNAB** (continues C2) — `Tests/Unit/Module.tests.ps1`.
+- [x] **D1. SecurityTools** (continues C2) — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`; remove BOMs from four files. Both legs.
+  - **Done 2026-11-13.** [#171](https://github.com/jjohns-dev/SecurityTools/pull/171) squashed to `d18c091`, all commits signed. The agent first stopped on the meta file-type gap, which became C4 (`v2.1.1`). Verified here: BOMs gone from the four files, three vendored files deleted, `help.tests.ps1` unchanged, shim `C09FEE99…0CFF`, callers on `@v2`. ubuntu 1066 executed (996 − 10 + 80 shared) → `minTests` 1056; windows 21 → 20. Post-merge `main`: ci green at 1066 and 21, pssa-sarif green.
+- [x] **D2. AWSAutomation** — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`; fix three `"$HOME\Desktop"` literals and the tab in `.devcontainer/devcontainer.json` (v2.1.1).
+  - **Done 2026-11-13.** [#109](https://github.com/jjohns-dev/AWSAutomation/pull/109) squashed to `8c1399f` by the repo agent, both commits signed. Verified here: the three code literals now use nested `Join-Path` (5.1-safe), the help `.EXAMPLE` on line 26 left as is; `devcontainer.json` has no tabs and parses; three vendored files deleted, `help.tests.ps1` unchanged; shim `C09FEE99…0CFF`; callers on `@v2`. 484 executed (444 − 10 + 50 shared) → `min-tests` 474. Post-merge `main`: ci green at 484, pssa-sarif green.
+- [x] **D3. PS.SSL** — `Tests/Common/{manifest,meta,PathLiterals}.tests.ps1`, `MetaFixers.psm1`. Both legs.
+  - **Done 2026-11-13.** [#80](https://github.com/jjohns-dev/PS.SSL/pull/80) squashed to `6b148a9` by the repo agent. Verified here: four vendored files deleted, `help.tests.ps1` unchanged; `AGENTS.md` points the manifest, encoding and path-literal checks at the shared suites; shim `C09FEE99…0CFF`; callers on `@v2`. ubuntu 350 executed (346 − 25 vendored + 29 shared), windows 351 (347 − 25 + 29) → `min-tests` 340 from the ubuntu leg. Post-merge `main`: ci green at 350 and 351 against `v2` tag object `2e53e23`, pssa-sarif green.
+- [x] **D4. PS.Log** — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`; fix the tab in `.devcontainer/devcontainer.json` (v2.1.1).
+  - **Done 2026-11-13.** [#63](https://github.com/jjohns-dev/PS.Log/pull/63) squashed to `74e614e` by the repo agent. Verified here: `devcontainer.json` has no tabs; three vendored files deleted, `help.tests.ps1` unchanged; shim `C09FEE99…0CFF`; callers on `@v2`. 101 executed (111 at C3, which included 20 shared, minus 10 vendored) → `min-tests` 96. Post-merge `main`: ci green at 101 against `v2` tag object `2e53e23`, pssa-sarif green.
+- [x] **D5. PS.DCU** — `Tests/Common/{manifest,meta}.tests.ps1`. Its count falls: 38 per-file meta tests become 3.
+  - **Done 2026-11-13.** [#28](https://github.com/jjohns-dev/PS.DCU/pull/28) squashed to `1b677ed` by the repo agent. Verified here: two vendored files deleted, `help.tests.ps1` unchanged at 32 tests; shim `C09FEE99…0CFF`; callers on `@v2`. 54 executed (81 − 11 manifest − 38 meta + 22 shared) → `min-tests` 52. Post-merge `main`: ci green at 54 against `v2` tag object `2e53e23` under `PesterStrictMode`, pssa-sarif green.
+  - PS.DCU's *declares empty CmdletsToExport, VariablesToExport, AliasesToExport* was dropped, not replaced. The fleet rule is no `*` in any export field (design, test 8); PS.SSL, AWSAutomation and SecurityTools export aliases or variables, and an explicit export is already a reviewed manifest edit.
+- [x] **D6. PS.GHOps** — `Tests/Unit/Module.tests.ps1`.
+  - **Done 2026-11-13.** [#24](https://github.com/jjohns-dev/PS.GHOps/pull/24) squashed to `8df428a` by the repo agent. Verified here: `Module.tests.ps1` deleted, no other test file changed; shim `C09FEE99…0CFF`; callers on `@v2`. 111 executed on each of ubuntu, windows and macos (95 − 8 + 24 shared) → `min-tests` 106. Post-merge `main`: ci green at 111 on all three against `v2` tag object `2e53e23`, pssa-sarif green. Its *minimum PowerShell version of 7.4 or higher* was dropped, superseded by the shared `PowerShellVersion` test (AC 4).
+- [x] **D7. PS.GitHub** — `Tests/Unit/Module.tests.ps1`.
+  - **Done 2026-11-13.** [#42](https://github.com/jjohns-dev/PS.GitHub/pull/42) squashed to `6d83b34` by the repo agent. Verified here: `Module.tests.ps1` deleted, no other test file changed; shim `C09FEE99…0CFF`; callers on `@v2`. 125 executed on each of ubuntu, windows and macos (112 − 7 + 20 shared) → `min-tests` 119. Post-merge `main`: ci green at 125 on all three against `v2` tag object `2e53e23`, pssa-sarif green. Its 7.4-minimum test was dropped as in D6; its suite had no exports test, so the shared pair is new coverage here.
+- [x] **D8. PS.YNAB** (continues C2) — `Tests/Unit/Module.tests.ps1`.
+  - **Done 2026-11-13.** [#19](https://github.com/jjohns-dev/PS.YNAB/pull/19) squashed to `51f6bfb` by the repo agent. The PR built on the C2 proof commit `5c56f3d` and repointed its callers from `@v2.1.0` to `@v2`. Verified here: `Module.tests.ps1` deleted, no other test file changed; shim `C09FEE99…0CFF`, replacing an older copy (`CABD2617…`). 207 executed (191 − 7 + 23 shared) → `min-tests` 197. Post-merge `main`: ci green at 207 against `v2` tag object `2e53e23`, pssa-sarif green. Its 7.4-minimum test was dropped as in D6.
 
 Verify each: post-merge `main` run green; executed count per leg read from JUnit; floor equals executed minus `min(floor(executed * 0.05), 10)`; callers pin `@v2`; `Build/build.ps1` byte-identical to the template; `help.tests.ps1` and unit tests untouched.
 
 ## E. Close-out
 
-- [ ] **E1.** Close #53 with the evidence; tick `ROLLOUT.md` item 8 with the merge commits and final floors.
-- [ ] **E2.** Update #55 and `ROLLOUT.md` item 9: help is to be centralized as its own release (agreed 2026-11-13), no longer optional.
+- [x] **E1.** Close #53 with the evidence; tick `ROLLOUT.md` item 8 with the merge commits and final floors.
+  - **Done 2026-11-13.** Closing comment with every consumer's merge, executed count and floor, and the two dropped assertions; #53 closed as completed. `ROLLOUT.md` item 8 ticked.
+- [x] **E2.** Update #55 and `ROLLOUT.md` item 9: help is to be centralized as its own release (agreed 2026-11-13), no longer optional.
+  - **Done 2026-11-13.** #55's *Optional and gates nothing* paragraph replaced; a comment records the eighth consumer, Group D now including PS.YNAB, and PS.SSL's export check being redundant. `ROLLOUT.md` item 9 and the running-order row updated.
   - Verify: issue and file agree.
