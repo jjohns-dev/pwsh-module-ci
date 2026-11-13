@@ -245,6 +245,39 @@ Describe -Name 'Get-HarnessAnalyzerSetting and Invoke-HarnessAnalysis' -Fixture 
     }
 }
 
+Describe -Name 'Get-HarnessSharedContainer' -Fixture {
+    BeforeAll {
+        . (Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath 'Build' -AdditionalChildPath 'Harness.Functions.ps1')
+    }
+    BeforeEach {
+        $suiteRoot = Join-Path -Path $TestDrive -ChildPath ([System.Guid]::NewGuid())
+        New-Item -Path $suiteRoot -ItemType 'Directory' | Out-Null
+    }
+    It -Name 'gives each suite only the keys its param block declares, in file name order' -Test {
+        Set-Content -Path (Join-Path -Path $suiteRoot -ChildPath 'b.tests.ps1') -Value 'param ([System.String] $ProjectPath)'
+        Set-Content -Path (Join-Path -Path $suiteRoot -ChildPath 'a.tests.ps1') -Value 'param ([System.String] $ProjectPath, [System.String] $ModuleName)'
+        Set-Content -Path (Join-Path -Path $suiteRoot -ChildPath 'c.tests.ps1') -Value 'Describe -Name ''none'' -Fixture { }'
+        $containers = @(Get-HarnessSharedContainer -SharedTestPath $suiteRoot -ProjectPath '/p' -ModuleName 'M')
+        $containers.ForEach({ Split-Path -Path $_.Item -Leaf }) | Should -Be @('a.tests.ps1', 'b.tests.ps1', 'c.tests.ps1')
+        ($containers[0].Data.Keys | Sort-Object) | Should -Be @('ModuleName', 'ProjectPath')
+        $containers[0].Data['ModuleName'] | Should -BeExactly 'M'
+        @($containers[1].Data.Keys) | Should -Be @('ProjectPath')
+        $containers[1].Data['ProjectPath'] | Should -BeExactly '/p'
+        @($containers[2].Data.Keys) | Should -HaveCount 0
+    }
+    It -Name 'stops when a suite declares a parameter the harness does not supply' -Test {
+        Set-Content -Path (Join-Path -Path $suiteRoot -ChildPath 'x.tests.ps1') -Value 'param ([System.String] $Unknown)'
+        { Get-HarnessSharedContainer -SharedTestPath $suiteRoot -ProjectPath '/p' -ModuleName 'M' } | Should -Throw -ExpectedMessage '*declares `[Unknown`]*'
+    }
+    It -Name 'stops when the folder holds no suites' -Test {
+        { Get-HarnessSharedContainer -SharedTestPath $suiteRoot -ProjectPath '/p' -ModuleName 'M' } | Should -Throw -ExpectedMessage '*No shared suites*'
+    }
+    It -Name 'defaults to the harness''s own three suites' -Test {
+        $containers = @(Get-HarnessSharedContainer -ProjectPath '/p' -ModuleName 'M')
+        $containers.ForEach({ Split-Path -Path $_.Item -Leaf }) | Should -Be @('manifest.tests.ps1', 'meta.tests.ps1', 'pathliterals.tests.ps1')
+    }
+}
+
 Describe -Name 'build.ps1 entry point' -Fixture {
     BeforeAll {
         $buildScript = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath 'Build' -AdditionalChildPath 'build.ps1'

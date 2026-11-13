@@ -1,6 +1,6 @@
 # ==============================================================================
 # Filename: build.psake.ps1
-# Version:  2.0.0 | Updated: 2026-11-09
+# Version:  2.1.0 | Updated: 2026-11-13
 # Author:   johnsarie27
 # ==============================================================================
 <#
@@ -159,19 +159,31 @@ Task 'Test' -depends 'ImportStagingModule' {
         }
     }
 
-    # RUN.PATH IS TYPED String[]; A SINGLE FileInfo FAILS COERCION, SO PASS AN ARRAY OF PATHS
+    # FULL PATHS AS A String[], ONE CONSUMER CONTAINER PER FILE
     $testScripts = [System.String[]] @(@($selected).ForEach({ $_.FullName }))
     if ($testScripts.Count -eq 0) {
         Write-Error -Message ('No test files selected under [{0}] for PesterScope [{1}].' -f $testRoot, $PesterScope) -ErrorAction 'Stop'
     }
     Write-Output -InputObject ('PesterScope [{0}]: {1} test file(s)' -f $PesterScope, $testScripts.Count)
 
+    # SHARED SUITES ARE CROSS-PLATFORM TESTS AND RUN LAST: THE MANIFEST SUITE RE-IMPORTS THE STAGED MODULE
+    $containers = @(New-PesterContainer -Path $testScripts)
+    if ($PesterScope -in 'All', 'CrossPlatform') {
+        $sharedParams = @{
+            ProjectPath = $ProjectRoot
+            ModuleName  = $ModuleName
+        }
+        $shared = @(Get-HarnessSharedContainer @sharedParams)
+        $containers += $shared
+        Write-Output -InputObject ('Shared suites: {0}' -f (($shared.ForEach({ Split-Path -Path $_.Item -Leaf })) -join ', '))
+    }
+
     $pesterConfig = New-PesterConfiguration
     $pesterConfig.TestResult.OutputFormat = 'JUnitXml'
     $pesterConfig.TestResult.OutputPath = Join-Path -Path $ArtifactFolder -ChildPath $TestFile
     $pesterConfig.TestResult.Enabled = $true
     $pesterConfig.Run.PassThru = $true
-    $pesterConfig.Run.Path = $testScripts
+    $pesterConfig.Run.Container = $containers
     if ($HarnessSettings.PesterExcludeTag.Count -gt 0) {
         $pesterConfig.Filter.ExcludeTag = $HarnessSettings.PesterExcludeTag
         Write-Output -InputObject ('Excluding Pester tags from Build/harness.psd1: {0}' -f ($HarnessSettings.PesterExcludeTag -join ', '))
