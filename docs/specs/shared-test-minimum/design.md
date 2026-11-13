@@ -96,7 +96,7 @@ Set comparisons join sorted arrays before comparing, as PS.YNAB's suite does, so
 
 ### `meta.tests.ps1` — 3 tests, looped (AC 6, AC 7)
 
-One file list: every `.ps1`, `.psm1` and `.psd1` under `ProjectPath`, excluding any path containing a `.git`, `Staging` or `Artifacts` segment. Each test reads bytes and fails with every offender in the message:
+One file list: every `.ps1`, `.psm1`, `.psd1`, `.json`, `.xml`, `.cmd`, `.mof`, `.gitignore` and `.gitattributes` under `ProjectPath`, dot-folders included, excluding any path containing a `.git`, `Staging` or `Artifacts` segment. The types are those of the `Get-TextFilesList` the consumer copies used (widened in `v2.1.1`; requirements, *Decisions*). Each test reads bytes and fails with every offender in the message:
 
 1. no UTF-8 BOM (`EF BB BF` at offset 0) — PS.DCU's check, which a `0x00` scan cannot replace;
 2. no tab byte (`0x09`);

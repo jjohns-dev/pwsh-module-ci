@@ -63,9 +63,9 @@ BeforeDiscovery {
         @{
             Suite = 'meta.tests.ps1'
             Names = @{
-                Bom = 'has no UTF-8 byte order mark in any source file'
-                Tab = 'has no tab character in any source file'
-                Nul = 'has no 0x00 byte in any source file'
+                Bom = 'has no UTF-8 byte order mark in any text file'
+                Tab = 'has no tab character in any text file'
+                Nul = 'has no 0x00 byte in any text file'
             }
             Cases = @(
                 @{ Case = 'a clean module'; Count = 3; Expect = @() }
@@ -74,6 +74,10 @@ BeforeDiscovery {
                 @{ Case = 'a UTF-16 file'; Count = 3; Files = @{ 'Private/Get-Wide.ps1' = $utf16 }; Expect = @('Nul'); Mentions = @('Get-Wide.ps1') }
                 @{ Case = 'defects only under .git, Staging and Artifacts'; Count = 3; Files = @{ '.git/hooks/pre.ps1' = $utf8Bom; 'Staging/Fixture/Get-Tab.ps1' = $tabbed; 'Artifacts/x.psd1' = $utf16 }; Expect = @() }
                 @{ Case = 'a tab in a dot-folder script'; Count = 3; Files = @{ '.github/scripts/Run-Tab.ps1' = $tabbed }; Expect = @('Tab'); Mentions = @('Run-Tab.ps1') }
+                @{ Case = 'a UTF-16 JSON data file'; Count = 3; Files = @{ 'Private/Data.json' = $utf16 }; Expect = @('Nul'); Mentions = @('Data.json') }
+                @{ Case = 'a BOM in a dot-folder JSON file'; Count = 3; Files = @{ '.vscode/settings.json' = $utf8Bom }; Expect = @('Bom'); Mentions = @('settings.json') }
+                @{ Case = 'a tab in .gitignore and in an XML file'; Count = 3; Files = @{ '.gitignore' = $tabbed; 'Private/Types.xml' = $tabbed }; Expect = @('Tab'); Mentions = @('.gitignore', 'Types.xml') }
+                @{ Case = 'defects only in file types it does not check'; Count = 3; Files = @{ 'README.md' = $tabbed; 'notes.txt' = $utf16; 'data.csv' = $utf8Bom }; Expect = @() }
                 @{ Case = 'twenty extra source files'; Count = 3; Files = [ordered] @{ 'Private/a01.ps1' = '# a'; 'Private/a02.ps1' = '# a'; 'Private/a03.ps1' = '# a'; 'Private/a04.ps1' = '# a'; 'Private/a05.ps1' = '# a'; 'Private/a06.ps1' = '# a'; 'Private/a07.ps1' = '# a'; 'Private/a08.ps1' = '# a'; 'Private/a09.ps1' = '# a'; 'Private/a10.ps1' = '# a'; 'Tests/Unit/b01.tests.ps1' = '# b'; 'Tests/Unit/b02.tests.ps1' = '# b'; 'Tests/Unit/b03.tests.ps1' = '# b'; 'Tests/Unit/b04.tests.ps1' = '# b'; 'Tests/Unit/b05.tests.ps1' = '# b'; 'Tests/Unit/b06.tests.ps1' = '# b'; 'Tests/Unit/b07.tests.ps1' = '# b'; 'Tests/Unit/b08.tests.ps1' = '# b'; 'Tests/Unit/b09.tests.ps1' = '# b'; 'Tests/Unit/b10.tests.ps1' = '# b' }; Expect = @() }
             )
         }

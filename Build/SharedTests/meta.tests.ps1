@@ -9,11 +9,13 @@ BeforeAll {
     if ([System.String]::IsNullOrWhiteSpace($ProjectPath)) {
         Write-Error -Message 'ProjectPath must be passed with New-PesterContainer -Data.' -ErrorAction 'Stop'
     }
+    # THE TYPES THE CONSUMERS' MetaFixers Get-TextFilesList CHECKED; .gitignore AND .gitattributes ARE THEIR OWN EXTENSION
+    $textExtensions = '.ps1', '.psm1', '.psd1', '.json', '.xml', '.cmd', '.mof', '.gitignore', '.gitattributes'
     # -Force SO DOT-FOLDERS ARE SCANNED ON EVERY OS; WITHOUT IT ONLY WINDOWS LISTS THEM
-    $candidates = @(Get-ChildItem -LiteralPath $ProjectPath -Recurse -File -Force -Include '*.ps1', '*.psm1', '*.psd1')
+    $candidates = @(Get-ChildItem -LiteralPath $ProjectPath -Recurse -File -Force).Where({ $_.Extension -in $textExtensions })
     $sourceFiles = @($candidates.Where({ [System.IO.Path]::GetRelativePath($ProjectPath, $_.FullName) -notmatch '(^|[\\/])(\.git|Staging|Artifacts)([\\/]|$)' }))
     if ($sourceFiles.Count -eq 0) {
-        Write-Error -Message ('No .ps1, .psm1 or .psd1 files found under [{0}].' -f $ProjectPath) -ErrorAction 'Stop'
+        Write-Error -Message ('No {0} files found under [{1}].' -f ($textExtensions -join ', '), $ProjectPath) -ErrorAction 'Stop'
     }
     $bom = [System.Collections.Generic.List[System.String]]::new()
     $tab = [System.Collections.Generic.List[System.String]]::new()
@@ -33,14 +35,14 @@ BeforeAll {
     }
 }
 
-Describe -Name 'Shared: source file encoding' -Fixture {
-    It -Name 'has no UTF-8 byte order mark in any source file' -Test {
+Describe -Name 'Shared: text file encoding' -Fixture {
+    It -Name 'has no UTF-8 byte order mark in any text file' -Test {
         $bom | Should -BeNullOrEmpty -Because ('these files start with EF BB BF: {0}' -f ($bom -join ', '))
     }
-    It -Name 'has no tab character in any source file' -Test {
+    It -Name 'has no tab character in any text file' -Test {
         $tab | Should -BeNullOrEmpty -Because ('these files contain a tab; indent with spaces: {0}' -f ($tab -join ', '))
     }
-    It -Name 'has no 0x00 byte in any source file' -Test {
+    It -Name 'has no 0x00 byte in any text file' -Test {
         $nul | Should -BeNullOrEmpty -Because ('these files contain 0x00, usually UTF-16; save as UTF-8: {0}' -f ($nul -join ', '))
     }
 }
