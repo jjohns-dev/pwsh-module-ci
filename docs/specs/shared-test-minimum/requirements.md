@@ -2,7 +2,7 @@
 
 - **Tracking:** [#53](https://github.com/jjohns-dev/pwsh-module-ci/issues/53)
 - **Decision record:** the [2026-11-06 decision](https://github.com/jjohns-dev/pwsh-module-ci/issues/53#issuecomment-6690021906), as refreshed by the [2026-11-12 survey](https://github.com/jjohns-dev/pwsh-module-ci/issues/53#issuecomment-6839693409)
-- **Status:** Approved — 2026-11-13
+- **Status:** Approved — 2026-11-13; AC 1, 3, 5 and 13 amended 2026-11-13 (see *Decisions*)
 
 ## Problem
 
@@ -21,11 +21,11 @@
 
 ## Acceptance criteria
 
-1. THE harness SHALL carry four shared suites, run against the consumer's project: manifest, module, meta and path literals. They SHALL depend on Pester only.
+1. THE harness SHALL carry three shared suites, run against the consumer's project: manifest, meta and path literals. They SHALL depend on Pester only.
 2. THE shared suites SHALL take every consumer-specific value as a `New-PesterContainer -Data` parameter. They SHALL NOT locate the consumer from `$PSScriptRoot`, which resolves into the harness, nor read `$env:BH*` or its replacements.
-3. THE manifest suite SHALL assert: the manifest exists; it passes `Test-ModuleManifest`; its name matches the module; `RootModule` names the `.psm1`; `ModuleVersion` and `Guid` parse; `Description`, `Author` and `Copyright` are non-empty; `FunctionsToExport` is non-empty and matches `Public/*.ps1`; no export field contains `'*'`; `ProjectUri` is present in `PSData`.
+3. THE manifest suite SHALL assert: it passes `Test-ModuleManifest`; `RootModule` names the `.psm1`; `ModuleVersion` and `Guid` parse; `Description`, `Author` and `Copyright` are non-empty; `FunctionsToExport` is non-empty and matches `Public/*.ps1`; no export field contains `'*'`; `ProjectUri` is present in `PSData`; and the staged module's resolved `ExportedFunctions` match `Public/*.ps1`.
 4. THE manifest suite SHALL assert that `PowerShellVersion` is present, parses as a version, and is either exactly `5.1` or at least `7.0` and no greater than the PowerShell running the tests. `3.0`, `5.0`, any `6.x` and any unreleased version SHALL fail. There is no per-repo minimum.
-5. THE module suite SHALL assert that the `.psm1` loader exists, that the module imports without throwing, and that its resolved `ExportedFunctions` match `Public/*.ps1`.
+5. THE shared suites SHALL NOT assert what the harness already enforces before its `Test` task runs, because such an assertion cannot fail there and AC 14 could only be met vacuously: exactly one manifest at the project root (`Resolve-HarnessProject`); the module name, which is that manifest's file name; the `.psm1` loader's presence (`CombineFunctionsAndStage`); and that the staged module imports (`ImportStagingModule`, on which `Test` depends). The design SHALL record this so the assertions are not re-added.
 6. THE meta suite SHALL check every `.ps1`, `.psm1` and `.psd1` file outside `.git`, `Staging` and `Artifacts` for a UTF-8 BOM, tab characters and `0x00` bytes, reading bytes rather than decoded text. It SHALL run one test per check, not one per file, and each failure SHALL name every offending file. Its test count is therefore fixed and counts toward the `min-tests` floor like any other.
 7. THE reason AC 6 loops rather than runs per file SHALL be recorded in `docs/test-integrity.md`: a per-file suite ties the floor to the number of source files, so deleting four files in an ordinary refactor would drop twelve tests, beyond the floor's maximum margin of 10, and fail CI with nothing wrong.
 8. THE path-literals suite SHALL check each `Public/*.ps1` for a backslash following `$HOME`, `$PSScriptRoot`, `$PWD` or `$TestDrive` in code. Comments, including comment-based help, SHALL NOT count: four `.EXAMPLE` paths in today's fleet are not defects.
@@ -33,7 +33,7 @@
 10. BEFORE `v2` moves to the release carrying the shared suites, THE release SHALL be proven on two throwaway consumer PRs pinned to its immutable tag: one expected green (PS.YNAB, whose manifest has not been measured against AC 3) and one expected red (SecurityTools, to confirm the failure messages name the defects).
 11. WHEN `v2` moves, every consumer SHALL run the shared suites from its next build. Consumers whose own defects then fail CI stay red until their cleanup PR (AC 12) lands; that is accepted. IF the shared suites themselves are wrong, THE rollback SHALL be moving `v2` back to the previous release.
 12. FOR each consumer, ONE cleanup PR after `v2` moves SHALL: delete its manifest, meta, module and path-literal tests and any `MetaFixers.psm1`; fix its red-list defects (four UTF-8 BOM files in SecurityTools, three `"$HOME\Desktop"` literals in AWSAutomation's exported code); recalculate every leg's `min-tests` floor from its own run, recording executed count and margin as the floors do today; and refresh its shim to the current template. `Help.Tests.ps1` and function unit tests stay.
-13. EVERY assertion a cleanup PR deletes SHALL be accounted for as covered by a shared suite or kept locally with a recorded reason. The classification of the three `Module.tests.ps1` files (PS.GHOps, PS.GitHub, PS.YNAB) is done: every assertion maps to AC 3 or AC 5 except `PowerShellVersion` ≥ `7.4`, which is dropped in favour of AC 4.
+13. EVERY assertion a cleanup PR deletes SHALL be accounted for as covered by a shared suite or kept locally with a recorded reason. The classification of the three `Module.tests.ps1` files (PS.GHOps, PS.GitHub, PS.YNAB) is done: every assertion maps to AC 3, or to a harness step under AC 5, except `PowerShellVersion` ≥ `7.4`, which is dropped in favour of AC 4.
 14. THE shared suites SHALL be covered by Pester suites in `tests/`, run by the required `verify Pester result step` check. Each assertion SHALL be shown to fail on a fixture that violates it as well as pass on one that does not.
 15. WHEN a developer runs the build locally through the shim, THE shared suites SHALL run exactly as in CI.
 
@@ -57,3 +57,4 @@ The four open questions in the first draft, resolved in review:
 - **Q2 — Opt-in:** none. The whole fleet takes the shared suites when `v2` moves, after a two-consumer proof (AC 10, AC 11). Known defects are fixed in each repo's cleanup PR rather than before the move.
 - **Q3 — SecurityTools' legs:** selected by `PesterScope` as cross-platform tests (AC 9).
 - **Q4 — The three `Module.tests.ps1` files:** classified (AC 13); `PowerShellVersion` ≥ `7.4` is dropped in favour of AC 4.
+- **Amended during implementation:** four planned assertions (manifest exists, name matches the module, loader exists, module imports) are already enforced by harness steps that run before `Test`, so they could never fail as shared tests. Dropped (AC 5); the module suite's one remaining check, resolved exports, moved into the manifest suite (AC 3).

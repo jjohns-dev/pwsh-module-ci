@@ -17,16 +17,15 @@ Each task names its verification and the acceptance criteria (AC) it serves. Pha
 
 Every assertion gets a fixture that must fail it and one that must pass it, under strict mode on and off. *(AC 14)*
 
-- [ ] **B1. `Build/SharedTests/manifest.tests.ps1`**, the 14 assertions. *(AC 3, AC 4)*
-  - Verify: for each assertion, a fixture module in `TestDrive:` that violates only it fails only it. `PowerShellVersion` cases: `5.1` and `7.0` pass; `3.0`, `5.0`, `6.2` and one above `$PSVersionTable.PSVersion` fail.
-- [ ] **B2. `Build/SharedTests/module.tests.ps1`**, the 3 assertions, importing the staged copy after `Remove-Module`. *(AC 5)*
-  - Verify: a missing `.psm1`, a loader that throws, and a public function that fails to load each fail exactly one test; a fixture where the module is already loaded still performs a real import.
+- [ ] **B1. `Build/SharedTests/manifest.tests.ps1`**, the 13 assertions. *(AC 3, AC 4)*
+  - Verify: for each assertion, a fixture module in `TestDrive:` that violates only it fails only it. `PowerShellVersion` cases: `5.1` and `7.0` pass; `3.0`, `5.0`, `6.2` and one above `$PSVersionTable.PSVersion` fail. Resolved exports: a `Public/` file whose function is misnamed fails, even with the module already loaded.
+- [x] **B2. ~~`Build/SharedTests/module.tests.ps1`~~ — dropped 2026-11-13.** Its loader and import checks are enforced by harness steps before `Test` (AC 5); its resolved-exports check moved to B1.
 - [ ] **B3. `Build/SharedTests/meta.tests.ps1`**, 3 looped tests. *(AC 6)*
   - Verify: a BOM, a tab and a `0x00` byte each fail their own test and name the file; files under `.git`, `Staging` and `Artifacts` are ignored; adding source files does not change the test count.
 - [ ] **B4. `Build/SharedTests/pathliterals.tests.ps1`**, one test per `Public/*.ps1`. *(AC 8)*
   - Verify: each of the four variables followed by `\` in a string fails; the same text in a comment and in comment-based help `.EXAMPLE` passes.
 - [ ] **B5. `Test` task integration** in `Build/build.psake.ps1`. *(AC 1, AC 2, AC 9, design: Order)*
-  - Verify, in `tests/HarnessTasks.Tests.ps1` against a fixture consumer: shared tests appear in the single JUnit file on `All` and `CrossPlatform`, not on `WindowsOnly`; they run after the consumer's tests; a failing shared test fails the task.
+  - Verify, in `tests/HarnessTasks.Tests.ps1` against a fixture consumer: shared tests appear in the single JUnit file on `All` and `CrossPlatform`, not on `WindowsOnly`; they run after the consumer's tests; a failing shared test fails the task. The fixture builder there produces a manifest that passes the shared suites, so existing cases keep testing what they test.
 - [ ] **B6. Fleet dry run.** Run the branch's harness locally against shallow clones of all eight consumers. *(AC 10, design: Rollout)*
   - Verify: expected red is exactly SecurityTools' four BOM files and AWSAutomation's three literals. Anything else is recorded here and resolved (fixed in the suite, or added to that repo's cleanup list) before release.
 - [ ] **B7. Documentation.** `docs/test-integrity.md` *Settled decisions*: why meta loops (AC 7). `docs/consumer-guide.md`: what the harness tests and what consumers no longer carry. `AGENTS.md` and `README.md`: the `Build/SharedTests/` layout row.
