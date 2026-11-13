@@ -40,12 +40,21 @@ if ($Strict) {
 }
 
 $records = [System.Collections.Generic.List[System.Object]]::new()
+# EACH SUITE GETS ONLY THE -Data KEYS ITS param BLOCK DECLARES, AS THE HARNESS DOES
+$declared = @([System.Management.Automation.Language.Parser]::ParseFile($SuiteFile, [ref] $null, [ref] $null).ParamBlock.Parameters.ForEach({ $_.Name.VariablePath.UserPath }))
 foreach ($case in @(Get-Content -LiteralPath $CasesPath -Raw | ConvertFrom-Json)) {
+    $data = @{}
+    if ($declared -contains 'ProjectPath') {
+        $data['ProjectPath'] = $case.ProjectPath
+    }
+    if ($declared -contains 'ModuleName') {
+        $data['ModuleName'] = 'Fixture'
+    }
     $container = if ($case.NoData) {
         New-PesterContainer -Path $SuiteFile
     }
     else {
-        New-PesterContainer -Path $SuiteFile -Data @{ ProjectPath = $case.ProjectPath; ModuleName = 'Fixture' }
+        New-PesterContainer -Path $SuiteFile -Data $data
     }
     $config = New-PesterConfiguration
     $config.Run.Container = @($container)
