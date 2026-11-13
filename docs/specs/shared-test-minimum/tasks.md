@@ -68,7 +68,8 @@ Red repos first, so `main` is green again soonest.
 - [x] **D2. AWSAutomation** — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`; fix three `"$HOME\Desktop"` literals and the tab in `.devcontainer/devcontainer.json` (v2.1.1).
   - **Done 2026-11-13.** [#109](https://github.com/jjohns-dev/AWSAutomation/pull/109) squashed to `8c1399f` by the repo agent, both commits signed. Verified here: the three code literals now use nested `Join-Path` (5.1-safe), the help `.EXAMPLE` on line 26 left as is; `devcontainer.json` has no tabs and parses; three vendored files deleted, `help.tests.ps1` unchanged; shim `C09FEE99…0CFF`; callers on `@v2`. 484 executed (444 − 10 + 50 shared) → `min-tests` 474. Post-merge `main`: ci green at 484, pssa-sarif green.
 - [ ] **D3. PS.SSL** — `Tests/Common/{manifest,meta,PathLiterals}.tests.ps1`, `MetaFixers.psm1`. Both legs.
-- [ ] **D4. PS.Log** — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`; fix the tab in `.devcontainer/devcontainer.json` (v2.1.1).
+- [x] **D4. PS.Log** — `Tests/Common/{manifest,meta}.tests.ps1`, `MetaFixers.psm1`; fix the tab in `.devcontainer/devcontainer.json` (v2.1.1).
+  - **Done 2026-11-13.** [#63](https://github.com/jjohns-dev/PS.Log/pull/63) squashed to `74e614e` by the repo agent. Verified here: `devcontainer.json` has no tabs; three vendored files deleted, `help.tests.ps1` unchanged; shim `C09FEE99…0CFF`; callers on `@v2`. 101 executed (111 at C3, which included 20 shared, minus 10 vendored) → `min-tests` 96. Post-merge `main`: ci green at 101 against `v2` tag object `2e53e23`, pssa-sarif green.
 - [ ] **D5. PS.DCU** — `Tests/Common/{manifest,meta}.tests.ps1`. Its count falls: 38 per-file meta tests become 3.
 - [ ] **D6. PS.GHOps** — `Tests/Unit/Module.tests.ps1`.
 - [ ] **D7. PS.GitHub** — `Tests/Unit/Module.tests.ps1`.
