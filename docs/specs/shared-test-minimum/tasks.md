@@ -34,8 +34,9 @@ Every assertion gets a fixture that must fail it and one that must pass it, unde
   - Verify: expected red is exactly SecurityTools' four BOM files and AWSAutomation's three literals. Anything else is recorded here and resolved (fixed in the suite, or added to that repo's cleanup list) before release.
   - **Done 2026-11-13**, `Test` task at `CrossPlatform` scope, each consumer at its `main` (PS.Log `2f36114`, PS.GHOps `7f6156a`, PS.GitHub `8f1c2c1`, PS.SSL `7ed0afe`, PS.DCU `8d2b51a`, AWSAutomation `2f454a1`, SecurityTools `29863db`, PS.YNAB `848a3a6`). Shared failures are exactly as predicted: AWSAutomation 3 (`Export-CFNStackDrift` L72, `Export-EC2UsageReport` L112, `Export-IAMRolePolicy` L69), SecurityTools 1 naming its four BOM files. Shared test counts equal 14 + public functions in all eight (20 to 80). Consumer counts unchanged against the floors' baselines.
   - **Not caused by this change:** PS.YNAB's own suite has 15 failures locally, decimal precision such as `12.34` against `12.3399999…`. The `main` harness (`114d292`) gives the same 191 tests and 15 failures on the same clone. This machine runs pwsh 7.7.0; PS.YNAB's CI on `main` is green. Inferred, not verified: a pwsh 7.7 behaviour change its runners have not reached. Raised for PS.YNAB, outside #53.
-- [ ] **B7. Documentation.** `docs/test-integrity.md` *Settled decisions*: why meta loops (AC 7). `docs/consumer-guide.md`: what the harness tests and what consumers no longer carry. `AGENTS.md` and `README.md`: the `Build/SharedTests/` layout row.
+- [x] **B7. Documentation.** `docs/test-integrity.md` *Settled decisions*: why meta loops (AC 7). `docs/consumer-guide.md`: what the harness tests and what consumers no longer carry. `AGENTS.md` and `README.md`: the `Build/SharedTests/` layout row.
   - Verify: markdown lint clean; `git diff -U0` reviewed hunk by hunk.
+  - **Done 2026-11-13.** `test-integrity.md` also records why the six harness-guaranteed assertions are not shared tests. The consumer guide gains a *Shared tests* section (suites, counts as `14 + n`, which files to delete). Lint clean; the `AGENTS.md` and `README.md` word diffs are additions only.
 
 ## C. Release
 

@@ -37,6 +37,10 @@ Do not relitigate these. Each was decided once, with evidence.
 
 - **Build tooling is pinned exactly, never to a range and never to `latest`**, because an unpinned bump can change a test or analysis result with no commit to explain it. The stack, the policy and the `Install-PSResource` mechanics are in [`dependency-stack.md`](dependency-stack.md).
 
+- **The shared meta suite loops: one test per check, not one per file.** A per-file suite ties the `min-tests` floor to the number of source files. The floor's margin is at most 10, so with three checks per file, deleting four files in an ordinary refactor drops twelve tests and fails CI with nothing wrong. Looped, the suite is always three tests, and each failure names every offending file instead. Decided 2026-11-13 on [#53](https://github.com/jjohns-dev/pwsh-module-ci/issues/53); the reasoning is the requirements' AC 7. The path-literal suite stays per public file on purpose: it tracks the module's public surface, as help tests already do.
+
+- **The shared suites do not assert what the harness already enforces.** Exactly one root manifest, the module name, the loader's presence, a clean import, and anything a failed import already reports, such as an unparseable `ModuleVersion` or `GUID`, are all checked by harness steps that run before `Test`. As shared tests they could never fail. The measured list is in the shared-test-minimum design, *What the harness already enforces*; do not re-add them.
+
 ## Traps that have cost real time
 
 - **A check that never fires is indistinguishable from one that passes.** Every new assertion needs a mutation: break the thing it guards, confirm red, revert. This matters most where a test cannot fire at all — a repo with no `.LINK` shows no difference before and after, which proves nothing. Where a repo cannot produce that evidence incidentally, the mutation has to be manufactured.

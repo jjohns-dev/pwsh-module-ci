@@ -188,6 +188,18 @@ Test files are named in lowercase, `*.tests.ps1` and `*.tests.windows.ps1`. The 
 
 A scope that selects no files fails the build. Set it per leg with `pesterScope` in `os-matrix`, or locally with `-Properties @{ PesterScope = 'CrossPlatform' }`.
 
+### Shared tests
+
+From `v2.1.0` the harness also runs three suites of its own against your module, from [`Build/SharedTests/`](../Build/SharedTests). They run after your tests, in the same Pester run and the same result file, so they count toward `min-tests` like your own. They run under `All` and `CrossPlatform` and not under `WindowsOnly`.
+
+| Suite | Tests | Checks |
+| ----- | ----- | ------ |
+| `manifest.tests.ps1` | 11 | passes `Test-ModuleManifest`; `RootModule` is `<Module>.psm1`; non-empty `Description`, `Author` and `Copyright`; `FunctionsToExport` non-empty and equal to the `Public/*.ps1` names; no `*` in any export field; `ProjectUri` in `PrivateData.PSData`; `PowerShellVersion` exactly `5.1`, or from `7.0` up to the PowerShell running the tests; and, after importing the staged module, every `Public/` function actually exported |
+| `meta.tests.ps1` | 3 | no UTF-8 BOM, no tab and no `0x00` byte in any `.ps1`, `.psm1` or `.psd1` outside `.git/`, `Staging/` and `Artifacts/`, dot-folders included; one test per check, each failure naming every file |
+| `pathliterals.tests.ps1` | 1 per `Public/*.ps1` | no backslash after `$HOME`, `$PSScriptRoot`, `$PWD` or `$TestDrive` inside a string; comments and help do not count |
+
+So a repo with `n` public functions runs `14 + n` shared tests. Do not keep your own copies of these checks: delete `Tests/Common/manifest.tests.ps1`, `meta.tests.ps1`, `PathLiterals.tests.ps1` and `MetaFixers.psm1`, or `Tests/Unit/Module.tests.ps1`, and recalculate `min-tests` from the next run. Help tests and function unit tests stay in your repo.
+
 Your tests run in the harness's session and can read `$env:HARNESS_PROJECT_PATH`, `$env:HARNESS_MODULE_NAME` and `$env:HARNESS_MANIFEST_PATH`. The legacy `$env:BHProjectPath`, `$env:BHProjectName` and `$env:BHPSModuleManifest` are set to the same values for tests that still read them.
 
 ### Tasks and properties
@@ -201,7 +213,7 @@ Your tests run in the harness's session and can read `$env:HARNESS_PROJECT_PATH`
 | `CombineFunctionsAndStage` | Stages the module into `Staging/<Module>/`. The name is historical; nothing is combined |
 | `ImportStagingModule` | Imports the staged module |
 | `Analyze` | Runs PSScriptAnalyzer on the staged module |
-| `Test` | Imports the staged module, runs Pester, and writes the JUnit result to `Artifacts/`. Each test file still loads whichever module it imports itself |
+| `Test` | Imports the staged module, runs your tests and then the [shared tests](#shared-tests), and writes the JUnit result to `Artifacts/`. Each test file still loads whichever module it imports itself |
 | `CreateBuildArtifact` | Zips `Staging/` to `Artifacts/<Module>-v<ModuleVersion>.zip` |
 | `Cleanup` | Deletes `Artifacts/` and `Staging/` |
 | `Default` | Runs `Test` |
