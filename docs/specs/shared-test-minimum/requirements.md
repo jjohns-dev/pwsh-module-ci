@@ -2,7 +2,7 @@
 
 - **Tracking:** [#53](https://github.com/jjohns-dev/pwsh-module-ci/issues/53)
 - **Decision record:** the [2026-11-06 decision](https://github.com/jjohns-dev/pwsh-module-ci/issues/53#issuecomment-6690021906), as refreshed by the [2026-11-12 survey](https://github.com/jjohns-dev/pwsh-module-ci/issues/53#issuecomment-6839693409)
-- **Status:** Draft — revised 2026-11-13 after review
+- **Status:** Approved — 2026-11-13
 
 ## Problem
 
