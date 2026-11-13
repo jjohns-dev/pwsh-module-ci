@@ -195,7 +195,7 @@ From `v2.1.0` the harness also runs three suites of its own against your module,
 | Suite | Tests | Checks |
 | ----- | ----- | ------ |
 | `manifest.tests.ps1` | 11 | passes `Test-ModuleManifest`; `RootModule` is `<Module>.psm1`; non-empty `Description`, `Author` and `Copyright`; `FunctionsToExport` non-empty and equal to the `Public/*.ps1` names; no `*` in any export field; `ProjectUri` in `PrivateData.PSData`; `PowerShellVersion` exactly `5.1`, or from `7.0` up to the PowerShell running the tests; and, after importing the staged module, every `Public/` function actually exported |
-| `meta.tests.ps1` | 3 | no UTF-8 BOM, no tab and no `0x00` byte in any `.ps1`, `.psm1` or `.psd1` outside `.git/`, `Staging/` and `Artifacts/`, dot-folders included; one test per check, each failure naming every file |
+| `meta.tests.ps1` | 3 | no UTF-8 BOM, no tab and no `0x00` byte in any `.ps1`, `.psm1`, `.psd1`, `.json`, `.xml`, `.cmd`, `.mof`, `.gitignore` or `.gitattributes` outside `.git/`, `Staging/` and `Artifacts/`, dot-folders included; one test per check, each failure naming every file |
 | `pathliterals.tests.ps1` | 1 per `Public/*.ps1` | no backslash after `$HOME`, `$PSScriptRoot`, `$PWD` or `$TestDrive` inside a string; comments and help do not count |
 
 So a repo with `n` public functions runs `14 + n` shared tests. Do not keep your own copies of these checks: delete `Tests/Common/manifest.tests.ps1`, `meta.tests.ps1`, `PathLiterals.tests.ps1` and `MetaFixers.psm1`, or `Tests/Unit/Module.tests.ps1`, and recalculate `min-tests` from the next run. Help tests and function unit tests stay in your repo.
