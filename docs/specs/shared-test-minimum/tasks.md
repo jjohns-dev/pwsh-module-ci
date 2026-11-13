@@ -40,14 +40,17 @@ Every assertion gets a fixture that must fail it and one that must pass it, unde
 
 ## C. Release
 
-- [ ] **C1. Merge B, cut `v2.1.0`** with a GitHub release whose notes say every consumer will run the shared suites when `v2` moves, and which repos are expected red. *(ADR-0002: minor)*
+- [x] **C1. Merge B, cut `v2.1.0`** with a GitHub release whose notes say every consumer will run the shared suites when `v2` moves, and which repos are expected red. *(ADR-0002: minor)*
   - Verify: tag annotated, on the merge commit, release immutable.
-- [ ] **C2. Prove `v2.1.0` on two consumers, in the PRs that become D1 and D8.** Each opens with one commit: its callers pinned `@v2.1.0`, nothing else. That first run is the proof; its evidence is posted as a PR comment before any other commit is pushed. *(AC 10)*
+  - **Done 2026-11-13.** #85 squashed to `552999b`; `v2.1.0` annotated (tag object `95a31b2`), release immutable.
+- [x] **C2. Prove `v2.1.0` on two consumers, in the PRs that become D1 and D8.** Each opens with one commit: its callers pinned `@v2.1.0`, nothing else. That first run is the proof; its evidence is posted as a PR comment before any other commit is pushed. *(AC 10)*
   - PS.YNAB (D8): all three workflows green, executed count up by exactly the shared suites' count.
   - SecurityTools (D1): red on the meta BOM test only, the message naming exactly its four files; the windows leg unchanged at 21.
   - Verify: `referenced_workflows` shows the `v2.1.0` tag object; counts from JUnit artifacts. Both PRs stay open for D.
-- [ ] **C3. Move `v2` to `v2.1.0`.** *(AC 11)*
+  - **Done 2026-11-13.** [PS.YNAB#19](https://github.com/jjohns-dev/PS.YNAB/pull/19) (`5c56f3d`): ci, release dry run and pssa-sarif green; 214 executed = 191 own + 23 shared. [SecurityTools#171](https://github.com/jjohns-dev/SecurityTools/pull/171) (`431003f`): ubuntu 1077 tests, 1 disabled, the one failure the BOM test naming exactly its four files; windows 21, no shared suites; release dry run red on the same test; pssa-sarif green. All six runs reference `95a31b2`. Evidence commented on both PRs.
+- [x] **C3. Move `v2` to `v2.1.0`.** *(AC 11)*
   - Verify: `git ls-remote origin 'refs/tags/v2^{}'` shows the `v2.1.0` commit; a rerun of one consumer's `main` ci records the new tag object.
+  - **Done 2026-11-13.** `v2^{}` = `552999b` (tag object `e128d30`). PS.Log `main` ci rerun (43271792912, attempt 3) referenced `e128d30` and passed, executing 111 = 91 own + 20 shared.
 
 ## D. Cleanup PRs, one per consumer *(AC 12, AC 13)*
 
