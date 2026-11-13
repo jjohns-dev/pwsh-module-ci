@@ -76,7 +76,8 @@ Red repos first, so `main` is green again soonest.
   - PS.DCU's *declares empty CmdletsToExport, VariablesToExport, AliasesToExport* was dropped, not replaced. The fleet rule is no `*` in any export field (design, test 8); PS.SSL, AWSAutomation and SecurityTools export aliases or variables, and an explicit export is already a reviewed manifest edit.
 - [x] **D6. PS.GHOps** — `Tests/Unit/Module.tests.ps1`.
   - **Done 2026-11-13.** [#24](https://github.com/jjohns-dev/PS.GHOps/pull/24) squashed to `8df428a` by the repo agent. Verified here: `Module.tests.ps1` deleted, no other test file changed; shim `C09FEE99…0CFF`; callers on `@v2`. 111 executed on each of ubuntu, windows and macos (95 − 8 + 24 shared) → `min-tests` 106. Post-merge `main`: ci green at 111 on all three against `v2` tag object `2e53e23`, pssa-sarif green. Its *minimum PowerShell version of 7.4 or higher* was dropped, superseded by the shared `PowerShellVersion` test (AC 4).
-- [ ] **D7. PS.GitHub** — `Tests/Unit/Module.tests.ps1`.
+- [x] **D7. PS.GitHub** — `Tests/Unit/Module.tests.ps1`.
+  - **Done 2026-11-13.** [#42](https://github.com/jjohns-dev/PS.GitHub/pull/42) squashed to `6d83b34` by the repo agent. Verified here: `Module.tests.ps1` deleted, no other test file changed; shim `C09FEE99…0CFF`; callers on `@v2`. 125 executed on each of ubuntu, windows and macos (112 − 7 + 20 shared) → `min-tests` 119. Post-merge `main`: ci green at 125 on all three against `v2` tag object `2e53e23`, pssa-sarif green. Its 7.4-minimum test was dropped as in D6; its suite had no exports test, so the shared pair is new coverage here.
 - [ ] **D8. PS.YNAB** (continues C2) — `Tests/Unit/Module.tests.ps1`.
 
 Verify each: post-merge `main` run green; executed count per leg read from JUnit; floor equals executed minus `min(floor(executed * 0.05), 10)`; callers pin `@v2`; `Build/build.ps1` byte-identical to the template; `help.tests.ps1` and unit tests untouched.
