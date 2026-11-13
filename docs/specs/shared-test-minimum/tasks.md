@@ -17,8 +17,9 @@ Each task names its verification and the acceptance criteria (AC) it serves. Pha
 
 Every assertion gets a fixture that must fail it and one that must pass it, under strict mode on and off. *(AC 14)*
 
-- [ ] **B1. `Build/SharedTests/manifest.tests.ps1`**, the 13 assertions. *(AC 3, AC 4)*
+- [x] **B1. `Build/SharedTests/manifest.tests.ps1`**, the 11 assertions. *(AC 3, AC 4)*
   - Verify: for each assertion, a fixture module in `TestDrive:` that violates only it fails only it. `PowerShellVersion` cases: `5.1` and `7.0` pass; `3.0`, `5.0`, `6.2` and one above `$PSVersionTable.PSVersion` fail. Resolved exports: a `Public/` file whose function is misnamed fails, even with the module already loaded.
+  - **Done 2026-11-13.** `tests/SharedTests.Tests.ps1` runs 19 fixture cases through `tests/SharedSuite.Driver.ps1` in a child pwsh, lenient and strict, each asserting the exact set of tests that fail; every test fails in at least one case; a run without `-Data` fails. 42/42. Three mutations of the suite (lower bound removed, wildcard check narrowed, resolved exports reading the declared list) each turned it red. Two cases fail more than one test by nature: an empty `FunctionsToExport` also fails the Public/ match and resolved exports, and a version above the running pwsh also fails `Test-ModuleManifest` and the import.
 - [x] **B2. ~~`Build/SharedTests/module.tests.ps1`~~ — dropped 2026-11-13.** Its loader and import checks are enforced by harness steps before `Test` (AC 5); its resolved-exports check moved to B1.
 - [ ] **B3. `Build/SharedTests/meta.tests.ps1`**, 3 looped tests. *(AC 6)*
   - Verify: a BOM, a tab and a `0x00` byte each fail their own test and name the file; files under `.git`, `Staging` and `Artifacts` are ignored; adding source files does not change the test count.

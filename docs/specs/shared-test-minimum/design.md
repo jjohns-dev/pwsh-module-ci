@@ -15,7 +15,7 @@
 Build/
   build.psake.ps1          Test task: consumer containers + shared containers -> one Invoke-Pester
   SharedTests/
-    manifest.tests.ps1     13 tests, fixed
+    manifest.tests.ps1     11 tests, fixed
     meta.tests.ps1          3 tests, fixed (looped)
     pathliterals.tests.ps1  1 per Public/*.ps1
 ```
@@ -54,30 +54,43 @@ These were in the consumer copies and are **deliberately not** shared tests. Eac
 | manifest name matches the module | the module name **is** the manifest's file name, as is `Test-ModuleManifest`'s `Name`; the comparison is a tautology |
 | the `.psm1` loader exists | `CombineFunctionsAndStage` stops the build if a required input is missing |
 | the staged module imports | `ImportStagingModule` imports with `-ErrorAction Stop`, and `Test` depends on it |
+| `ModuleVersion` and `GUID` parse | an unparseable value fails that import (measured 2026-11-13, pwsh 7.6.9) |
+
+Measured 2026-11-13 on pwsh 7.6.9 against fixture manifests, to find which remaining checks the import already covers:
+
+| Defect | `Import-Module` | `Test-ModuleManifest` |
+| ------ | --------------- | --------------------- |
+| `ModuleVersion` or `GUID` unparseable | fails | fails |
+| `PowerShellVersion` `9.0` or `abc` | fails | fails |
+| `PowerShellVersion` `3.0` | imports | passes |
+| `FileList` names a missing file | imports | fails |
+| `RootModule` without extension, or absent | imports | passes |
+| `Description` absent; `FunctionsToExport = '*'` | imports | passes |
+| a `Public/` function misnamed | imports, exports nothing | passes |
+
+So AC 4's upper bound and parsing are also enforced by the import, but its lower bound is not, and that is why the version test stays.
 
 They made sense in the consumers, which ran outside a harness that checks them.
 
 ## The three suites
 
-### `manifest.tests.ps1` — 13 tests (AC 3, AC 4)
+### `manifest.tests.ps1` — 11 tests (AC 3, AC 4)
 
-Reads the manifest two ways, because they catch different failures: `Test-ModuleManifest` for resolved values, `Import-PowerShellDataFile` for what is literally declared. One test imports the staged module.
+Reads the manifest with `Import-PowerShellDataFile`, for what is literally declared, plus one `Test-ModuleManifest` call and one import of the staged module.
 
 | # | Assertion | Source |
 | - | --------- | ------ |
 | 1 | passes `Test-ModuleManifest` | resolved |
-| 2 | `RootModule` is `<ModuleName>.psm1` | resolved |
-| 3 | `ModuleVersion` parses | resolved |
-| 4 | `Guid` parses | resolved |
-| 5–7 | `Description`, `Author`, `Copyright` non-empty | resolved |
-| 8 | `FunctionsToExport` non-empty | declared |
-| 9 | `FunctionsToExport` equals `Public/*.ps1` base names | declared |
-| 10 | no `*` in `FunctionsToExport`, `CmdletsToExport`, `VariablesToExport`, `AliasesToExport` | declared |
-| 11 | `PrivateData.PSData.ProjectUri` non-empty | declared |
-| 12 | `PowerShellVersion` present, parses, and is `5.1` or in `7.0`..`$PSVersionTable.PSVersion` | declared |
-| 13 | the staged module's `ExportedFunctions` equal `Public/*.ps1` base names | imported |
+| 2 | `RootModule` is `<ModuleName>.psm1` | declared |
+| 3–5 | `Description`, `Author`, `Copyright` non-empty | declared |
+| 6 | `FunctionsToExport` non-empty | declared |
+| 7 | `FunctionsToExport` equals `Public/*.ps1` base names | declared |
+| 8 | no `*` in `FunctionsToExport`, `CmdletsToExport`, `VariablesToExport`, `AliasesToExport` | declared |
+| 9 | `PrivateData.PSData.ProjectUri` non-empty | declared |
+| 10 | `PowerShellVersion` present, parses, and is `5.1` or in `7.0`..`$PSVersionTable.PSVersion` | declared |
+| 11 | the staged module's `ExportedFunctions` equal `Public/*.ps1` base names | imported |
 
-#13 imports `Staging/<ModuleName>` with `-Force -PassThru` and reads the returned module, not `Get-Module`, because a consumer test may have removed or replaced the loaded copy. It catches what #9 cannot: a `Public/` file whose function is named differently, or which defines nothing, is declared and present yet never exported, and `Import-Module` does not error on a missing export. Measured 2026-11-13 on pwsh 7.6.9: such a module imports cleanly with `ExportedFunctions` empty, while `Test-ModuleManifest` still reports the declared name. Staged, because that is what the artifact ships.
+#11 imports `Staging/<ModuleName>` with `-Force -PassThru` and reads the returned module, not `Get-Module`, because a consumer test may have removed or replaced the loaded copy. It catches what #7 cannot: a `Public/` file whose function is named differently, or which defines nothing, is declared and present yet never exported, and `Import-Module` does not error on a missing export. Measured 2026-11-13 on pwsh 7.6.9: such a module imports cleanly with `ExportedFunctions` empty, while `Test-ModuleManifest` still reports the declared name. Staged, because that is what the artifact ships.
 
 Set comparisons join sorted arrays before comparing, as PS.YNAB's suite does, so an empty side cannot pass vacuously.
 
