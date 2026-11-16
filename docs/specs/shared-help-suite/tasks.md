@@ -2,7 +2,7 @@
 
 - **Requirements:** [requirements.md](requirements.md), approved 2026-11-16; AC 2 amended 2026-11-16
 - **Design:** [design.md](design.md), approved 2026-11-16
-- **Status:** Draft — 2026-11-16
+- **Status:** Approved — 2026-11-16
 
 Each task names its verification and the acceptance criteria (AC) it serves. Phase B is one PR in this repo; C is the release; D is one PR per consumer, through the agent-prompt pattern, each verified here from run artifacts before its box is ticked.
 
