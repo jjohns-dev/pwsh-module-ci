@@ -68,4 +68,5 @@ Verify each: post-merge `main` run green; executed count per leg read from JUnit
 
 ## E. Close-out
 
-- [ ] **E1.** Close #55 with the evidence; tick `ROLLOUT.md` item 9 with the merge commits and final floors.
+- [x] **E1.** Close #55 with the evidence; tick `ROLLOUT.md` item 9 with the merge commits and final floors.
+  - **Done 2026-11-16.** #55 closed with a per-consumer table of merge commits, executed counts and floors.
