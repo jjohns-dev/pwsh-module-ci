@@ -48,6 +48,7 @@ Verify each: post-merge `main` run green; executed count per leg read from JUnit
 - [ ] **D1. PS.Log** — `Tests/Common/help.tests.ps1`.
 - [ ] **D2. PS.SSL** — `Tests/Common/help.tests.ps1`; `AGENTS.md` line 48. Both legs.
 - [ ] **D3. PS.DCU** — `Tests/Common/help.tests.ps1`; `AGENTS.md` line 40. Under `PesterStrictMode`.
+  - **Then archive PS.DCU** (decided 2026-11-16): once D3's post-merge `main` is verified green, archive `jjohns-dev/PS.DCU`. Confirm first that it has no open PRs; settle its open issues, [PS.DCU#20](https://github.com/jjohns-dev/PS.DCU/issues/20) among them, and its row in `ROLLOUT.md`'s *Found during the rollout*; and drop it from the consumer list in `AGENTS.md`.
 - [ ] **D4. AWSAutomation** — `Tests/Common/help.tests.ps1`.
 - [ ] **D5. SecurityTools** — `Tests/Common/help.tests.ps1`, whose `ValidateSet` trigger for dynamic parameters is replaced by the AC 2 exemption. Both legs; windows unchanged.
 - [ ] **D6. PS.GHOps** — floor only.
