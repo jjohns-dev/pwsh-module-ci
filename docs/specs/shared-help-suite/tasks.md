@@ -24,18 +24,22 @@ Every assertion gets a fixture that must fail it and one that must pass it, unde
 - [x] **B5. Documentation.** `docs/consumer-guide.md` *Shared tests*: four suites, `15 + 5n`, delete `help.tests.ps1`. `docs/test-integrity.md`: help is per function with one looped link test, and why; the `.PSBase.Keys` trap; the `DynamicParam` exemption, pointing at the design's *Future: checking dynamic parameters*; the intro's `Help.Tests.ps1` mention. `AGENTS.md`: the `Build/` row says four suites.
   - Verify: markdown lint clean; `git diff -U0` reviewed hunk by hunk.
   - **Done 2026-11-16.** Also rewrote `test-integrity.md`'s settled decision *link URIs come from `Get-Help`*: the shared suite reads links from the AST and classifies them by scheme, which SecurityTools' related-topic `.LINK` confirms (skipped, green). Lint clean.
-- [ ] **B6. Merge.** Full verification suite green locally, then the required `verify Pester result step` on the PR.
+- [x] **B6. Merge.** Full verification suite green locally, then the required `verify Pester result step` on the PR.
+  - **Done 2026-11-16.** [#90](https://github.com/jjohns-dev/pwsh-module-ci/pull/90) squashed to `2952aa6`, signed; 275/275 locally, required check green on ubuntu and windows.
 
 ## C. Release
 
-- [ ] **C1. Cut `v2.2.0`** on the merge commit, annotated, with a GitHub release whose notes say every consumer runs the help suite when `v2` moves and none is expected red. *(ADR-0002: minor)*
+- [x] **C1. Cut `v2.2.0`** on the merge commit, annotated, with a GitHub release whose notes say every consumer runs the help suite when `v2` moves and none is expected red. *(ADR-0002: minor)*
   - Verify: tag annotated, on the merge commit, release immutable.
-- [ ] **C2. Prove on two throwaway consumer PRs pinned `@v2.2.0`**: PS.GHOps and SecurityTools, callers repinned and nothing else. *(AC 9)*
+  - **Done 2026-11-16.** `v2.2.0` annotated (tag object `a4ad17d`) on `2952aa6`; [release](https://github.com/jjohns-dev/pwsh-module-ci/releases/tag/v2.2.0) published, immutable.
+- [x] **C2. Prove on two throwaway consumer PRs pinned `@v2.2.0`**: PS.GHOps and SecurityTools, callers repinned and nothing else. *(AC 9)*
   - PS.GHOps: every leg (ubuntu, windows, macOS) green at its `main` count plus 41.
   - SecurityTools: ubuntu green at its `main` count plus 265, `Get-KEVList` passing; windows unchanged at 21.
   - Verify: `referenced_workflows` shows the `v2.2.0` tag object; counts from JUnit artifacts. Evidence commented on each PR; both closed unmerged and their branches deleted.
-- [ ] **C3. Move `v2` to `v2.2.0`.** *(AC 10)*
+  - **Done 2026-11-16.** Both runs reference tag object `a4ad17d`; both PRs closed unmerged with evidence comments, branches deleted, `main` untouched. [SecurityTools#172](https://github.com/jjohns-dev/SecurityTools/pull/172): ci, release and pssa-sarif green; ubuntu 1331 executed with the shared help suite at 265 and all four `Get-KEVList` tests passing; windows 21. Its own `help.tests.ps1` ran 527, matching the per-parameter estimate. [PS.GHOps#25](https://github.com/jjohns-dev/PS.GHOps/pull/25): ubuntu and windows 152 executed each, help 41, pssa-sarif and release green. **macOS not proven:** GitHub cancelled that leg after 15 minutes with no runner ever assigned (no incident on githubstatus.com); accepted as unproven, since the suite reads help from the AST and is OS-independent. That outcome led to dropping the macOS leg in D6 and D7.
+- [x] **C3. Move `v2` to `v2.2.0`.** *(AC 10)*
   - Verify: `git ls-remote origin 'refs/tags/v2^{}'` shows the `v2.2.0` commit; a rerun of one consumer's `main` ci records the new tag object and passes.
+  - **Done 2026-11-16.** `v2^{}` = `2952aa6` (tag object `969808e`), pushed with the logged admin bypass. PS.Log `main` ci rerun (43503707486, attempt 2) referenced `969808e` and passed: 126 executed, the shared help suite 25 and PS.Log's own `help.tests.ps1` 54, both suites running until D1.
 
 ## D. Cleanup PRs, one per consumer *(AC 11, AC 12)*
 
@@ -43,15 +47,26 @@ Each PR: delete the consumer's `help.tests.ps1` where it has one, and `Tests/Com
 
 Verify each: post-merge `main` run green; executed count per leg read from JUnit artifacts, equal to the PR's final run; remote branch deleted.
 
-- [ ] **D1. PS.Log** — `Tests/Common/help.tests.ps1`.
-- [ ] **D2. PS.SSL** — `Tests/Common/help.tests.ps1`; `AGENTS.md` line 48. Both legs.
-- [ ] **D3. PS.DCU** — `Tests/Common/help.tests.ps1`; `AGENTS.md` line 40. Under `PesterStrictMode`.
-- [ ] **D4. AWSAutomation** — `Tests/Common/help.tests.ps1`.
-- [ ] **D5. SecurityTools** — `Tests/Common/help.tests.ps1`, whose `ValidateSet` trigger for dynamic parameters is replaced by the AC 2 exemption. Both legs; windows unchanged.
-- [ ] **D6. PS.GHOps** — floor only.
-- [ ] **D7. PS.GitHub** — floor only.
-- [ ] **D8. PS.YNAB** — floor only.
+- [x] **D1. PS.Log** — `Tests/Common/help.tests.ps1`.
+  - **Done 2026-11-16.** [#64](https://github.com/jjohns-dev/PS.Log/pull/64) squashed to `ec75083` by the repo agent. `help.tests.ps1` and `Tests/Common/` deleted; `AGENTS.md`'s row and template note removed. 72 executed (126 − 54 own help), shared help 25 → `min-tests` 69. Post-merge `main`: ci green at 72 against `v2` tag object `969808e`, pssa-sarif green.
+- [x] **D2. PS.SSL** — `Tests/Common/help.tests.ps1`; `AGENTS.md` line 48. Both legs.
+  - **Done 2026-11-16.** [#81](https://github.com/jjohns-dev/PS.SSL/pull/81) squashed to `648ed3a` by the repo agent. `help.tests.ps1` and `Tests/Common/` deleted; `AGENTS.md` updated. The windows leg hung in two of three attempts: a pre-existing pipe deadlock in `Invoke-OpenSsl`, sequential stdout-then-stderr reads, hit when `rsa:4096` key generation fills the windows stderr pipe, which deadlocked at 4,131 bytes but not at 2,091. Same hang on windows 2026-09-06, 2026-10-27 and 2026-11-12, before this suite. Fixed first in [#83](https://github.com/jjohns-dev/PS.SSL/pull/83) (`0571e05`, closes [#82](https://github.com/jjohns-dev/PS.SSL/issues/82); +1 regression test, proven to fail on the old code), three green windows runs; #81 rebased onto it. Executed ubuntu 252, windows 253, shared help 61 per leg → `min-tests` 242. Post-merge `main`: ci green at the same counts against `v2` tag object `969808e`, pssa-sarif green. Side finding, deferred past E1: [#91](https://github.com/jjohns-dev/pwsh-module-ci/issues/91), the meta suite scans git-ignored files.
+- [x] **D3. PS.DCU** — `Tests/Common/help.tests.ps1`; `AGENTS.md` line 40. Under `PesterStrictMode`.
+  - **Superseded by archiving PS.DCU** (decided 2026-11-16). `help.tests.ps1` is PS.DCU's only test file, so deleting it leaves no consumer test file, and the `Test` task stops with *No test files selected* before the shared suites run (`Build/build.psake.ps1`, present in `v2.2.0`). The spec assumed every consumer keeps one test file of its own. Rather than add tests to a repo about to be archived, or loosen a guard that catches a broken test glob for every consumer, PS.DCU is archived with its own help suite in place. Before archiving: no open PRs and only `main`; [PS.DCU#20](https://github.com/jjohns-dev/PS.DCU/issues/20) and [#11](https://github.com/jjohns-dev/PS.DCU/issues/11) settled in that repo; dropped from the consumer lists in `AGENTS.md`, `README.md` and `docs/consumer-guide.md`, and its row in `ROLLOUT.md`'s *Found during the rollout* closed.
+  - **Archived 2026-11-16.** Repo agent closed #11 as completed (tag `v0.1.1` carries `ModuleVersion` 0.1.1 and the `jjohns-dev` URIs) and #20 as not planned, and merged an archive notice as [#29](https://github.com/jjohns-dev/PS.DCU/pull/29) (`4da8bac`). Its post-merge `main` ran 87 executed: the earlier 54 plus 33 shared help, because `main` had last run on `v2.1.1`, with no test changed. Then `gh repo archive`.
+- [x] **D4. AWSAutomation** — `Tests/Common/help.tests.ps1`.
+  - **Done 2026-11-16.** [#110](https://github.com/jjohns-dev/AWSAutomation/pull/110) squashed to `8a942b9` by the repo agent. `help.tests.ps1` and `Tests/Common/` deleted; `AGENTS.md`'s row points to the shared suites. Assertion mapping confirmed against `v2.2.0` and posted on the PR. 229 executed (484 − 400 own help + 145 shared help) → `min-tests` 219, the `ci.yml` comment now saying *executed*. Post-merge `main`: ci green at 229 against `v2` tag object `969808e`, pssa-sarif green.
+- [x] **D5. SecurityTools** — `Tests/Common/help.tests.ps1`, whose `ValidateSet` trigger for dynamic parameters is replaced by the AC 2 exemption. Both legs; windows unchanged.
+  - **Done 2026-11-16.** [#173](https://github.com/jjohns-dev/SecurityTools/pull/173) squashed to `7fbd14b` by the repo agent. `help.tests.ps1` and `Tests/Common/` deleted; `AGENTS.md`'s row points to the shared suites. ubuntu 804 executed (1066 − 527 own help + 265 shared help) → `minTests` 794; windows 21, unchanged because `WindowsOnly` runs no shared suite → `minTests` 20. `Get-KEVList` passed under the AC 2 exemption. Post-merge `main`: ci green at the same counts against `v2` tag object `969808e`, pssa-sarif green.
+- [x] **D6. PS.GHOps** — floor; drop the macOS leg.
+  - **Done 2026-11-16.** [#26](https://github.com/jjohns-dev/PS.GHOps/pull/26) squashed to `9828ea1` by the repo agent. Ruleset `protect` (`20075968`) edited first by `PUT`, read back: only `validate / validate (macos-latest)` removed, enforcement and the other five rule types intact. `ci.yml` sets `os-matrix: '["ubuntu-latest", "windows-latest"]'`. 152 executed per leg (111 + 41 shared help) → `min-tests` 145. Post-merge `main`: ci green on ubuntu and windows only, at 152 each, against `v2` tag object `969808e`; pssa-sarif green.
+- [x] **D7. PS.GitHub** — floor; drop the macOS leg.
+  - **Done 2026-11-16.** [#43](https://github.com/jjohns-dev/PS.GitHub/pull/43) squashed to `15826df` by the repo agent. Ruleset `protect` (`18439023`) edited first by `PUT`, read back: only `validate / validate (macos-latest)` removed, enforcement and the other five rule types intact. `ci.yml` sets `os-matrix: '["ubuntu-latest", "windows-latest"]'`; `AGENTS.md`'s matrix line updated. 150 executed per leg (125 + 25 shared help) → `min-tests` 143. Post-merge `main`: ci green on ubuntu and windows only, at 150 each, against `v2` tag object `969808e`; pssa-sarif green.
+  - **macOS leg dropped in D6 and D7** (decided 2026-11-16). Both repos run macOS only because they inherit `ci.yml`'s default `os-matrix`, and `validate / validate (macos-latest)` is a required check in each. Each PR sets `os-matrix: '["ubuntu-latest", "windows-latest"]'` and removes that check from the repo's ruleset in the same change; otherwise it never reports and blocks every merge. Why: for these modules Linux is the stricter Unix leg (case-sensitive), and local builds already run on macOS; the leg's cost is runner availability, shown when C2's macOS leg was cancelled unrun. The harness default is unchanged: changing it would silently remove a required check from every consumer relying on the default.
+- [x] **D8. PS.YNAB** — floor only.
+  - **Done 2026-11-16.** [#27](https://github.com/jjohns-dev/PS.YNAB/pull/27) squashed to `799909f` by the repo agent; only the `min-tests` line changed. 332 executed (291 + 41 shared help) → `min-tests` 322. Post-merge `main`: ci green at 332 against `v2` tag object `969808e`, pssa-sarif green.
 
 ## E. Close-out
 
-- [ ] **E1.** Close #55 with the evidence; tick `ROLLOUT.md` item 9 with the merge commits and final floors.
+- [x] **E1.** Close #55 with the evidence; tick `ROLLOUT.md` item 9 with the merge commits and final floors.
+  - **Done 2026-11-16.** #55 closed with a per-consumer table of merge commits, executed counts and floors.
