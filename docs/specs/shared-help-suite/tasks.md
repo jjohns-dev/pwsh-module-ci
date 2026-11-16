@@ -47,7 +47,8 @@ Each PR: delete the consumer's `help.tests.ps1` where it has one, and `Tests/Com
 
 Verify each: post-merge `main` run green; executed count per leg read from JUnit artifacts, equal to the PR's final run; remote branch deleted.
 
-- [ ] **D1. PS.Log** — `Tests/Common/help.tests.ps1`.
+- [x] **D1. PS.Log** — `Tests/Common/help.tests.ps1`.
+  - **Done 2026-11-16.** [#64](https://github.com/jjohns-dev/PS.Log/pull/64) squashed to `ec75083` by the repo agent. `help.tests.ps1` and `Tests/Common/` deleted; `AGENTS.md`'s row and template note removed. 72 executed (126 − 54 own help), shared help 25 → `min-tests` 69. Post-merge `main`: ci green at 72 against `v2` tag object `969808e`, pssa-sarif green.
 - [ ] **D2. PS.SSL** — `Tests/Common/help.tests.ps1`; `AGENTS.md` line 48. Both legs.
 - [ ] **D3. PS.DCU** — `Tests/Common/help.tests.ps1`; `AGENTS.md` line 40. Under `PesterStrictMode`.
   - **Then archive PS.DCU** (decided 2026-11-16): once D3's post-merge `main` is verified green, archive `jjohns-dev/PS.DCU`. Confirm first that it has no open PRs; settle its open issues, [PS.DCU#20](https://github.com/jjohns-dev/PS.DCU/issues/20) among them, and its row in `ROLLOUT.md`'s *Found during the rollout*; and drop it from the consumer list in `AGENTS.md`.
