@@ -21,8 +21,87 @@ BeforeDiscovery {
         '}'
     ) -join [System.Environment]::NewLine
 
+    # A FUNCTION WITH COMPLETE HELP FOR ONE [System.String] PARAMETER, -Path, UNLESS A SWITCH REMOVES OR CHANGES A PART
+    function Get-HelpFixtureSource {
+        param (
+            [System.String] $Name = 'Get-Fixture',
+            [System.String[]] $Parameters = @('Path'),
+            [System.Collections.IDictionary] $ParameterHelp = [ordered] @{ Path = 'A path.' },
+            [System.String[]] $Links = @(),
+            [System.Management.Automation.SwitchParameter] $NoHelp,
+            [System.Management.Automation.SwitchParameter] $NoSynopsis,
+            [System.Management.Automation.SwitchParameter] $NoDescription,
+            [System.Management.Automation.SwitchParameter] $NoExample,
+            [System.Management.Automation.SwitchParameter] $Dynamic
+        )
+        $help = @(
+            if (-not $NoSynopsis) { '    .SYNOPSIS', '        Fixture.' }
+            if (-not $NoDescription) { '    .DESCRIPTION', '        A fixture function.' }
+            # .PSBase: THE Keys CASE PUTS A Keys ENTRY IN THIS DICTIONARY
+            foreach ($p in $ParameterHelp.PSBase.Keys) {
+                '    .PARAMETER {0}' -f $p
+                if ($ParameterHelp[$p]) { '        {0}' -f $ParameterHelp[$p] }
+            }
+            if (-not $NoExample) { '    .EXAMPLE', ('        {0}' -f $Name) }
+            foreach ($l in $Links) { '    .LINK', ('        {0}' -f $l) }
+        )
+        $dynamicBlock = @(
+            '    dynamicparam {'
+            '        if ($PSBoundParameters.ContainsKey(''Path'')) {'
+            '            $dictionary = [System.Management.Automation.RuntimeDefinedParameterDictionary]::new()'
+            '            $attributes = [System.Collections.ObjectModel.Collection[System.Attribute]]::new()'
+            '            $attributes.Add([System.Management.Automation.ParameterAttribute]::new())'
+            '            $dictionary.Add(''Extra'', [System.Management.Automation.RuntimeDefinedParameter]::new(''Extra'', [System.String], $attributes))'
+            '            $dictionary'
+            '        }'
+            '    }'
+        )
+        @(
+            'function {0} {{' -f $Name
+            if (-not $NoHelp) { '    <#'; $help; '    #>' }
+            '    [CmdletBinding()]'
+            ('    param ({0})' -f (($Parameters.ForEach({ '[System.String] ${0}' -f $_ })) -join ', '))
+            if ($Dynamic) { $dynamicBlock }
+            '    process { ''ok'' }'
+            '}'
+        ) -join [System.Environment]::NewLine
+    }
+
     # EACH CASE NAMES EXACTLY THE TESTS IT MUST FAIL (BY KEY) AND HOW MANY TESTS THE SUITE MUST RUN
     $suites = @(
+        @{
+            Suite = 'help.tests.ps1'
+            Names = @{
+                Synopsis          = 'Get-Fixture has a synopsis'
+                Description       = 'Get-Fixture has a description'
+                Example           = 'Get-Fixture has an example'
+                Parameters        = 'Get-Fixture documents exactly its parameters'
+                Link              = 'has a well-formed absolute http or https URI in every .LINK'
+                SecondSynopsis    = 'Get-Second has a synopsis'
+                SecondDescription = 'Get-Second has a description'
+                SecondExample     = 'Get-Second has an example'
+                SecondParameters  = 'Get-Second documents exactly its parameters'
+            }
+            Cases = @(
+                @{ Case = 'complete help'; Count = 5; Function = (Get-HelpFixtureSource); Expect = @() }
+                @{ Case = 'no comment-based help'; Count = 5; Function = (Get-HelpFixtureSource -NoHelp); Expect = @('Synopsis', 'Description', 'Example', 'Parameters'); Mentions = @('no comment-based help') }
+                @{ Case = 'no .SYNOPSIS'; Count = 5; Function = (Get-HelpFixtureSource -NoSynopsis); Expect = @('Synopsis') }
+                @{ Case = 'no .DESCRIPTION'; Count = 5; Function = (Get-HelpFixtureSource -NoDescription); Expect = @('Description') }
+                @{ Case = 'no .EXAMPLE'; Count = 5; Function = (Get-HelpFixtureSource -NoExample); Expect = @('Example') }
+                @{ Case = 'an undocumented parameter'; Count = 5; Function = (Get-HelpFixtureSource -Parameters 'Path', 'Missing'); Expect = @('Parameters'); Mentions = @('Missing') }
+                @{ Case = 'an empty .PARAMETER entry'; Count = 5; Function = (Get-HelpFixtureSource -ParameterHelp ([ordered] @{ Path = '' })); Expect = @('Parameters'); Mentions = @('Path') }
+                @{ Case = 'a .PARAMETER naming no parameter'; Count = 5; Function = (Get-HelpFixtureSource -ParameterHelp ([ordered] @{ Path = 'A path.'; Ghost = 'Not declared.' })); Expect = @('Parameters'); Mentions = @('Ghost') }
+                @{ Case = 'a .PARAMETER for a dynamic parameter'; Count = 5; Function = (Get-HelpFixtureSource -Dynamic -ParameterHelp ([ordered] @{ Path = 'A path.'; Extra = 'Dynamic.' })); Expect = @() }
+                @{ Case = 'an undocumented parameter beside a DynamicParam block'; Count = 5; Function = (Get-HelpFixtureSource -Dynamic -Parameters 'Path', 'Missing'); Expect = @('Parameters'); Mentions = @('Missing') }
+                @{ Case = 'a documented parameter named Keys'; Count = 5; Function = (Get-HelpFixtureSource -Parameters 'Path', 'Keys' -ParameterHelp ([ordered] @{ Path = 'A path.'; Keys = 'Some keys.' })); Expect = @() }
+                @{ Case = 'a .LINK to a command'; Count = 5; Function = (Get-HelpFixtureSource -Links 'Get-Item'); Expect = @() }
+                @{ Case = 'a .LINK to an https URI'; Count = 5; Function = (Get-HelpFixtureSource -Links 'https://example.com/ok'); Expect = @() }
+                @{ Case = 'a .LINK with a non-http scheme'; Count = 5; Function = (Get-HelpFixtureSource -Links 'ftp://example.com/file'); Expect = @('Link'); Mentions = @('ftp://example.com/file') }
+                @{ Case = 'a .LINK that is not a well-formed URI'; Count = 5; Function = (Get-HelpFixtureSource -Links 'https://example.com/a^b'); Expect = @('Link'); Mentions = @('https://example.com/a^b') }
+                @{ Case = 'two malformed .LINK URIs'; Count = 5; Function = (Get-HelpFixtureSource -Links 'htp:/broken', 'ftp://example.com/two'); Expect = @('Link'); Mentions = @('htp:/broken', 'ftp://example.com/two') }
+                @{ Case = 'a second function with no help'; Count = 9; Change = @{ FunctionsToExport = @('Get-Fixture', 'Get-Second') }; Function = (Get-HelpFixtureSource); Files = @{ 'Staging/Fixture/Public/Get-Second.ps1' = (Get-HelpFixtureSource -Name 'Get-Second' -NoHelp) }; Expect = @('SecondSynopsis', 'SecondDescription', 'SecondExample', 'SecondParameters'); Mentions = @('Get-Second') }
+            )
+        }
         @{
             Suite = 'manifest.tests.ps1'
             Names = @{
