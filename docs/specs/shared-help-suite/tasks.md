@@ -32,10 +32,11 @@ Every assertion gets a fixture that must fail it and one that must pass it, unde
 - [x] **C1. Cut `v2.2.0`** on the merge commit, annotated, with a GitHub release whose notes say every consumer runs the help suite when `v2` moves and none is expected red. *(ADR-0002: minor)*
   - Verify: tag annotated, on the merge commit, release immutable.
   - **Done 2026-11-16.** `v2.2.0` annotated (tag object `a4ad17d`) on `2952aa6`; [release](https://github.com/jjohns-dev/pwsh-module-ci/releases/tag/v2.2.0) published, immutable.
-- [ ] **C2. Prove on two throwaway consumer PRs pinned `@v2.2.0`**: PS.GHOps and SecurityTools, callers repinned and nothing else. *(AC 9)*
+- [x] **C2. Prove on two throwaway consumer PRs pinned `@v2.2.0`**: PS.GHOps and SecurityTools, callers repinned and nothing else. *(AC 9)*
   - PS.GHOps: every leg (ubuntu, windows, macOS) green at its `main` count plus 41.
   - SecurityTools: ubuntu green at its `main` count plus 265, `Get-KEVList` passing; windows unchanged at 21.
   - Verify: `referenced_workflows` shows the `v2.2.0` tag object; counts from JUnit artifacts. Evidence commented on each PR; both closed unmerged and their branches deleted.
+  - **Done 2026-11-16.** Both runs reference tag object `a4ad17d`; both PRs closed unmerged with evidence comments, branches deleted, `main` untouched. [SecurityTools#172](https://github.com/jjohns-dev/SecurityTools/pull/172): ci, release and pssa-sarif green; ubuntu 1331 executed with the shared help suite at 265 and all four `Get-KEVList` tests passing; windows 21. Its own `help.tests.ps1` ran 527, matching the per-parameter estimate. [PS.GHOps#25](https://github.com/jjohns-dev/PS.GHOps/pull/25): ubuntu and windows 152 executed each, help 41, pssa-sarif and release green. **macOS not proven:** GitHub cancelled that leg after 15 minutes with no runner ever assigned (no incident on githubstatus.com); accepted as unproven, since the suite reads help from the AST and is OS-independent. That outcome led to dropping the macOS leg in D6 and D7.
 - [ ] **C3. Move `v2` to `v2.2.0`.** *(AC 10)*
   - Verify: `git ls-remote origin 'refs/tags/v2^{}'` shows the `v2.2.0` commit; a rerun of one consumer's `main` ci records the new tag object and passes.
 
