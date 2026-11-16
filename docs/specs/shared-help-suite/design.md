@@ -1,8 +1,7 @@
 # Shared help suite — design
 
-- **Requirements:** [requirements.md](requirements.md), approved 2026-11-16
-- **Status:** Draft — 2026-11-16
-- **Proposes amending AC 2.** See *Dynamic parameters*; the approved wording cannot be met.
+- **Requirements:** [requirements.md](requirements.md), approved 2026-11-16; AC 2 amended as proposed here
+- **Status:** Approved — 2026-11-16
 
 ## Approach
 
@@ -52,16 +51,35 @@ Help is `$command.ScriptBlock.Ast.GetHelpContent()`. When it is `$null`, each of
 - **Read dictionary keys through `.PSBase.Keys`.** AWSAutomation's `Get-RoleCredential` has a parameter named `Keys`, so `$command.Parameters.Keys` returns that `ParameterMetadata` instead of the key list. Measured 2026-11-16: the naive form fails that function with nine false findings. PS.DCU's current suite uses the naive form.
 - Every failure names the function and the parameter or link, through `-Because` (AC 7).
 
-### Dynamic parameters (proposed amendment to AC 2)
+### Dynamic parameters (AC 2, amended)
 
 AC 2 requires reading parameters "from the imported module so that dynamic parameters are included". That cannot be done in general. A `DynamicParam` block runs only when the command is bound, so neither `$module.ExportedFunctions[...].Parameters` nor `Get-Command` lists a dynamic parameter without arguments. Measured 2026-11-16: neither shows `Get-KEVList -OutputDirectory`, which SecurityTools adds only when `-Format` is bound.
 
 SecurityTools' current suite works around it by re-querying with the first `ValidateSet` value of each parameter. That is a heuristic: it executes the module's `DynamicParam` code with guessed arguments, and covers only the shape it was written for.
 
-**Proposed AC 2:** *THE help suite SHALL check every function the staged module exports. FOR a function with a `DynamicParam` block, a `.PARAMETER` entry naming no static parameter SHALL NOT fail, because its dynamic parameters cannot be listed without binding it.*
+**AC 2, as amended:** *THE help suite SHALL check every function the staged module exports. FOR a function with a `DynamicParam` block, a `.PARAMETER` entry naming no static parameter SHALL NOT fail, because its dynamic parameters cannot be listed without binding it.*
 
 - Detected from the AST: `$command.ScriptBlock.Ast.Body.DynamicParamBlock`.
-- Cost: an undocumented dynamic parameter, or a stale `.PARAMETER` on a function that has a `DynamicParam` block, goes undetected. One function in the fleet has one.
+- Cost: an undocumented dynamic parameter, or a stale `.PARAMETER` on a function that has a `DynamicParam` block, goes undetected. One function in the fleet has one (measured 2026-11-16: `Get-KEVList`).
+- How other harnesses handle it, checked 2026-11-16: juneb's `Module.Help.Tests.ps1`, which Group A descends from, and PSFramework's `Help.Tests.ps1` read only static `ParameterSets.Parameters`; PSFramework's escape hatch is a per-repo list of commands to skip entirely. Microsoft's documented route is `Get-Command -ArgumentList` with the triggering arguments. This exemption needs no configuration and relaxes one check on one kind of function.
+
+### Future: checking dynamic parameters
+
+Not built now: one function in the fleet has a `DynamicParam` block. If more appear, or one needs its dynamic parameters checked, extend the suite with per-function trigger arguments, the `Get-Command -ArgumentList` route, as an optional `harness.psd1` setting:
+
+```powershell
+# Arguments that make a function's DynamicParam block emit its parameters, so the help suite
+# can check them like static ones. Hashtable of exported function name to argument array; default none.
+# A listed function must be exported and have a DynamicParam block, and its arguments must
+# add at least one parameter, or the build stops, so an entry cannot silently go stale.
+# HelpDynamicParameterArguments = @{ 'Get-KEVList' = @('CSV') }
+```
+
+- `Get-HarnessSetting` validates the key: a hashtable whose values are arrays.
+- `Get-HarnessSharedContainer` gains it as an available `-Data` key, and the help suite declares it.
+- For a listed function, the suite resolves the command with `Get-Command -Name '<Module>\<Function>' -ArgumentList <values>`, adds the parameters it reports as `IsDynamic` to the declared set, and runs the parameter test with no exemption. Unlisted functions with a `DynamicParam` block keep the AC 2 exemption.
+- **Unverified until built:** how `-ArgumentList` binds a function's arguments. SecurityTools' suite passes `ValidateSet` values positionally and finds `-OutputDirectory`; whether named arguments work, and how a parameter with no position is triggered, must be measured first.
+- It executes the module's `DynamicParam` code with the configured arguments at test time; a block with side effects would run them.
 
 ### Strict mode
 

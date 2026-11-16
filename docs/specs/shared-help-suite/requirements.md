@@ -2,7 +2,7 @@
 
 - **Tracking:** [#55](https://github.com/jjohns-dev/pwsh-module-ci/issues/55)
 - **Follows:** [#53](https://github.com/jjohns-dev/pwsh-module-ci/issues/53), [shared test minimum](../shared-test-minimum/requirements.md), whose delivery mechanism this reuses
-- **Status:** Approved — 2026-11-16
+- **Status:** Approved — 2026-11-16; AC 2 amended 2026-11-16 (see *Decisions*)
 
 ## Problem
 
@@ -21,7 +21,7 @@
 ## Acceptance criteria
 
 1. THE harness SHALL carry a fourth shared suite, help, delivered and selected exactly as the three from #53 are: taking consumer values as `New-PesterContainer -Data` parameters, depending on Pester only, and running on `All` and `CrossPlatform` legs but not `WindowsOnly`.
-2. THE help suite SHALL check every function the staged module exports, read from the imported module so that dynamic parameters are included.
+2. THE help suite SHALL check every function the staged module exports. FOR a function with a `DynamicParam` block, a `.PARAMETER` entry naming no static parameter SHALL NOT fail, because its dynamic parameters cannot be listed without binding it.
 3. FOR each exported function, THE help suite SHALL run four tests, and each SHALL fail WHEN the function has no comment-based help as well as on its own condition: `.SYNOPSIS` is empty; `.DESCRIPTION` is empty; there is no `.EXAMPLE`; or a declared parameter, common parameters excepted, has no `.PARAMETER` entry or an empty one, or a `.PARAMETER` entry names no declared parameter.
 4. THE help suite SHALL run one test per module that fails WHEN any exported function has a `.LINK` URI that is not a well-formed absolute `http` or `https` URI. A `.LINK` naming a related command is not a URI and SHALL NOT fail. A consumer's help test count is therefore four per exported function plus one.
 5. THE parameter checks SHALL read documented parameters from the help content, not `Get-Help`, which synthesizes an entry for an undocumented parameter and drops a `.PARAMETER` naming no real one, so neither check could fail against it.
@@ -70,3 +70,4 @@ The three open questions in the draft, resolved in review:
 
 - **Q2 — Links: one looped test per module** (AC 4). Only AWSAutomation has `.LINK` URIs today, two, both valid. A per-function link test would pass with nothing to check in seven repos, 66 such tests in SecurityTools alone, inflating the floor without guarding anything. Folding the check into another per-function test would report a bad link under an unrelated test name. The module-level test also passes with nothing to check where there are no links, but it is one test, and AC 8 proves it fails on a malformed link.
 - **Q3 — "Not auto-generated": dropped** (AC 12). Group A detects missing help by the synopsis falling back to a syntax diagram; AC 3's no-help condition replaces it directly.
+- **AC 2 amended in design review.** The approved wording required reading dynamic parameters from the imported module. Measured 2026-11-16, that cannot be done: neither the module's export table nor `Get-Command` lists a dynamic parameter until the command is bound. See the design, *Dynamic parameters*, and *Future: checking dynamic parameters*.
