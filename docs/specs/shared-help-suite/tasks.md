@@ -10,16 +10,20 @@ Each task names its verification and the acceptance criteria (AC) it serves. Pha
 
 Every assertion gets a fixture that must fail it and one that must pass it, under strict mode on and off. *(AC 8)*
 
-- [ ] **B1. `Build/SharedTests/help.tests.ps1`**: four tests per exported function, one looped link test. *(AC 1–7)*
+- [x] **B1. `Build/SharedTests/help.tests.ps1`**: four tests per exported function, one looped link test. *(AC 1–7)*
   - Verify: re-run the 2026-11-16 measurement through the real suite: stage each of the eight consumers' `main` and run the suite against it, lenient and strict. Expect zero failures and `4n + 1` tests each, `Get-KEVList` included.
-- [ ] **B2. Fixture cases** in `tests/SharedTests.Tests.ps1`, the design's list, each naming exactly the tests it must fail, lenient and strict. *(AC 8)*
+  - **Done 2026-11-16.** All eight green in both modes at exactly `4n + 1`: PS.Log 25, PS.GHOps 41, PS.GitHub 25, PS.SSL 61, PS.DCU 33, AWSAutomation 145, SecurityTools 265, PS.YNAB 41. PS.YNAB's `main` moved to `674e1dd` since the requirements were measured and now exports 10 functions, so 41 rather than the 37 recorded there.
+- [x] **B2. Fixture cases** in `tests/SharedTests.Tests.ps1`, the design's list, each naming exactly the tests it must fail, lenient and strict. *(AC 8)*
   - Verify: every test fails in at least one case; a run without `-Data` fails. Mutations, each of which must turn the suite red: reading parameters through `Get-Help`; dropping the `DynamicParam` exemption's AST check, so it exempts every function; dropping `.PSBase`; dropping either half of the link check; checking only the first function.
-- [ ] **B3. `tests/Harness.Tests.ps1`**: the expected container list starts with `help.tests.ps1`. *(AC 1)*
+  - **Done 2026-11-16.** Seventeen cases, lenient and strict; 126/126 for the whole file. The link case was split in two, a non-`http` scheme and a malformed `https` URI, so each half of the link check has a case only it catches. All six mutations turned it red, each caught by the case built for it; the suite was restored byte-for-byte after each. The `Keys` case first failed because the fixture builder itself iterated `.Keys` on a dictionary holding a `Keys` entry, the trap the suite guards against; fixed with `.PSBase.Keys`.
+- [x] **B3. `tests/Harness.Tests.ps1`**: the expected container list starts with `help.tests.ps1`. *(AC 1)*
   - Verify: the case fails before the suite file exists and passes after.
-- [ ] **B4. `tests/HarnessTasks.Tests.ps1`**: the fixture consumer's function gains complete help; `$sharedCount` 15 → 20; the expected suite order starts with `help.tests.ps1`. *(AC 1, AC 13)*
+- [x] **B4. `tests/HarnessTasks.Tests.ps1`**: the fixture consumer's function gains complete help; `$sharedCount` 15 → 20; the expected suite order starts with `help.tests.ps1`. *(AC 1, AC 13)*
   - Verify: the task cases pass; a fixture function with no help fails the build.
-- [ ] **B5. Documentation.** `docs/consumer-guide.md` *Shared tests*: four suites, `15 + 5n`, delete `help.tests.ps1`. `docs/test-integrity.md`: help is per function with one looped link test, and why; the `.PSBase.Keys` trap; the `DynamicParam` exemption, pointing at the design's *Future: checking dynamic parameters*; the intro's `Help.Tests.ps1` mention. `AGENTS.md`: the `Build/` row says four suites.
+  - **B3 and B4 done 2026-11-16.** With `help.tests.ps1` moved aside, six cases across both files failed, including the new no-help case (4 failures); restored, all pass. Full verification suite 275/275. PSScriptAnalyzer with the shared settings: no findings on the four changed files, after renaming a fixture helper that only builds a string from `New-` to `Get-HelpFixtureSource`.
+- [x] **B5. Documentation.** `docs/consumer-guide.md` *Shared tests*: four suites, `15 + 5n`, delete `help.tests.ps1`. `docs/test-integrity.md`: help is per function with one looped link test, and why; the `.PSBase.Keys` trap; the `DynamicParam` exemption, pointing at the design's *Future: checking dynamic parameters*; the intro's `Help.Tests.ps1` mention. `AGENTS.md`: the `Build/` row says four suites.
   - Verify: markdown lint clean; `git diff -U0` reviewed hunk by hunk.
+  - **Done 2026-11-16.** Also rewrote `test-integrity.md`'s settled decision *link URIs come from `Get-Help`*: the shared suite reads links from the AST and classifies them by scheme, which SecurityTools' related-topic `.LINK` confirms (skipped, green). Lint clean.
 - [ ] **B6. Merge.** Full verification suite green locally, then the required `verify Pester result step` on the PR.
 
 ## C. Release

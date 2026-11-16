@@ -1,6 +1,6 @@
 # Test integrity
 
-Why a test suite can be green and prove nothing, and the rules that follow from it. Covers the Pester suites in the PowerShell module repos, including their `Help.Tests.ps1` suites, and the `min-tests` floor that guards them.
+Why a test suite can be green and prove nothing, and the rules that follow from it. Covers the Pester suites in the PowerShell module repos, the harness's shared suites in `Build/SharedTests/` (which from `v2.2.0` include the help suite that replaced each repo's `Help.Tests.ps1`), and the `min-tests` floor that guards them.
 
 **This file is not interim.** These decisions about how tests are written and measured outlive any de-duplication, as [`dependency-stack.md`](dependency-stack.md) does. They moved here on 2026-11-04 from `shared-ci-standards.md`, which #20 deleted; that file's map of which repo holds the reference copy of each test piece is preserved on [#53](https://github.com/jjohns-dev/pwsh-module-ci/issues/53#issuecomment-6780926659).
 
@@ -22,12 +22,10 @@ Do not relitigate these. Each was decided once, with evidence.
 
 - **The link test is offline, and both of its checks are load-bearing.** A live `Invoke-WebRequest` makes unit tests network-dependent. Neither half of the replacement is redundant: the scheme pattern rejects `ftp://` and `htp:/broken`, which `IsWellFormedUriString` accepts; `IsWellFormedUriString` rejects `https://example.com/a^b`, which the pattern accepts. Verified 2026-10-28.
 
-- **Parameter names come from the AST; link URIs come from `Get-Help`.** These look contradictory and are not.
-  `Get-Help` silently drops a `.PARAMETER` block naming no real parameter, which is what made the matching-help assertion a tautology — hence the AST for parameters.
-  But the AST returns related-topic names (`.LINK Get-Item`) alongside URIs, which would fail the scheme check, while `Get-Help` sorts them into `linkText` with an empty `uri` — hence `Get-Help` for links.
-  Filter on a **non-empty `uri`**, not on the collection being empty: a command with no `.LINK` at all still yields a `navigationLink` entry whose `uri` is an empty string, so a null-or-count check does not drop it.
-  **This is observed, not just argued.** `jjohns-dev/SecurityTools` is the only repo where the two sources diverge — its single `.LINK` is `ConvertTo-GZipString`, a related-topic name rather than a URI. Confirmed green under `Get-Help` in SecurityTools#159, where the AST would have reported a valid link as a malformed URI. Go there before reopening the question.
-  Any repo doing both needs a comment saying so, or someone will "fix" one of them into a bug.
+- **Parameter names and links both come from the AST in the shared help suite; links are classified by scheme.** `Get-Help` silently drops a `.PARAMETER` block naming no real parameter, which is what made the matching-help assertion a tautology — hence the AST for parameters.
+  The per-repo `Help.Tests.ps1` copies took links from `Get-Help`, because the AST returns related-topic names (`.LINK Get-Item`) alongside URIs and their scheme check would have failed those. The shared suite instead treats a `.LINK` as a URI only when it starts with a scheme, `^[A-Za-z][A-Za-z0-9+.-]*:`, and skips the rest, so one source serves both checks.
+  **Observed, not just argued.** `jjohns-dev/SecurityTools`' only `.LINK` is `ConvertTo-GZipString`, a related-topic name; the shared suite skips it and passes (measured 2026-11-16 at `d18c091`), and a fixture `.LINK Get-Item` must pass. That repo's SecurityTools#159 is where the `Get-Help` route was confirmed for the per-repo copies.
+  A Windows path such as `C:\x` reads as a URI and fails, which is right for a `.LINK`.
 
 - **A `$null` help-content guard is required, and the obvious reference implementations lack it.** When a function has no comment-based help at all, `$HelpContent` is `$null`, and `$null.Parameters.Keys` piped through `Where-Object` yields a **one-element array containing `$null`** — not an empty array. That generates a single case literally named `$null`, which then fails. `-AllowNullOrEmptyForEach` does not help, because the array is neither null nor empty. The guard is `Where-Object { $_ -and ... }`. Found while implementing jjohns-dev/PS.Log#54.
 
@@ -40,6 +38,10 @@ Do not relitigate these. Each was decided once, with evidence.
 - **The shared meta suite loops: one test per check, not one per file.** A per-file suite ties the `min-tests` floor to the number of source files. The floor's margin is at most 10, so with three checks per file, deleting four files in an ordinary refactor drops twelve tests and fails CI with nothing wrong. Looped, the suite is always three tests, and each failure names every offending file instead. Decided 2026-11-13 on [#53](https://github.com/jjohns-dev/pwsh-module-ci/issues/53); the reasoning is the requirements' AC 7. The path-literal suite stays per public file on purpose: it tracks the module's public surface, as help tests already do.
 
 - **The shared suites do not assert what the harness already enforces.** Exactly one root manifest, the module name, the loader's presence, a clean import, and anything a failed import already reports, such as an unparseable `ModuleVersion` or `GUID`, are all checked by harness steps that run before `Test`. As shared tests they could never fail. The measured list is in the shared-test-minimum design, *What the harness already enforces*; do not re-add them.
+
+- **The shared help suite runs four tests per exported function and one looped link test, not one per parameter or link.** Per parameter ties the `min-tests` floor to the number of parameters, so removing a dozen in a refactor would fail CI with nothing wrong — the meta suite's reason, above. A per-function link test would pass with nothing to check in every repo without links, inflating the floor without guarding anything. Decided 2026-11-16 on [#55](https://github.com/jjohns-dev/pwsh-module-ci/issues/55); the requirements' *Decisions* record it. A function with no help at all fails all four of its tests, so there is no separate *not auto-generated* test.
+
+- **A function with a `DynamicParam` block may document parameters it does not declare statically.** A `DynamicParam` block emits its parameters only when the command is bound, so neither `Get-Command` nor the module's export table lists them; measured 2026-11-16 on SecurityTools' `Get-KEVList -OutputDirectory`. The shared help suite therefore skips its *names no declared parameter* check for such functions, and an undocumented or stale dynamic parameter goes unseen. If that ever matters, the path is per-function trigger arguments in `harness.psd1`: the shared-help-suite design, [*Future: checking dynamic parameters*](specs/shared-help-suite/design.md#future-checking-dynamic-parameters).
 
 ## Traps that have cost real time
 
@@ -57,6 +59,8 @@ Do not relitigate these. Each was decided once, with evidence.
   **Check the file's encoding as a separate claim.** That gap is why [SecurityTools#161](https://github.com/jjohns-dev/SecurityTools/issues/161) existed at all rather than being covered by a `-ceq` result. Same defect class as everything above: a comparison that cannot report the difference you are asking about.
 
 - **Pester's `Run.Path` throws on a scalar `FileInfo` and accepts an array.** A glob matching exactly one file returns a single `FileInfo`, so a build that worked with two test files breaks with one. Verified on Pester 6.2.0 in [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20); the harness passes `[System.String[]]` of full paths for this reason.
+
+- **A dictionary with a `Keys` entry hides its `.Keys` property.** On any `IDictionary`, `.Keys` resolves to an entry named `Keys` before the property, so `$command.Parameters.Keys` on a function with a `-Keys` parameter returns that parameter's metadata instead of the name list. AWSAutomation's `Get-RoleCredential` has one; read naively, it produced nine false findings (measured 2026-11-16). Read keys through `.PSBase.Keys`, as the shared help suite does. PS.DCU's own `help.tests.ps1` uses the naive form and passes only because no PS.DCU function has a `-Keys` parameter.
 
 - **An `Assert` on an undefined variable passes silently.** psake does not apply `Set-StrictMode` to task bodies on its own, so a misspelt variable is `$null` and the condition can come out `True`. Six of seven repos had exactly that in `Analyze`'s `default` branch (`$analysisResult` for `$Results`), and on psake 5.0.4 the build succeeded (#20). The harness sets `Set-StrictMode -Version Latest` at the top of `build.psake.ps1`, which does reach task bodies; setting it in `build.ps1` does not (measured 2026-11-09).
 
