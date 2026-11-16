@@ -15,8 +15,7 @@ Phase numbers are **names, not a sequence**. They were assigned before #22 moved
 | ✓ | **4** — close the tracker issue | complete 2026-11-03 — #17 closed after auditing every box against the repos |
 | ✓ | **8** — drain this file | **complete 2026-11-04** — [#43](https://github.com/jjohns-dev/pwsh-module-ci/issues/43), closed. 391 lines to 117 |
 | ✓ | [#27](https://github.com/jjohns-dev/pwsh-module-ci/issues/27) | **complete 2026-11-04** — `pssa-sarif.yml` moved to `Install-PSResource`, released as `v1.5.1`, `v1` moved and verified on a live consumer run |
-| → | **5** — stop the duplication | **in progress.** Items 1–9 complete 2026-11-05 to 11-16: every consumer runs the shared harness, the shared test minimum and the shared help suite at `@v2`, and `v1` is retired. PS.DCU was archived 2026-11-16, leaving seven consumers. Next [ArcGISEnterprise#153](https://github.com/PS-MCS/ArcGISEnterprise/issues/153) joins as the eighth consumer (deferred by choice), then [mcssec-ops#157](https://github.com/PS-MCS/mcssec-ops/issues/157) promotes the harness to `PS-MCS`. Phase 6 follows |
-| | **6** — migration | [#19](https://github.com/jjohns-dev/pwsh-module-ci/issues/19) only. #21 moved into Phase 5 on 2026-11-05, once [ADR-0006](docs/adr/0006-host-the-build-harness-in-this-repo.md) removed its dependency on the Sampler decision |
+| → | **5** — stop the duplication | **in progress.** Items 1–9 complete 2026-11-05 to 11-16: every consumer runs the shared harness, the shared test minimum and the shared help suite at `@v2`, and `v1` is retired. PS.DCU was archived 2026-11-16, leaving seven consumers. Next [ArcGISEnterprise#153](https://github.com/PS-MCS/ArcGISEnterprise/issues/153) joins as the eighth consumer (deferred by choice); it is the last item |
 | | **Final phase** — delete this file | once it has nothing left to carry |
 
 Completed phases are closed. New work goes in a later phase or a new one, never back into a phase already marked done — Phase 2B exists because that rule was applied rather than reopening Phase 1.
@@ -25,14 +24,14 @@ Completed phases are closed. New work goes in a later phase or a new one, never 
 
 ## Phase 5 — Stop the duplication
 
-**`jjohns-dev` repos only.** `PS-MCS` is downstream: changes are incubated and vetted here, then promoted, so its repos are not in scope for this phase and will pick the work up with that promotion. Item 11 is that promotion; its work and its ADR live in `PS-MCS`, and this file tracks only the handoff.
+**`jjohns-dev` repos only.** `PS-MCS` is downstream: changes are incubated and vetted here, then promoted, so its repos are not in scope for this phase and will pick the work up with that promotion, tracked on [mcssec-ops#157](https://github.com/PS-MCS/mcssec-ops/issues/157), not here.
 
 - [x] **pwsh-module-ci** — [#24](https://github.com/jjohns-dev/pwsh-module-ci/issues/24) — **complete 2026-11-05**
   `BuildHelpers` is absent from all ten module repos across both orgs; renaming the `$env:BH*` assignments was decided against. Measurements on #24 and [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20).
 
 ### The remaining sequence, agreed 2026-11-05
 
-Eleven items, in order. The ordering is not arbitrary and it is not a simple chain — each item records what it gates.
+Ten items, in order. The ordering is not arbitrary and it is not a simple chain — each item records what it gates. Item 11, promoting the harness to `PS-MCS`, was drained on 2026-11-16 to [mcssec-ops#157](https://github.com/PS-MCS/mcssec-ops/issues/157), which records its sequencing.
 
 - [x] **1 — [#53](https://github.com/jjohns-dev/pwsh-module-ci/issues/53), decide the test-scaffold minimum** — **complete 2026-11-06**. Decision and measurements on the issue.
 - [x] **2 — [#9](https://github.com/jjohns-dev/pwsh-module-ci/issues/9), `os-matrix-include`** — **complete 2026-11-06**. Shipped by [#57](https://github.com/jjohns-dev/pwsh-module-ci/pull/57) as a polymorphic `os-matrix` in `v1.6.0`; ADR-0006 amended. Proof and release record on the issue.
@@ -51,15 +50,6 @@ Eleven items, in order. The ordering is not arbitrary and it is not a simple cha
 - [ ] **10 — [PS-MCS/ArcGISEnterprise#153](https://github.com/PS-MCS/ArcGISEnterprise/issues/153), transfer ArcGISEnterprise to `jjohns-dev` and onto the harness**
   **Closes when** the repo is in `jjohns-dev`, calls `ci.yml`, `release.yml` and `pssa-sarif.yml` at `@v2` with the template shim, is green with its executed count unchanged, and is registered here as the eighth consumer. Steps and their order are on the issue.
   **Why here:** Deferred by choice 2026-11-12; it was item 7c, between `v2.0.2` and #53. Consequence: #53's refreshed spec covers eight consumers, so this repo adopts the shared minimum and the current shim as part of its own migration rather than through #53's consumer PRs. Phase 5 stays `jjohns-dev` only: the repo enters scope by transferring, not by Phase 5 reaching into `PS-MCS`.
-- [ ] **11 — [PS-MCS/mcssec-ops#157](https://github.com/PS-MCS/mcssec-ops/issues/157), promote the harness to a dedicated `PS-MCS` repo**
-  **Closes when** a dedicated `PS-MCS` repo hosts the harness with immutable releases behind a moving major tag, `PS.ETL` and `MCS` run on it, and `mcssec-ops`' `ps-module-validate.yml` and `ps-module-release.yml` are deprecated. Tracked on the issue; the ADR lives in `PS-MCS`, not here.
-  **Why here:** Last, so it promotes the harness as items 9 and 10 leave it. Decided 2026-11-16: a dedicated repo rather than `mcssec-ops`, reasons on the issue. Its first step is a spike on whether consumers can check out a private host: ADR-0006's "adopt unchanged" was written against this public one.
-
-## Phase 6 — Migration
-
-- [ ] **pwsh-module-ci** — [#19](https://github.com/jjohns-dev/pwsh-module-ci/issues/19) — gated on Phases 1–5
-  psake → Sampler. Design for SecurityTools' per-leg test scope from the start, migrate that repo last.
-  **Re-scoped 2026-11-05.** The question is no longer *"migrate psake to Sampler"* but *"should the centralised harness be Sampler-based or hand-rolled?"* — a decision taken once here, with no per-repo migration, and one that #20's outcome informs. All three of this issue's `$env:BH*` checkboxes were answered on 2026-11-05.
 
 ## Phase 8 — Drain this file
 
@@ -84,6 +74,7 @@ So this phase is a drain, not a `git rm`. **Nothing is deleted until its destina
   | `mcssec-ops` cannot be staged; the copies of the verify step | ✓ **done 2026-11-04** — [#20](https://github.com/jjohns-dev/pwsh-module-ci/issues/20), with the copy count re-measured at **5**, not four |
   | `AWSAutomation`'s ADR-0002 caveat | ✓ **drained 2026-11-04** — but the confirmation this row asked for **failed**: the caveat was *not* in that repo's ADR. Removing it from here was safe only because [`docs/dependency-stack.md`](docs/dependency-stack.md) states it independently. **Resolved 2026-11-04** — [#106](https://github.com/jjohns-dev/AWSAutomation/pull/106) added it to that ADR's Consequences |
   | Second drain: completed Phase 5 narratives, closed findings, the retrospective note, the standing caveat and *Reference — moved out* | ✓ **done 2026-11-13** — the linked issues and PRs; #9, #73 and #79 got closing records first. The caveat lives in `AWSAutomation`'s ADR-0002, and [ADR-0008](docs/adr/0008-runtime-modules-float-build-tools-pinned.md) has since made floating runtime dependencies the fleet rule. Recoverable with `git show <this PR's merge commit>^:ROLLOUT.md` |
+  | Third drain: Phase 5 item 11 and Phase 6 | ✓ **done 2026-11-16** — each has its own issue, which now records its sequencing: [mcssec-ops#157](https://github.com/PS-MCS/mcssec-ops/issues/157#issuecomment-6931898195) (after item 10) and [#19](https://github.com/jjohns-dev/pwsh-module-ci/issues/19#issuecomment-6931898917) (after Phase 5, and its 2026-11-05 re-scope). Recoverable with `git show <this PR's merge commit>^:ROLLOUT.md` |
 
 Deleting `ROLLOUT.md` itself is **not** a row in this phase. It moved to the **Final phase** at the end of this document, because it is gated on far more than the drain.
 
@@ -101,7 +92,7 @@ Each of these was surfaced by rollout work, is independent of it, and would have
 
 **Not "Phase 9", and not "Phase X"** — X reads as Roman numeral 10 among numbered phases. This is the only unnumbered phase, because it is the only one whose position cannot change.
 
-Gated on what remains: Phase 5 items 9 to 11, then Phase 6; the drain ([#43](https://github.com/jjohns-dev/pwsh-module-ci/issues/43)) and [#27](https://github.com/jjohns-dev/pwsh-module-ci/issues/27) are done. The file stays until then, because it still carries the Phase 5 and Phase 6 sections and the running order at the top.
+Gated on what remains: Phase 5 item 10. The drain ([#43](https://github.com/jjohns-dev/pwsh-module-ci/issues/43)) and [#27](https://github.com/jjohns-dev/pwsh-module-ci/issues/27) are done, and item 11 and Phase 6 moved to their own issues on 2026-11-16. The file stays until then, because it still carries the Phase 5 section and the running order at the top.
 
 - [ ] **Delete `ROLLOUT.md` from `main`**, in its own PR, once nothing here is unrecorded elsewhere.
 
