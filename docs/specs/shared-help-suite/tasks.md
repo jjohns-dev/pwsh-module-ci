@@ -51,8 +51,9 @@ Verify each: post-merge `main` run green; executed count per leg read from JUnit
   - **Then archive PS.DCU** (decided 2026-11-16): once D3's post-merge `main` is verified green, archive `jjohns-dev/PS.DCU`. Confirm first that it has no open PRs; settle its open issues, [PS.DCU#20](https://github.com/jjohns-dev/PS.DCU/issues/20) among them, and its row in `ROLLOUT.md`'s *Found during the rollout*; and drop it from the consumer list in `AGENTS.md`.
 - [ ] **D4. AWSAutomation** — `Tests/Common/help.tests.ps1`.
 - [ ] **D5. SecurityTools** — `Tests/Common/help.tests.ps1`, whose `ValidateSet` trigger for dynamic parameters is replaced by the AC 2 exemption. Both legs; windows unchanged.
-- [ ] **D6. PS.GHOps** — floor only.
-- [ ] **D7. PS.GitHub** — floor only.
+- [ ] **D6. PS.GHOps** — floor; drop the macOS leg.
+- [ ] **D7. PS.GitHub** — floor; drop the macOS leg.
+  - **macOS leg dropped in D6 and D7** (decided 2026-11-16). Both repos run macOS only because they inherit `ci.yml`'s default `os-matrix`, and `validate / validate (macos-latest)` is a required check in each. Each PR sets `os-matrix: '["ubuntu-latest", "windows-latest"]'` and removes that check from the repo's ruleset in the same change; otherwise it never reports and blocks every merge. Why: for these modules Linux is the stricter Unix leg (case-sensitive), and local builds already run on macOS; the leg's cost is runner availability, shown when C2's macOS leg was cancelled unrun. The harness default is unchanged: changing it would silently remove a required check from every consumer relying on the default.
 - [ ] **D8. PS.YNAB** — floor only.
 
 ## E. Close-out
