@@ -3,7 +3,21 @@ param ()
 
 BeforeAll {
     $buildScript = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath 'Build' -AdditionalChildPath 'build.ps1'
-    $cleanFunction = 'function Get-Fixture { [CmdletBinding()] param () ''ok'' }'
+    $cleanFunction = @(
+        'function Get-Fixture {'
+        '    <#'
+        '    .SYNOPSIS'
+        '        Fixture.'
+        '    .DESCRIPTION'
+        '        A fixture function.'
+        '    .EXAMPLE'
+        '        Get-Fixture'
+        '    #>'
+        '    [CmdletBinding()]'
+        '    param ()'
+        '    ''ok'''
+        '}'
+    ) -join [System.Environment]::NewLine
     $passingTest = 'Describe -Name ''fixture'' -Fixture { It -Name ''passes'' -Test { $true | Should -BeTrue } }'
 
     function Initialize-FixtureModule {
@@ -173,9 +187,9 @@ Describe -Name 'Test' -Fixture {
             'Get-Other.tests.windows.ps1'   = $passingTest
         }
         $windowsCount = if ($IsWindows) { 3 } else { 1 }
-        # 11 MANIFEST + 3 META + 1 PATH-LITERAL, FOR THE FIXTURE'S ONE PUBLIC FILE
-        $sharedCount = 15
-        $sharedSuites = @('manifest.tests.ps1', 'meta.tests.ps1', 'pathliterals.tests.ps1')
+        # 4 HELP + 1 LINK + 11 MANIFEST + 3 META + 1 PATH-LITERAL, FOR THE FIXTURE'S ONE PUBLIC FUNCTION
+        $sharedCount = 20
+        $sharedSuites = @('help.tests.ps1', 'manifest.tests.ps1', 'meta.tests.ps1', 'pathliterals.tests.ps1')
     }
     It -Name 'runs cross-platform files, plus Windows-only files on Windows, under the default All scope' -Test {
         $project = Initialize-FixtureModule -Tests $mixedTests
@@ -212,6 +226,13 @@ Describe -Name 'Test' -Fixture {
         $result.ExitCode | Should -Not -Be 0
         $result.Output | Should -BeLike '*Pester result `[Failed`]*'
         (Get-FixtureJUnit -ProjectPath $project).Failures | Should -Be 1
+    }
+    It -Name 'fails the build when a public function has no help' -Test {
+        $project = Initialize-FixtureModule -FunctionBody 'function Get-Fixture { [CmdletBinding()] param () ''ok'' }'
+        $result = Invoke-FixtureBuild -ProjectPath $project -TaskList 'Test'
+        $result.ExitCode | Should -Not -Be 0
+        $result.Output | Should -BeLike '*Pester result `[Failed`]*'
+        (Get-FixtureJUnit -ProjectPath $project).Failures | Should -Be 4
     }
     It -Name 'runs only cross-platform files under CrossPlatform' -Test {
         $result = Invoke-FixtureBuild -ProjectPath (Initialize-FixtureModule -Tests $mixedTests) -TaskList 'Test' -Properties @{ PesterScope = 'CrossPlatform' }

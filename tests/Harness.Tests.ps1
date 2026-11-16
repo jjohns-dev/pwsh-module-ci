@@ -272,9 +272,9 @@ Describe -Name 'Get-HarnessSharedContainer' -Fixture {
     It -Name 'stops when the folder holds no suites' -Test {
         { Get-HarnessSharedContainer -SharedTestPath $suiteRoot -ProjectPath '/p' -ModuleName 'M' } | Should -Throw -ExpectedMessage '*No shared suites*'
     }
-    It -Name 'defaults to the harness''s own three suites' -Test {
+    It -Name 'defaults to the harness''s own four suites' -Test {
         $containers = @(Get-HarnessSharedContainer -ProjectPath '/p' -ModuleName 'M')
-        $containers.ForEach({ Split-Path -Path $_.Item -Leaf }) | Should -Be @('manifest.tests.ps1', 'meta.tests.ps1', 'pathliterals.tests.ps1')
+        $containers.ForEach({ Split-Path -Path $_.Item -Leaf }) | Should -Be @('help.tests.ps1', 'manifest.tests.ps1', 'meta.tests.ps1', 'pathliterals.tests.ps1')
     }
 }
 

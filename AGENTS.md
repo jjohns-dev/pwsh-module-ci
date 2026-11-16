@@ -29,7 +29,7 @@ Consequences for how you work:
 | `.github/workflows/self-test.yml` | This repo's own CI; runs `tests/` on ubuntu and windows |
 | `.github/actionlint.yaml` | actionlint config; ignores only the `job.workflow_*` properties actionlint 1.7.12 does not know ([rhysd/actionlint#707](https://github.com/rhysd/actionlint/pull/707)) |
 | `.github/release.yml` | Label categories for this repo's generated release notes; not a workflow |
-| `Build/` | The harness: `build.ps1` entry point (`-ProjectPath`), `build.psake.ps1` tasks, `Harness.Functions.ps1`, pinned `depend.psd1`, shared `PSScriptAnalyzerSettings.psd1`, and `SharedTests/`, the three suites every consumer's `Test` task runs against its module |
+| `Build/` | The harness: `build.ps1` entry point (`-ProjectPath`), `build.psake.ps1` tasks, `Harness.Functions.ps1`, pinned `depend.psd1`, shared `PSScriptAnalyzerSettings.psd1`, and `SharedTests/`, the four suites every consumer's `Test` task runs against its module |
 | `templates/Build/` | The consumer shim `build.ps1`, byte-identical in every consumer, and the optional `harness.psd1` sample |
 | `tests/` | Pester suites for the harness, the shim and the workflows' `run:` blocks, their fixtures, and the runner |
 | `docs/adr/` | Architecture Decision Records, Nygard format |
