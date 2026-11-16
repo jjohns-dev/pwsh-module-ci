@@ -24,12 +24,14 @@ Every assertion gets a fixture that must fail it and one that must pass it, unde
 - [x] **B5. Documentation.** `docs/consumer-guide.md` *Shared tests*: four suites, `15 + 5n`, delete `help.tests.ps1`. `docs/test-integrity.md`: help is per function with one looped link test, and why; the `.PSBase.Keys` trap; the `DynamicParam` exemption, pointing at the design's *Future: checking dynamic parameters*; the intro's `Help.Tests.ps1` mention. `AGENTS.md`: the `Build/` row says four suites.
   - Verify: markdown lint clean; `git diff -U0` reviewed hunk by hunk.
   - **Done 2026-11-16.** Also rewrote `test-integrity.md`'s settled decision *link URIs come from `Get-Help`*: the shared suite reads links from the AST and classifies them by scheme, which SecurityTools' related-topic `.LINK` confirms (skipped, green). Lint clean.
-- [ ] **B6. Merge.** Full verification suite green locally, then the required `verify Pester result step` on the PR.
+- [x] **B6. Merge.** Full verification suite green locally, then the required `verify Pester result step` on the PR.
+  - **Done 2026-11-16.** [#90](https://github.com/jjohns-dev/pwsh-module-ci/pull/90) squashed to `2952aa6`, signed; 275/275 locally, required check green on ubuntu and windows.
 
 ## C. Release
 
-- [ ] **C1. Cut `v2.2.0`** on the merge commit, annotated, with a GitHub release whose notes say every consumer runs the help suite when `v2` moves and none is expected red. *(ADR-0002: minor)*
+- [x] **C1. Cut `v2.2.0`** on the merge commit, annotated, with a GitHub release whose notes say every consumer runs the help suite when `v2` moves and none is expected red. *(ADR-0002: minor)*
   - Verify: tag annotated, on the merge commit, release immutable.
+  - **Done 2026-11-16.** `v2.2.0` annotated (tag object `a4ad17d`) on `2952aa6`; [release](https://github.com/jjohns-dev/pwsh-module-ci/releases/tag/v2.2.0) published, immutable.
 - [ ] **C2. Prove on two throwaway consumer PRs pinned `@v2.2.0`**: PS.GHOps and SecurityTools, callers repinned and nothing else. *(AC 9)*
   - PS.GHOps: every leg (ubuntu, windows, macOS) green at its `main` count plus 41.
   - SecurityTools: ubuntu green at its `main` count plus 265, `Get-KEVList` passing; windows unchanged at 21.
