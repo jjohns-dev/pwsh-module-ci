@@ -234,7 +234,7 @@ Optional, and only for a genuine difference that must also apply to local runs. 
 | --- | ---- | ------- | ------- |
 | `PSScriptAnalyzerExcludeRules` | string array | none | AWSAutomation, whose `AWS.Tools.*` calls never take a `PSCredential` |
 | `PesterExcludeTag` | string array | none | PS.SSL, whose `Network` tests call a live endpoint |
-| `PesterStrictMode` | boolean | `$false` | PS.DCU, to run its tests under `Set-StrictMode -Version Latest` |
+| `PesterStrictMode` | boolean | `$false` | none at present; runs a repo's tests under `Set-StrictMode -Version Latest` |
 
 An unknown key, or a value of the wrong type, fails the build, so a misspelt setting cannot be silently ignored. Exclusions apply to both the build's `Analyze` task and the Security-tab scan. Prefer an inline `SuppressMessageAttribute` when a finding is confined to a few files, such as a test fixture, so the rule stays on for the rest of the module.
 

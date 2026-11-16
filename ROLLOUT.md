@@ -92,7 +92,7 @@ Deleting `ROLLOUT.md` itself is **not** a row in this phase. It moved to the **F
 Each of these was surfaced by rollout work, is independent of it, and would have expanded a phase's scope if bundled. Recorded here so they are not lost when this file is deleted.
 
 - [x] **`SecurityTools` has no `.gitattributes`** — [SecurityTools#161](https://github.com/jjohns-dev/SecurityTools/issues/161), opened 2026-11-02, **closed 2026-11-03**. Landed as [#163](https://github.com/jjohns-dev/SecurityTools/pull/163) and [#164](https://github.com/jjohns-dev/SecurityTools/pull/164); measurements on the issue.
-- [ ] **`PS.DCU` has no behavioural tests** — [PS.DCU#20](https://github.com/jjohns-dev/PS.DCU/issues/20), opened 2026-11-02. Its tests check help and metadata, not module logic.
+- [x] **`PS.DCU` has no behavioural tests** — [PS.DCU#20](https://github.com/jjohns-dev/PS.DCU/issues/20), opened 2026-11-02, **closed as not planned 2026-11-16**: PS.DCU was archived instead (#55 task D3).
 - [ ] **Evaluate `PSMutant`** — [#34](https://github.com/jjohns-dev/pwsh-module-ci/issues/34), opened 2026-11-02. Independent of [#19](https://github.com/jjohns-dev/pwsh-module-ci/issues/19).
 - [x] **Remove the unused `PlatyPS` pin** — folded into [#24](https://github.com/jjohns-dev/pwsh-module-ci/issues/24), **complete 2026-11-04** by [AWSAutomation#106](https://github.com/jjohns-dev/AWSAutomation/pull/106), which amended that repo's ADR-0002.
 - [ ] **Three `PS-MCS` repos have no `AGENTS.md`** — [mcssec-ops#154](https://github.com/PS-MCS/mcssec-ops/issues/154), opened 2026-11-04. Filed in `mcssec-ops`, where the work lands.
