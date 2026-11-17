@@ -157,6 +157,11 @@ BeforeDiscovery {
                 @{ Case = 'a BOM in a dot-folder JSON file'; Count = 3; Files = @{ '.vscode/settings.json' = $utf8Bom }; Expect = @('Bom'); Mentions = @('settings.json') }
                 @{ Case = 'a tab in .gitignore and in an XML file'; Count = 3; Files = @{ '.gitignore' = $tabbed; 'Private/Types.xml' = $tabbed }; Expect = @('Tab'); Mentions = @('.gitignore', 'Types.xml') }
                 @{ Case = 'defects only in file types it does not check'; Count = 3; Files = @{ 'README.md' = $tabbed; 'notes.txt' = $utf16; 'data.csv' = $utf8Bom }; Expect = @() }
+                @{ Case = 'a BOM in a git-ignored file'; Count = 3; Git = $true; Files = @{ '.agent-tmp/.gitignore' = '*'; '.agent-tmp/result.xml' = $utf8Bom }; Expect = @() }
+                @{ Case = 'BOMs in files an extension pattern ignores'; Count = 3; Git = $true; Files = @{ '.gitignore' = '*.xml'; 'Private/a.xml' = $utf8Bom; 'zz/z.xml' = $utf8Bom }; Expect = @() }
+                @{ Case = 'the same BOM outside a git repo'; Count = 3; Files = @{ '.agent-tmp/.gitignore' = '*'; '.agent-tmp/result.xml' = $utf8Bom }; Expect = @('Bom'); Mentions = @('result.xml') }
+                @{ Case = 'a BOM in a tracked file an ignore pattern matches'; Count = 3; Git = $true; Track = @('Private/Types.xml'); Files = @{ '.gitignore' = '*.xml'; 'Private/Types.xml' = $utf8Bom }; Expect = @('Bom'); Mentions = @('Types.xml') }
+                @{ Case = 'a BOM in an untracked file git does not ignore'; Count = 3; Git = $true; Files = @{ 'Private/Get-New.ps1' = $utf8Bom }; Expect = @('Bom'); Mentions = @('Get-New.ps1') }
                 @{ Case = 'twenty extra source files'; Count = 3; Files = [ordered] @{ 'Private/a01.ps1' = '# a'; 'Private/a02.ps1' = '# a'; 'Private/a03.ps1' = '# a'; 'Private/a04.ps1' = '# a'; 'Private/a05.ps1' = '# a'; 'Private/a06.ps1' = '# a'; 'Private/a07.ps1' = '# a'; 'Private/a08.ps1' = '# a'; 'Private/a09.ps1' = '# a'; 'Private/a10.ps1' = '# a'; 'Tests/Unit/b01.tests.ps1' = '# b'; 'Tests/Unit/b02.tests.ps1' = '# b'; 'Tests/Unit/b03.tests.ps1' = '# b'; 'Tests/Unit/b04.tests.ps1' = '# b'; 'Tests/Unit/b05.tests.ps1' = '# b'; 'Tests/Unit/b06.tests.ps1' = '# b'; 'Tests/Unit/b07.tests.ps1' = '# b'; 'Tests/Unit/b08.tests.ps1' = '# b'; 'Tests/Unit/b09.tests.ps1' = '# b'; 'Tests/Unit/b10.tests.ps1' = '# b' }; Expect = @() }
             )
         }
@@ -207,7 +212,9 @@ BeforeAll {
             [System.Collections.IDictionary] $Change,
             [System.String[]] $Remove,
             [System.String] $Function = 'function Get-Fixture { ''ok'' }',
-            [System.Collections.IDictionary] $Files
+            [System.Collections.IDictionary] $Files,
+            [System.Management.Automation.SwitchParameter] $Git,
+            [System.String[]] $Track
         )
         $root = Join-Path -Path $TestDrive -ChildPath ([System.Guid]::NewGuid())
         $public = New-Item -Path (Join-Path -Path $root -ChildPath 'Public') -ItemType 'Directory' -Force
@@ -247,6 +254,15 @@ BeforeAll {
                 }
             }
         }
+        if ($Git) {
+            $output = git -C $root init --quiet --initial-branch=main 2>&1
+            foreach ($relative in $Track) {
+                if ($LASTEXITCODE -eq 0) { $output = git -C $root add --force -- $relative 2>&1 }
+            }
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error -Message ('git fixture setup failed: {0}' -f ($output -join ' ')) -ErrorAction 'Stop'
+            }
+        }
         $root
     }
 
@@ -276,13 +292,17 @@ Describe -Name '<Suite> (<Mode>)' -ForEach $runs -Fixture {
     BeforeAll {
         $runCases = @(foreach ($c in $Cases) {
                 $fixtureParams = @{}
-                foreach ($k in 'Change', 'Remove', 'Function', 'Files') {
+                foreach ($k in 'Change', 'Remove', 'Function', 'Files', 'Git', 'Track') {
                     if ($c.ContainsKey($k)) { $fixtureParams[$k] = $c[$k] }
                 }
                 [PSCustomObject] @{ Case = $c.Case; ProjectPath = (Initialize-SharedFixture @fixtureParams); NoData = $false }
             })
         $runCases += [PSCustomObject] @{ Case = 'no -Data'; ProjectPath = ''; NoData = $true }
         $results = Invoke-SharedSuite -Suite $Suite -Cases $runCases -Strict $Strict
+    }
+    AfterAll {
+        # GIT WRITES OBJECT FILES READ-ONLY, WHICH BREAKS PESTER'S TestDrive CLEANUP ON WINDOWS
+        Get-ChildItem -LiteralPath $TestDrive -Directory -Recurse -Force -Filter '.git' | Remove-Item -Recurse -Force -ErrorAction 'SilentlyContinue'
     }
     It -Name 'runs <Count> tests and fails exactly the expected ones for <Case>' -ForEach $Cases -Test {
         $caseResults = @($results.Where({ $_.Case -eq $Case }))
