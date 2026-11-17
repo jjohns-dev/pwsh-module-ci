@@ -14,6 +14,11 @@ BeforeAll {
     # -Force SO DOT-FOLDERS ARE SCANNED ON EVERY OS; WITHOUT IT ONLY WINDOWS LISTS THEM
     $candidates = @(Get-ChildItem -LiteralPath $ProjectPath -Recurse -File -Force).Where({ $_.Extension -in $textExtensions })
     $sourceFiles = @($candidates.Where({ [System.IO.Path]::GetRelativePath($ProjectPath, $_.FullName) -notmatch '(^|[\\/])(\.git|Staging|Artifacts)([\\/]|$)' }))
+    # GIT-IGNORED FILES NEVER REACH A CI CHECKOUT; OUTSIDE A WORK TREE GIT EXITS 128 WITH NO OUTPUT AND EVERY FILE IS KEPT
+    $relativePaths = $sourceFiles.ForEach({ [System.IO.Path]::GetRelativePath($ProjectPath, $_.FullName).Replace('\', '/') })
+    # NUL-TERMINATED: PWSH APPENDS A NEWLINE TO PIPED STDIN, WHICH WOULD STOP THE LAST PATH MATCHING
+    $ignored = (@((($relativePaths -join "`0") + "`0") | git -C $ProjectPath check-ignore -z --stdin 2>$null) -join '') -split "`0"
+    $sourceFiles = @($sourceFiles.Where({ [System.IO.Path]::GetRelativePath($ProjectPath, $_.FullName).Replace('\', '/') -notin $ignored }))
     if ($sourceFiles.Count -eq 0) {
         Write-Error -Message ('No {0} files found under [{1}].' -f ($textExtensions -join ', '), $ProjectPath) -ErrorAction 'Stop'
     }
