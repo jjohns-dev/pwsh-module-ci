@@ -135,10 +135,48 @@ Describe -Name 'release.yml dry run' -Fixture {
 Describe -Name 'pssa-sarif.yml' -Fixture {
     BeforeAll {
         $document = ConvertFrom-Yaml -Yaml (Get-Content -Path (Join-Path -Path $workflowRoot -ChildPath 'pssa-sarif.yml') -Raw)
-        $run = @($document['jobs']['analyze']['steps'].Where({ $_['name'] -eq 'Run PSScriptAnalyzer' }))[0]['run']
+        $runStep = @($document['jobs']['analyze']['steps'].Where({ $_['name'] -eq 'Run PSScriptAnalyzer' }))[0]
+        $run = $runStep['run']
+        $reportStep = @($document['jobs']['analyze']['steps'].Where({ $_['name'] -eq 'Report PSScriptAnalyzer findings' }))[0]
+        $uploadStep = @($document['jobs']['analyze']['steps'].Where({ $_['name'] -eq 'Upload SARIF results file' }))[0]
     }
-    It -Name 'no longer takes a settings path input' -Test {
-        $document['on']['workflow_call'] | Should -BeNullOrEmpty
+    It -Name 'takes only the upload-sarif input, and no longer a settings path' -Test {
+        @($document['on']['workflow_call']['inputs'].Keys) | Should -Be @('upload-sarif')
+    }
+    It -Name 'defaults upload-sarif to true, as an optional boolean, so existing callers are unchanged' -Test {
+        $uploadInput = $document['on']['workflow_call']['inputs']['upload-sarif']
+        $uploadInput['type'] | Should -BeExactly 'boolean'
+        $uploadInput['default'] | Should -BeTrue
+        $uploadInput['required'] | Should -BeFalse
+    }
+    It -Name 'gates the ConvertToSARIF install, the conversion and the upload on upload-sarif' -Test {
+        $run | Should -Match 'ConvertToSARIF'
+        $runStep['if'] | Should -BeExactly '${{ inputs.upload-sarif }}'
+        $uploadStep['if'] | Should -BeExactly '${{ inputs.upload-sarif }}'
+    }
+    It -Name 'never installs or loads ConvertToSARIF on the path that skips the upload' -Test {
+        $reportStep['if'] | Should -BeExactly '${{ !inputs.upload-sarif }}'
+        $reportStep['run'] | Should -Not -Match 'ConvertToSARIF|ConvertTo-SARIF'
+    }
+    It -Name 'reports through the shared harness analysis and the same PSScriptAnalyzer pin' -Test {
+        $reportStep['run'] | Should -Match 'Invoke-HarnessAnalysis -ProjectPath \$env:GITHUB_WORKSPACE'
+        $reportStep['run'] | Should -Match 'Write-HarnessAnalysisReport'
+        $reportStep['run'] | Should -Match 'RUNNER_TEMP/harness/Build/depend\.psd1'
+        $reportStep['run'] | Should -Not -Match 'Invoke-ScriptAnalyzer'
+        $reportStep['run'] | Should -Match '(?m)^\s*\$ErrorActionPreference = ''Stop'''
+        $reportStep['shell'] | Should -BeExactly 'pwsh'
+    }
+    It -Name 'keeps the job name and the permissions a caller must already grant' -Test {
+        $job = $document['jobs']['analyze']
+        $job['name'] | Should -BeExactly 'PSScriptAnalyzer'
+        $job['permissions']['security-events'] | Should -BeExactly 'write'
+        $job['permissions']['contents'] | Should -BeExactly 'read'
+        $job['permissions'].Keys | Should -HaveCount 2
+    }
+    It -Name 'keeps the harness checkout and the move step ahead of both analysis paths' -Test {
+        $names = @($document['jobs']['analyze']['steps'] | ForEach-Object -Process { $_['name'] })
+        $names.IndexOf('Move the build harness out of the workspace') | Should -BeLessThan $names.IndexOf('Run PSScriptAnalyzer')
+        $names.IndexOf('Move the build harness out of the workspace') | Should -BeLessThan $names.IndexOf('Report PSScriptAnalyzer findings')
     }
     It -Name 'analyses the caller''s workspace through the harness' -Test {
         $run | Should -Match 'Invoke-HarnessAnalysis -ProjectPath \$env:GITHUB_WORKSPACE'

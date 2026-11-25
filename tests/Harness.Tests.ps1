@@ -245,6 +245,122 @@ Describe -Name 'Get-HarnessAnalyzerSetting and Invoke-HarnessAnalysis' -Fixture 
     }
 }
 
+Describe -Name 'Write-HarnessAnalysisReport' -Fixture {
+    BeforeAll {
+        . (Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath 'Build' -AdditionalChildPath 'Harness.Functions.ps1')
+        function Get-FindingFixture ([System.String] $Severity, [System.String] $Rule = 'PSRule', [System.String] $Path = 'Public/Get-A.ps1', [System.String] $Message = 'A message.') {
+            [PSCustomObject] @{
+                RuleName   = $Rule
+                Severity   = $Severity
+                ScriptPath = if ($Path) { Join-Path -Path $script:root -ChildPath $Path } else { $null }
+                Line       = 3
+                Column     = 5
+                Message    = $Message
+            }
+        }
+        # RUNS THE REPORT AND KEEPS WHAT IT EMITTED EVEN WHEN IT THROWS, SO THE FAILING CASES CAN INSPECT IT
+        function Invoke-Report ([System.Object[]] $Finding) {
+            $captured = [System.Collections.Generic.List[System.String]]::new()
+            $threw = $false
+            try {
+                Write-HarnessAnalysisReport -Finding $Finding -ProjectPath $script:root -SummaryPath $script:summary | ForEach-Object -Process { $captured.Add($_) }
+            }
+            catch {
+                $threw = $true
+            }
+            [PSCustomObject] @{ Threw = $threw; Output = @($captured); Summary = (Get-Content -LiteralPath $script:summary -Raw) }
+        }
+    }
+    BeforeEach {
+        $script:root = Join-Path -Path $TestDrive -ChildPath ([System.Guid]::NewGuid())
+        New-Item -Path $script:root -ItemType 'Directory' | Out-Null
+        $script:summary = Join-Path -Path $script:root -ChildPath 'summary.md'
+    }
+    It -Name 'fails and annotates a finding at Error severity, with file, line and column' -Test {
+        $result = Invoke-Report -Finding @(Get-FindingFixture -Severity 'Error' -Rule 'PSAvoidUsingInvokeExpression' -Message 'Bad thing.')
+        $result.Threw | Should -BeTrue
+        $result.Output | Should -Be @('::error file=Public/Get-A.ps1,line=3,col=5,title=PSAvoidUsingInvokeExpression::Bad thing.')
+        $result.Summary | Should -BeLike '*1 error(s), 0 warning(s).*'
+        $result.Summary | Should -BeLike '*| PSAvoidUsingInvokeExpression | Error | Public/Get-A.ps1:3 | Bad thing. |*'
+    }
+    It -Name 'fails on a parse error' -Test {
+        $result = Invoke-Report -Finding @(Get-FindingFixture -Severity 'ParseError')
+        $result.Threw | Should -BeTrue
+        $result.Output[0] | Should -BeLike '::error *'
+    }
+    It -Name 'annotates a Warning-only run but does not fail it' -Test {
+        $result = Invoke-Report -Finding @(Get-FindingFixture -Severity 'Warning' -Rule 'PSAvoidUsingWriteHost'), (Get-FindingFixture -Severity 'Warning' -Path 'Private/B.ps1')
+        $result.Threw | Should -BeFalse
+        $result.Output | Should -HaveCount 2
+        $result.Output | ForEach-Object -Process { $_ | Should -BeLike '::warning file=*' }
+        $result.Output -join "`n" | Should -Not -BeLike '*::error*'
+        $result.Summary | Should -BeLike '*0 error(s), 2 warning(s).*'
+    }
+    It -Name 'fails a mixed run on its Error and still annotates the Warning' -Test {
+        $result = Invoke-Report -Finding @(Get-FindingFixture -Severity 'Warning'), (Get-FindingFixture -Severity 'Error' -Path 'Private/B.ps1')
+        $result.Threw | Should -BeTrue
+        $result.Output | Should -HaveCount 2
+        $result.Output.Where({ $_ -like '::warning *' }) | Should -HaveCount 1
+        $result.Output.Where({ $_ -like '::error *' }) | Should -HaveCount 1
+    }
+    It -Name 'reports a clean tree with no annotations, a no-findings line, and a pass' -Test {
+        $result = Invoke-Report -Finding @()
+        $result.Threw | Should -BeFalse
+        $result.Output | Should -HaveCount 0
+        $result.Summary | Should -BeLike '*No PSScriptAnalyzer findings.*'
+        $result.Summary | Should -Not -BeLike '*| Rule |*'
+    }
+    It -Name 'omits the location properties for a finding with no file' -Test {
+        $result = Invoke-Report -Finding @(Get-FindingFixture -Severity 'Warning' -Path $null)
+        $result.Output | Should -Be @('::warning title=PSRule::A message.')
+    }
+    It -Name 'cannot be made to inject a workflow command through a hostile file name, rule or message' -Test {
+        $hostile = "bad%name:with,comma`n::error::injected-from-path.ps1"
+        $finding = Get-FindingFixture -Severity 'Warning' -Path $hostile -Rule "Rule,x`n::set-output name=a::b" -Message "boom 100% :: stop`r`n::add-mask::secret`n::error file=evil::pwned"
+        $result = Invoke-Report -Finding @($finding)
+        # ONE FINDING, ONE LINE: EVERY LINE BREAK IN THE DATA WAS ESCAPED
+        $result.Output | Should -HaveCount 1
+        $line = $result.Output[0]
+        $line | Should -Not -Match "[`r`n]"
+        $line | Should -Match '^::warning file=[^,]*,line=3,col=5,title=[^,]*::'
+        # THE PROPERTIES CARRY NO RAW DELIMITER, SO THE DATA CANNOT END THE LIST EARLY
+        $properties = ($line -split '::', 3)[1]
+        ($properties -split ',').Count | Should -Be 4
+        $properties | Should -BeLike '*bad%25name%3Awith%2Ccomma%0A%3A%3Aerror%3A%3Ainjected-from-path.ps1*'
+        $line | Should -BeLike '*boom 100%25 :: stop%0D%0A::add-mask::secret%0A::error file=evil::pwned'
+        # AND NO LINE OF THE REPORT, OR OF THE SUMMARY, STARTS A COMMAND OF ITS OWN
+        $result.Output.Where({ $_ -notmatch '^::warning ' }) | Should -HaveCount 0
+        ($result.Summary -split "`r?`n").Where({ $_ -match '^::' }) | Should -HaveCount 0
+    }
+    It -Name 'keeps a hostile finding on one row of the summary table, with no raw markup' -Test {
+        $finding = Get-FindingFixture -Severity 'Warning' -Message "a | b`nc <img src=x> `` d"
+        $result = Invoke-Report -Finding @($finding)
+        $rows = @(($result.Summary -split "`r?`n").Where({ $_ -like '| PSRule *' }))
+        $rows | Should -HaveCount 1
+        $rows[0] | Should -Not -BeLike '*<img*'
+        # -BeExactly, NOT -BeLike: A BACKTICK IS THE ESCAPE CHARACTER IN A WILDCARD PATTERN
+        $rows[0] | Should -BeExactly '| PSRule | Warning | Public/Get-A.ps1:3 | a \| b c &lt;img src=x&gt; \` d |'
+    }
+}
+
+Describe -Name 'ConvertTo-HarnessWorkflowCommandText' -Fixture {
+    BeforeAll {
+        . (Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath 'Build' -AdditionalChildPath 'Harness.Functions.ps1')
+    }
+    It -Name 'escapes % first so an escape is not double-escaped, then CR and LF' -Test {
+        ConvertTo-HarnessWorkflowCommandText -Text "a%0Ab`r`nc" | Should -BeExactly 'a%250Ab%0D%0Ac'
+    }
+    It -Name 'leaves : and , alone in a message' -Test {
+        ConvertTo-HarnessWorkflowCommandText -Text 'a:b,c' | Should -BeExactly 'a:b,c'
+    }
+    It -Name 'also escapes : and , in a property' -Test {
+        ConvertTo-HarnessWorkflowCommandText -Text 'a:b,c' -Property | Should -BeExactly 'a%3Ab%2Cc'
+    }
+    It -Name 'turns null into an empty string' -Test {
+        ConvertTo-HarnessWorkflowCommandText -Text $null | Should -BeExactly ''
+    }
+}
+
 Describe -Name 'Get-HarnessSharedContainer' -Fixture {
     BeforeAll {
         . (Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath 'Build' -AdditionalChildPath 'Harness.Functions.ps1')
