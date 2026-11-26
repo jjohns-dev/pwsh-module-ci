@@ -86,7 +86,7 @@ Each workflow checks this repo out at its own commit and moves it to the runner'
 Uploading SARIF needs code scanning, and on a **private** repo that needs GitHub Code Security. Without it the upload step fails and the job goes red on every run. Set `upload-sarif: false` and the workflow skips the SARIF conversion and upload, runs the same analysis with the same rules and `PSScriptAnalyzer` version, and reports in the run itself:
 
 - one annotation per finding, with file, line and column, so findings show on the PR diff (`::error` for `Error`, `::warning` for `Warning`);
-- a findings table in the run's step summary, or a "no findings" line when clean;
+- a findings table in the run's step summary, or a "no findings" line when clean. GitHub shows at most 10 error and 10 warning annotations per step, so on a repo with more findings the summary table is the complete list;
 - a failed job when any finding is at `Error` severity, the same threshold as the build's `Analyze` task. `Warning` findings are annotated and do not fail it. The threshold is fixed; there is no input to change it.
 
 ```yaml
