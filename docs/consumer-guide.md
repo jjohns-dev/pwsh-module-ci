@@ -70,6 +70,7 @@ Each workflow checks this repo out at its own commit and moves it to the runner'
 | `min-tests` | `ci.yml` | `0` (off) | Floor on executed tests; see [Minimum test count](#minimum-test-count) |
 | `artifact-name` | `release.yml` | `'Artifacts'` | Display name of the uploaded build artifact |
 | `dry-run` | `release.yml` | `false` | Skip only the publishing step |
+| `upload-sarif` | `pssa-sarif.yml` | `true` | Upload the findings to the Security tab; `false` reports them in the run instead, see [Private repos without Code Security](#private-repos-without-code-security) |
 
 `artifact-name` must be valid on every event that runs it. `github.ref_name` is `<n>/merge` on a pull request, and artifact names cannot contain `/`, so a repo-specific name needs a PR fallback:
 
@@ -78,7 +79,30 @@ Each workflow checks this repo out at its own commit and moves it to the runner'
       artifact-name: ${{ github.event_name == 'pull_request' && 'MyModule-dry-run' || format('MyModule-{0}', github.ref_name) }}
 ```
 
-`pssa-sarif.yml` takes no inputs. `v1`'s `psscriptanalyzer-settings-path` is gone: the scan uses the harness's settings plus your [`harness.psd1`](#buildharnesspsd1) exclusions, the same settings as the build's `Analyze` task. The scopes differ: `Analyze` checks only the staged module, while the Security-tab scan covers the whole repo, tests included, except `.git/`.
+`pssa-sarif.yml` takes one input, `upload-sarif`. `v1`'s `psscriptanalyzer-settings-path` is gone: the scan uses the harness's settings plus your [`harness.psd1`](#buildharnesspsd1) exclusions, the same settings as the build's `Analyze` task. The scopes differ: `Analyze` checks only the staged module, while the scan covers the whole repo, tests included, except `.git/`.
+
+### Private repos without Code Security
+
+Uploading SARIF needs code scanning, and on a **private** repo that needs GitHub Code Security. Without it the upload step fails and the job goes red on every run. Set `upload-sarif: false` and the workflow skips the SARIF conversion and upload, runs the same analysis with the same rules and `PSScriptAnalyzer` version, and reports in the run itself:
+
+- one annotation per finding, with file, line and column, so findings show on the PR diff (`::error` for `Error`, `::warning` for `Warning`);
+- a findings table in the run's step summary, or a "no findings" line when clean. GitHub shows at most 10 error and 10 warning annotations per step, so on a repo with more findings the summary table is the complete list;
+- a failed job when any finding is at `Error` severity, the same threshold as the build's `Analyze` task. `Warning` findings are annotated and do not fail it. The threshold is fixed; there is no input to change it.
+
+```yaml
+jobs:
+  analyze:
+    uses: jjohns-dev/pwsh-module-ci/.github/workflows/pssa-sarif.yml@v2.3.0
+    with:
+      upload-sarif: false
+    permissions:
+      contents: read
+      security-events: write   # still required: a called job cannot exceed the caller's token
+```
+
+The caller must **still grant `security-events: write`**, even with `upload-sarif: false`. The `analyze` job requests it, a called workflow cannot exceed the token its caller grants, and `permissions:` cannot depend on an input, so omitting it fails the run at startup. Granting it does not enable code scanning. The job is still named `analyze`, so a required check keeps its name.
+
+Annotations and the summary treat analyzer messages and file names as data: `%`, line breaks, `:` and `,` are escaped, so a crafted file name or string in a scanned file cannot inject a workflow command.
 
 ## Runner matrix
 

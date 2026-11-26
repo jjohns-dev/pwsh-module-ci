@@ -1,6 +1,6 @@
 # ==============================================================================
 # Filename: Harness.Functions.ps1
-# Version:  0.2.0 | Updated: 2026-11-13
+# Version:  0.3.0 | Updated: 2026-11-26
 # Author:   johnsarie27
 # ==============================================================================
 <#
@@ -304,6 +304,156 @@ function Invoke-HarnessAnalysis {
     $items = @(Get-ChildItem -LiteralPath $ProjectPath -Force).Where({ $_.Name -notin '.harness', '.git' })
     foreach ($item in $items) {
         Invoke-ScriptAnalyzer -Path $item.FullName -Recurse -Settings $settings
+    }
+}
+
+function ConvertTo-HarnessWorkflowCommandText {
+    <#
+    .SYNOPSIS
+        Escapes text so it cannot inject or alter a GitHub Actions workflow command.
+    .DESCRIPTION
+        Analyzer messages and file paths are data from the scanned repo. Written raw into a
+        ::error or ::warning line, a crafted value could end the command early or start another.
+        Escapes % first, then CR and LF. An annotation property (file, title) also needs : and ,
+        escaped, because those delimit the property list; the message after the final :: does not.
+    .PARAMETER Text
+        The value to escape. Null becomes an empty string.
+    .PARAMETER Property
+        Escape for an annotation property rather than the command's message.
+    .OUTPUTS
+        System.String
+    #>
+    [CmdletBinding()]
+    [OutputType([System.String])]
+    param (
+        [AllowNull()]
+        [AllowEmptyString()]
+        [System.String] $Text,
+        [System.Management.Automation.SwitchParameter] $Property
+    )
+
+    $escaped = "$Text".Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+    if ($Property) {
+        $escaped = $escaped.Replace(':', '%3A').Replace(',', '%2C')
+    }
+    $escaped
+}
+
+function ConvertTo-HarnessMarkdownCell {
+    <#
+    .SYNOPSIS
+        Escapes text for one cell of a Markdown table in the step summary.
+    .DESCRIPTION
+        A scanned file's name or an analyzer message can carry |, a line break, a backtick or
+        HTML. Each is neutralised so the value cannot break the row or render as markup.
+    .PARAMETER Text
+        The value to escape. Null becomes an empty string.
+    .OUTPUTS
+        System.String
+    #>
+    [CmdletBinding()]
+    [OutputType([System.String])]
+    param (
+        [AllowNull()]
+        [AllowEmptyString()]
+        [System.String] $Text
+    )
+
+    $escaped = "$Text".Replace('\', '\\').Replace('|', '\|').Replace('`', '\`').Replace('<', '&lt;').Replace('>', '&gt;')
+    $escaped -replace '\r\n|\r|\n', ' '
+}
+
+function Write-HarnessAnalysisReport {
+    <#
+    .SYNOPSIS
+        Reports analyzer findings as workflow annotations and a step summary, and fails on Error.
+    .DESCRIPTION
+        The reporting path for a repo that cannot upload SARIF. Writes one ::error, ::warning or
+        ::notice workflow command per finding to the output stream, so findings show on the PR
+        diff, then appends a findings table (or a no-findings line) to the step summary file.
+        Terminates with an error when any finding is at Error severity, which matches the
+        build's Analyze task default. Warning findings are reported and do not fail.
+        Every value from a finding is escaped before it reaches either sink.
+    .PARAMETER Finding
+        Findings from Invoke-HarnessAnalysis. May be empty.
+    .PARAMETER ProjectPath
+        Root of the checkout. File paths are reported relative to it.
+    .PARAMETER SummaryPath
+        File to append the summary to, normally $env:GITHUB_STEP_SUMMARY.
+    .OUTPUTS
+        System.String
+    #>
+    [CmdletBinding()]
+    [OutputType([System.String])]
+    param (
+        [AllowNull()]
+        [AllowEmptyCollection()]
+        [System.Object[]] $Finding,
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [System.String] $ProjectPath,
+        [Parameter(Mandatory)]
+        [ValidateNotNullOrEmpty()]
+        [System.String] $SummaryPath
+    )
+
+    $commandByLevel = @{ Error = 'error'; ParseError = 'error'; Warning = 'warning' }
+    $rows = [System.Collections.Generic.List[System.String]]::new()
+    $errorCount = 0
+    $warningCount = 0
+
+    foreach ($item in @($Finding).Where({ $null -ne $_ })) {
+        $severity = "$($item.Severity)"
+        $command = if ($commandByLevel.ContainsKey($severity)) { $commandByLevel[$severity] } else { 'notice' }
+        if ($command -eq 'error') { $errorCount++ }
+        if ($command -eq 'warning') { $warningCount++ }
+
+        $relativePath = if ($item.ScriptPath) {
+            [System.IO.Path]::GetRelativePath($ProjectPath, "$($item.ScriptPath)").Replace('\', '/')
+        }
+        else {
+            ''
+        }
+
+        $property = [System.Collections.Generic.List[System.String]]::new()
+        if ($relativePath) {
+            $property.Add(('file={0}' -f (ConvertTo-HarnessWorkflowCommandText -Text $relativePath -Property)))
+            $property.Add(('line={0}' -f [System.Int32] ($item.Line -as [System.Int32])))
+            $property.Add(('col={0}' -f [System.Int32] ($item.Column -as [System.Int32])))
+        }
+        $property.Add(('title={0}' -f (ConvertTo-HarnessWorkflowCommandText -Text "$($item.RuleName)" -Property)))
+        $message = ConvertTo-HarnessWorkflowCommandText -Text "$($item.Message)"
+        Write-Output -InputObject ('::{0} {1}::{2}' -f $command, ($property -join ','), $message)
+
+        $location = if ($relativePath) { '{0}:{1}' -f $relativePath, [System.Int32] ($item.Line -as [System.Int32]) } else { '' }
+        $cells = @(
+            ConvertTo-HarnessMarkdownCell -Text "$($item.RuleName)"
+            ConvertTo-HarnessMarkdownCell -Text $severity
+            ConvertTo-HarnessMarkdownCell -Text $location
+            ConvertTo-HarnessMarkdownCell -Text "$($item.Message)"
+        )
+        $rows.Add(('| {0} |' -f ($cells -join ' | ')))
+    }
+
+    $summary = [System.Collections.Generic.List[System.String]]::new()
+    $summary.Add('## PSScriptAnalyzer findings')
+    $summary.Add('')
+    if ($rows.Count -eq 0) {
+        $summary.Add('No PSScriptAnalyzer findings.')
+    }
+    else {
+        $summary.Add(('{0} error(s), {1} warning(s).' -f $errorCount, $warningCount))
+        $summary.Add('')
+        $summary.Add('| Rule | Severity | Location | Message |')
+        $summary.Add('| ---- | -------- | -------- | ------- |')
+        $summary.AddRange($rows)
+    }
+    $summary.Add('')
+    Add-Content -LiteralPath $SummaryPath -Value ($summary -join "`n") -Encoding 'utf8'
+
+    if ($errorCount -gt 0) {
+        $message = '{0} PSScriptAnalyzer finding(s) at Error severity.' -f $errorCount
+        Write-Error -Message $message -ErrorAction Stop
     }
 }
 

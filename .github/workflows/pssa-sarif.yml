@@ -3,6 +3,14 @@ run-name: pssa-sarif
 
 on:
   workflow_call:
+    inputs:
+      upload-sarif:
+        description: >-
+          Upload the findings to the Security tab as SARIF. Set false on a private repo without GitHub Code Security:
+          the findings are annotated on the run and in its summary instead, and the job fails on an Error finding.
+        type: boolean
+        required: false
+        default: true
 
 permissions:
   contents: read
@@ -34,6 +42,7 @@ jobs:
         run: Move-Item -LiteralPath '.harness' -Destination (Join-Path -Path $env:RUNNER_TEMP -ChildPath 'harness')
 
       - name: Run PSScriptAnalyzer
+        if: ${{ inputs.upload-sarif }}
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -56,7 +65,31 @@ jobs:
           . "$env:RUNNER_TEMP/harness/Build/Harness.Functions.ps1"
           Invoke-HarnessAnalysis -ProjectPath $env:GITHUB_WORKSPACE | ConvertTo-SARIF -FilePath 'results.sarif'
 
+      # No SARIF, so no upload and no code scanning requirement: report in the run itself (#99). The same
+      # harness analysis and PSScriptAnalyzer pin as above, so the rules and scope do not diverge.
+      - name: Report PSScriptAnalyzer findings
+        if: ${{ !inputs.upload-sarif }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $moduleParams = @{
+            Scope           = 'CurrentUser'
+            Repository      = 'PSGallery'
+            TrustRepository = $true
+            ErrorAction     = 'Stop'
+          }
+
+          $pssaVersion = (Import-PowerShellDataFile -LiteralPath "$env:RUNNER_TEMP/harness/Build/depend.psd1")['PSScriptAnalyzer']
+          Install-PSResource -Name 'PSScriptAnalyzer' -Version $pssaVersion @moduleParams
+          Import-Module -Name 'PSScriptAnalyzer' -RequiredVersion $pssaVersion -Force -ErrorAction Stop
+
+          . "$env:RUNNER_TEMP/harness/Build/Harness.Functions.ps1"
+          $findings = @(Invoke-HarnessAnalysis -ProjectPath $env:GITHUB_WORKSPACE)
+          Write-HarnessAnalysisReport -Finding $findings -ProjectPath $env:GITHUB_WORKSPACE -SummaryPath $env:GITHUB_STEP_SUMMARY
+
       - name: Upload SARIF results file
+        if: ${{ inputs.upload-sarif }}
         uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: results.sarif

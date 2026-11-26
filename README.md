@@ -12,7 +12,7 @@ From `v2`, every consumer's build runs from the harness in [`Build/`](Build): st
 | --- | --- | --- |
 | `ci.yml` | Stage, analyze, and test the module across a runner matrix | `pull_request`, `push` to `main` |
 | `release.yml` | Build the module artifact and cut a GitHub release; on a pull request, a dry run that skips publishing | `push` of a `v*.*.*` tag, `pull_request` |
-| `pssa-sarif.yml` | PSScriptAnalyzer findings uploaded to the Security tab | `pull_request`, `push` to `main` |
+| `pssa-sarif.yml` | PSScriptAnalyzer findings uploaded to the Security tab; `upload-sarif: false` reports them in the run instead, for private repos without Code Security | `pull_request`, `push` to `main` |
 
 ## Versioning
 
