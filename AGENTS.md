@@ -4,7 +4,7 @@ Guidance for AI coding agents working in `pwsh-module-ci`.
 
 ## What this repo is
 
-Reusable GitHub Actions workflows called by eight PowerShell module repos: PS.Log, PS.GHOps, PS.GitHub, PS.SSL, AWSAutomation, SecurityTools, PS.YNAB, ArcGISEnterprise. PS.DCU was a consumer until it was archived on 2026-11-16; ArcGISEnterprise joined on 2026-11-18 (ArcGISEnterprise#176). From `v2` it also hosts the **build harness** in `Build/` that runs every consumer's stage, analyze, test and package tasks, plus the consumer shim template in `templates/`. It contains no application code and no PowerShell module of its own.
+Reusable GitHub Actions workflows called by nine PowerShell module repos: PS.Log, PS.GHOps, PS.GitHub, PS.SSL, AWSAutomation, SecurityTools, PS.YNAB, ArcGISEnterprise, joplin-mcp-pwsh. PS.DCU was a consumer until it was archived on 2026-11-16; ArcGISEnterprise joined on 2026-11-18 (ArcGISEnterprise#176), and joplin-mcp-pwsh on 2026-11-23 (johnsarie27/joplin-mcp-pwsh#23). joplin-mcp-pwsh is the one consumer owned by `johnsarie27` rather than `jjohns-dev`, so a sweep that builds `jjohns-dev/<repo>` misses it. From `v2` it also hosts the **build harness** in `Build/` that runs every consumer's stage, analyze, test and package tasks, plus the consumer shim template in `templates/`. It contains no application code and no PowerShell module of its own.
 
 SecurityTools is the only consumer of the object form of `os-matrix`: each leg carries its own `pesterScope` and `minTests`. It adopted `ci.yml` in #21 (SecurityTools#169); a change to how `ci.yml` handles either key must be checked against it.
 
@@ -72,7 +72,7 @@ The rulesets still cover both names (`release/*` in `protect-main`, `v*` in `pro
 
 Consumers normally pin the major tag; while staging a release that can change CI outcomes they pin the immutable `vX.Y.Z`, then repoint once the major tag has moved. There is deliberately no moving `vX.Y` tag, and a consumer left pinned stops receiving the centralized action bumps (ADR-0002).
 
-"Breaking" otherwise means the consumer's **call** stops working, not its **build** stops passing (ADR-0002): removing an input any consumer passes, or renaming a job (which silently un-gates branch protection), is a new major; removing an input no consumer passes is a minor; turning a wrongly-green build red is not breaking. Verify which you have against the eight consumer repos and record it in the PR.
+"Breaking" otherwise means the consumer's **call** stops working, not its **build** stops passing (ADR-0002): removing an input any consumer passes, or renaming a job (which silently un-gates branch protection), is a new major; removing an input no consumer passes is a minor; turning a wrongly-green build red is not breaking. Verify which you have against the nine consumer repos and record it in the PR.
 
 ### Cutting a release
 
